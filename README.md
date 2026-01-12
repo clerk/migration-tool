@@ -9,7 +9,7 @@ This repository contains a script that takes a JSON file as input, containing a 
 Clone the repository and install the dependencies.
 
 ```bash
-git clone git@github.com/clerk/migration-script
+git clone git@github.com:clerk/migration-script
 
 cd migration-script
 
