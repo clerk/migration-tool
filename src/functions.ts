@@ -93,8 +93,6 @@ const transformUsers = (
         transformedUser.phone = allPhones;
       }
     }
-    console.log("============= TEST ====================");
-    console.log(transformedUser.userId, transformedUser.email, transformedUser.password);
     const validationResult = userSchema.safeParse(transformedUser);
     // Check if validation was successful
     if (validationResult.success) {
@@ -179,7 +177,6 @@ export const loadUsersFromFile = async (
     const users: User[] = JSON.parse(
       fs.readFileSync(createImportFilePath(file), "utf-8"),
     );
-    console.log('USER COUNT', users.length)
     const usersWithDefaultFields = addDefaultFields(users, key);
 
     const transformedData: User[] = transformUsers(
