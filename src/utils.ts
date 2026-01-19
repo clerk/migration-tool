@@ -28,3 +28,17 @@ export const checkIfFileExists = (file: string) => {
 export const getFileType = (file: string) => {
   return mime.lookup(createImportFilePath(file));
 };
+
+// awaitable wrapper that returns 'data' and 'error' 
+export const tryCatch = async <T>(
+  promise: Promise<T>,
+): Promise<[T, null] | [null, Error]> => {
+  try {
+    const data = await promise;
+    return [data, null];
+  } catch (throwable) {
+    if (throwable instanceof Error) return [null, throwable];
+
+    throw throwable;
+  }
+};
