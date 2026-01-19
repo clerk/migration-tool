@@ -5,8 +5,9 @@ config();
 // TODO: Revisit if we need this. Left to easily implement
 export const withDevDefault = <T extends z.ZodTypeAny>(
   schema: T,
-  val: TypeOf<T>,
-) => (process.env["NODE_ENV"] !== "production" ? schema.default(val) : schema);
+  val: NonNullable<TypeOf<T>>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+) => (process.env["NODE_ENV"] !== "production" ? schema.default(val as any) : schema);
 
 const envSchema = z.object({
   CLERK_SECRET_KEY: z.string(),

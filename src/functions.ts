@@ -1,84 +1,26 @@
 import fs from "fs";
-import path from "path";
-import mime from "mime-types";
 import csvParser from "csv-parser";
-import * as z from "zod";
 import * as p from "@clack/prompts";
 import { validationLogger } from "./logger";
 import { handlers } from "./handlers";
+import { userSchema } from "./validators";
+import { HandlerMapKeys, HandlerMapUnion, User } from "./types";
+import { createImportFilePath, getDateTimeStamp, getFileType } from "./utils";
 
 const s = p.spinner();
-
-// default schema -- incoming data will be transformed to this format
-export const userSchema = z.object({
-  userId: z.string(),
-  email: z.string().email(),
-  username: z.string().optional(),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-  password: z.string().optional(),
-  passwordHasher: z
-    .enum([
-      "argon2i",
-      "argon2id",
-      "bcrypt",
-      "md5",
-      "pbkdf2_sha256",
-      "pbkdf2_sha256_django",
-      "pbkdf2_sha1",
-      "scrypt_firebase",
-    ])
-    .optional(),
-});
-
-export type User = z.infer<typeof userSchema>;
-
-// emulate what Clack CLI expects for an option in a Select / MultiSelect
-export type OptionType = {
-  value: string;
-  label: string | undefined;
-  hint?: string | undefined;
-};
-// create union of string literals from handlers transformer object keys
-export type HandlerMapKeys = (typeof handlers)[number]["key"];
-
-// create a union of all transformer objects in handlers array
-type HandlerMapUnion = (typeof handlers)[number];
-
-// utility function to create file path
-const createImportFilePath = (file: string) => {
-  return path.join(__dirname, "..", file);
-};
-
-// make sure the file exists. CLI will error if it doesn't
-export const checkIfFileExists = (file: string) => {
-  if (fs.existsSync(createImportFilePath(file))) {
-    return true;
-  } else {
-    return false;
-  }
-};
-
-// get the file type so we can verify if this is a JSON or CSV
-export const getFileType = (file: string) => {
-  return mime.lookup(createImportFilePath(file));
-};
-
-export const getDateTimeStamp = () => {
-  return new Date().toISOString().split(".")[0]; // YYYY-MM-DDTHH:mm:ss
-};
 
 // transform incoming data datas to match default schema
 export function transformKeys<T extends HandlerMapUnion>(
   data: Record<string, unknown>,
   keys: T,
 ): Record<string, unknown> {
-  const transformedData = {};
+  const transformedData: Record<string, unknown> = {};
+  const transformer = keys.transformer as Record<string, string>;
   for (const [key, value] of Object.entries(data)) {
-    if (value !== "" && value !== '"{}"') {
+    if (value !== "" && value !== '"{}"' && value !== null) {
       if (Object.prototype.hasOwnProperty.call(data, key)) {
         let transformedKey = key;
-        if (keys.transformer[key]) transformedKey = keys.transformer[key];
+        if (transformer[key]) transformedKey = transformer[key];
 
         transformedData[transformedKey] = data[key];
       }
@@ -103,6 +45,56 @@ const transformUsers = (
 
     const transformedUser = transformKeys(users[i], transformerKeys);
 
+    // Transform email to array for clerk handler (merges primary + verified + unverified emails)
+    if (key === "clerk") {
+      // Helper to parse email field - could be array (JSON) or comma-separated string (CSV)
+      const parseEmails = (field: unknown): string[] => {
+        if (Array.isArray(field)) return field;
+        if (typeof field === "string" && field) {
+          return field.split(",").map((e: string) => e.trim()).filter(Boolean);
+        }
+        return [];
+      };
+
+      const primaryEmail = transformedUser.email as string | undefined;
+      const verifiedEmails = parseEmails(transformedUser.emailAddresses);
+      const unverifiedEmails = parseEmails(transformedUser.unverifiedEmailAddresses);
+
+      // Build email array: primary first, then verified, then unverified (deduplicated)
+      const allEmails: string[] = [];
+      if (primaryEmail) allEmails.push(primaryEmail);
+      for (const email of [...verifiedEmails, ...unverifiedEmails]) {
+        if (!allEmails.includes(email)) allEmails.push(email);
+      }
+      if (allEmails.length > 0) {
+        transformedUser.email = allEmails;
+      }
+
+      // Helper to parse phone field - could be array (JSON) or comma-separated string (CSV)
+      const parsePhones = (field: unknown): string[] => {
+        if (Array.isArray(field)) return field;
+        if (typeof field === "string" && field) {
+          return field.split(",").map((p: string) => p.trim()).filter(Boolean);
+        }
+        return [];
+      };
+
+      const primaryPhone = transformedUser.phone as string | undefined;
+      const verifiedPhones = parsePhones(transformedUser.phoneNumbers);
+      const unverifiedPhones = parsePhones(transformedUser.unverifiedPhoneNumbers);
+
+      // Build phone array: primary first, then verified, then unverified (deduplicated)
+      const allPhones: string[] = [];
+      if (primaryPhone) allPhones.push(primaryPhone);
+      for (const phone of [...verifiedPhones, ...unverifiedPhones]) {
+        if (!allPhones.includes(phone)) allPhones.push(phone);
+      }
+      if (allPhones.length > 0) {
+        transformedUser.phone = allPhones;
+      }
+    }
+    console.log("============= TEST ====================");
+    console.log(transformedUser.userId, transformedUser.email, transformedUser.password);
     const validationResult = userSchema.safeParse(transformedUser);
     // Check if validation was successful
     if (validationResult.success) {
@@ -111,10 +103,12 @@ const transformUsers = (
       transformedData.push(validatedData);
     } else {
       // The data is not valid, handle errors
+      const firstIssue = validationResult.error.issues[0];
       validationLogger(
         {
-          error: `${validationResult.error.errors[0].code} for required field.`,
-          path: validationResult.error.errors[0].path,
+          error: `${firstIssue.code} for required field.`,
+          path: firstIssue.path as (string | number)[],
+          id: transformedUser.userId as string,
           row: i,
         },
         dateTime,
@@ -125,12 +119,10 @@ const transformUsers = (
 };
 
 const addDefaultFields = (users: User[], key: string) => {
-  if (handlers.find((obj) => obj.key === key)?.defaults) {
-    const defaultFields =
-      handlers.find((obj) => obj.key === key)?.defaults ?? {};
+  const handler = handlers.find((obj) => obj.key === key);
+  const defaultFields = (handler && "defaults" in handler) ? handler.defaults : null;
 
-    console.log("defaults", defaultFields);
-
+  if (defaultFields) {
     const updatedUsers: User[] = [];
 
     for (const user of users) {
@@ -141,7 +133,6 @@ const addDefaultFields = (users: User[], key: string) => {
       updatedUsers.push(updated);
     }
 
-    console.log("USERS", JSON.stringify(updatedUsers, null, 2));
     return updatedUsers;
   } else {
     return users;
@@ -163,11 +154,14 @@ export const loadUsersFromFile = async (
     const users: User[] = [];
     return new Promise((resolve, reject) => {
       fs.createReadStream(createImportFilePath(file))
-        .pipe(csvParser())
+        .pipe(csvParser({ skipComments: true }))
         .on("data", (data) => {
           users.push(data);
         })
-        .on("error", (err) => reject(err))
+        .on("error", (err) => {
+          s.stop("Error loading users");
+          reject(err);
+        })
         .on("end", () => {
           const usersWithDefaultFields = addDefaultFields(users, key);
           const transformedData: User[] = transformUsers(
@@ -175,6 +169,7 @@ export const loadUsersFromFile = async (
             key,
             dateTime,
           );
+          s.stop("Users Loaded");
           resolve(transformedData);
         });
     });
@@ -184,12 +179,15 @@ export const loadUsersFromFile = async (
     const users: User[] = JSON.parse(
       fs.readFileSync(createImportFilePath(file), "utf-8"),
     );
+    console.log('USER COUNT', users.length)
     const usersWithDefaultFields = addDefaultFields(users, key);
+
     const transformedData: User[] = transformUsers(
       usersWithDefaultFields,
       key,
       dateTime,
     );
+
     s.stop("Users Loaded");
     // p.log.step('Users loaded')
     return transformedData;

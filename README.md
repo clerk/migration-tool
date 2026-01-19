@@ -16,48 +16,19 @@ cd migration-script
 npm install
 ```
 
-### Users.json file
+## Users file
 
-Create a `users.json` file. This file should be populated with all the users that need to be imported. The users should pass this schema:
+The script is designed to import from multiple sources, including moving users from one Clerk instance to another. You may need to edit the handler for your source. Please see below for more information on that.
 
-```ts
-[
-  {
-    userId: "string",
-    email: "email",
-    firstName: "string (optional)",
-    lastName: "string (optional)",
-    password: "string (optional)",
-    passwordHasher:
-      "argon2 | argon | bcrypt | md5 | pbkdf2_sha256 | pbkdf2_sha256_django | pbkdf2_sha1 | scrypt_firebase",
-  },
-];
-```
+The script will import from a CSV or JSON. It accounts for empty fields in a CSV and will remove them when converting from CSV to a javascript object.
 
-The only required fields are `userId` and `email`. First and last names can be added if available. Clerk will also accept hashed password values along with the hashing algorithm used (the default is `bcrypt`).
+The only required fields are `userId` and `email`. 
 
-Here are a couple examples.
-
-```json
-[
-  {
-    "userId": "1",
-    "email": "dev@clerk.com",
-    "firstName": "Dev",
-    "lastName": "Agrawal"
-  },
-  {
-    "userId": "2",
-    "email": "john@blurp.com",
-    "password": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
-    "passwordHasher": "bcrypt" // default value
-  }
-]
-```
+### Samples
 
 The samples/ folder contains some samples, including issues that will produce errors when running the import.
 
-### Secret Key
+## Secret Key
 
 Create a `.env` file in the root of the folder and add your `CLERK_SECRET_KEY` to it. You can find your secret key in the [Clerk dashboard](https://dashboard.clerk.dev/).
 

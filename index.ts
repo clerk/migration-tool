@@ -21,6 +21,11 @@ async function main() {
   // we can use Zod to validate the args.keys to ensure it is TransformKeys type
   const users = await loadUsersFromFile(args.file, args.key);
 
+  // console.log("USERS FROM FILE", users.length);
+  //
+  // console.log("USERS from JSON:");
+  // users.map((user) => console.log(user.email));
+  //
   const usersToImport = users.slice(
     parseInt(args.offset) > env.OFFSET ? parseInt(args.offset) : env.OFFSET,
   );
