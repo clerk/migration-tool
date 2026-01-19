@@ -3,6 +3,28 @@ import { handlers } from "./handlers";
 import { userSchema } from "./validators";
 import * as z from "zod";
 
+export const PASSWORD_HASHERS = [
+	"argon2i",
+	"argon2id",
+	"bcrypt",
+	"bcrypt_peppered",
+	"bcrypt_sha256_django",
+	"hmac_sha256_utf16_b64",
+	"md5",
+	"md5_salted",
+	"pbkdf2_sha1",
+	"pbkdf2_sha256",
+	"pbkdf2_sha256_django",
+	"pbkdf2_sha512",
+	"scrypt_firebase",
+	"scrypt_werkzeug",
+	"sha256",
+	"sha256_salted",
+	"md5_phpass",
+	"ldap_ssha",
+	"sha512_symfony",
+] as const;
+
 export type User = z.infer<typeof userSchema>;
 
 // emulate what Clack CLI expects for an option in a Select / MultiSelect

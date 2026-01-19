@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { userSchema } from "./validators";
+import { PASSWORD_HASHERS } from "./types";
 
 describe("userSchema", () => {
   describe("userId (required)", () => {
@@ -103,18 +104,7 @@ describe("userSchema", () => {
   });
 
   describe("passwordHasher enum", () => {
-    const validHashers = [
-      "argon2i",
-      "argon2id",
-      "bcrypt",
-      "md5",
-      "pbkdf2_sha256",
-      "pbkdf2_sha256_django",
-      "pbkdf2_sha1",
-      "scrypt_firebase",
-    ];
-
-    test.each(validHashers)("passes with valid hasher: %s", (hasher) => {
+    test.each(PASSWORD_HASHERS)("passes with valid hasher: %s", (hasher) => {
       const result = userSchema.safeParse({
         userId: "user_123",
         email: "test@example.com",

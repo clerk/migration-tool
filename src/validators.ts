@@ -1,4 +1,5 @@
 import * as z from "zod";
+import { PASSWORD_HASHERS } from "./types";
 
 const unsafeMetadataSchema = z.object({});
 // username: z.string().optional(),
@@ -16,16 +17,7 @@ const privateMetadataSchema = z.object({});
 //
 // ============================================================================
 
-const passwordHasherEnum = z.enum([
-	"argon2i",
-	"argon2id",
-	"bcrypt",
-	"md5",
-	"pbkdf2_sha256",
-	"pbkdf2_sha256_django",
-	"pbkdf2_sha1",
-	"scrypt_firebase",
-]);
+const passwordHasherEnum = z.enum(PASSWORD_HASHERS as unknown as [string, ...string[]]);
 
 // default schema -- incoming data will be transformed to this format
 // All fields are optional except:

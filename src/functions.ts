@@ -4,7 +4,7 @@ import * as p from "@clack/prompts";
 import { validationLogger } from "./logger";
 import { handlers } from "./handlers";
 import { userSchema } from "./validators";
-import { HandlerMapKeys, HandlerMapUnion, User } from "./types";
+import { HandlerMapKeys, HandlerMapUnion, User, PASSWORD_HASHERS } from "./types";
 import { createImportFilePath, getDateTimeStamp, getFileType } from "./utils";
 
 const s = p.spinner();
@@ -102,6 +102,22 @@ const transformUsers = (
     } else {
       // The data is not valid, handle errors
       const firstIssue = validationResult.error.issues[0];
+
+      // Check if this is a password hasher validation error with an invalid value
+      // Only stop immediately if there's an actual invalid value, not missing/undefined
+      if (firstIssue.path.includes("passwordHasher") && transformedUser.passwordHasher) {
+        const userId = transformedUser.userId as string;
+        const invalidHasher = transformedUser.passwordHasher;
+        s.stop("Validation Error");
+        throw new Error(
+          `Invalid password hasher detected.\n` +
+          `User ID: ${userId}\n` +
+          `Row: ${i + 1}\n` +
+          `Invalid hasher: "${invalidHasher}"\n` +
+          `Expected one of: ${PASSWORD_HASHERS.join(", ")}`
+        );
+      }
+
       validationLogger(
         {
           error: `${firstIssue.code} for required field.`,
