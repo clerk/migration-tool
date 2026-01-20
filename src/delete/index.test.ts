@@ -25,6 +25,10 @@ vi.mock("@clack/prompts", () => ({
     stop: vi.fn(),
     message: vi.fn(),
   })),
+  log: {
+    error: vi.fn(),
+    info: vi.fn(),
+  },
 }));
 
 // Mock picocolors
@@ -32,6 +36,8 @@ vi.mock("picocolors", () => ({
   default: {
     bgCyan: vi.fn((s) => s),
     black: vi.fn((s) => s),
+    red: vi.fn((s) => s),
+    yellow: vi.fn((s) => s),
   },
 }));
 
@@ -53,8 +59,15 @@ vi.mock("../envs-constants", () => ({
   },
 }));
 
+// Mock fs module
+vi.mock("fs", () => ({
+  existsSync: vi.fn(),
+  readFileSync: vi.fn(),
+}));
+
 // Import after mocks are set up
 import { cooldown } from "../utils";
+import * as fs from "fs";
 
 // Get reference to mocked cooldown
 const mockCooldown = vi.mocked(cooldown);
@@ -62,12 +75,29 @@ const mockCooldown = vi.mocked(cooldown);
 describe("delete-users", () => {
   let fetchUsers: any;
   let deleteUsers: any;
+  let readSettings: any;
+  let readMigrationFile: any;
+  let findIntersection: any;
+
+  const mockExistsSync = vi.mocked(fs.existsSync);
+  const mockReadFileSync = vi.mocked(fs.readFileSync);
 
   beforeEach(async () => {
     vi.clearAllMocks();
     // Set default return values to handle auto-execution of processUsers()
     mockGetUserList.mockResolvedValue({ data: [] });
     mockDeleteUser.mockResolvedValue({});
+    mockExistsSync.mockReturnValue(true);
+
+    // Mock readFileSync to return different data based on file path
+    mockReadFileSync.mockImplementation((filePath: any) => {
+      const path = filePath.toString();
+      if (path.includes(".settings")) {
+        return JSON.stringify({ file: "samples/test.json" });
+      }
+      // Return empty array for migration files by default
+      return JSON.stringify([]);
+    });
 
     // Reset modules to clear module-level state (users array)
     vi.resetModules();
@@ -75,6 +105,9 @@ describe("delete-users", () => {
     const deleteUsersModule = await import("./index");
     fetchUsers = deleteUsersModule.fetchUsers;
     deleteUsers = deleteUsersModule.deleteUsers;
+    readSettings = deleteUsersModule.readSettings;
+    readMigrationFile = deleteUsersModule.readMigrationFile;
+    findIntersection = deleteUsersModule.findIntersection;
 
     // Wait for the auto-executed processUsers() to complete
     await new Promise(resolve => setTimeout(resolve, 10));
@@ -295,6 +328,167 @@ describe("delete-users", () => {
 
       // Should still attempt first two deletions
       expect(mockDeleteUser).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("readSettings", () => {
+    test("reads settings file and returns file path", () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(JSON.stringify({ file: "samples/users.json" }));
+
+      const result = readSettings();
+
+      expect(result).toBe("samples/users.json");
+      expect(mockExistsSync).toHaveBeenCalledWith(expect.stringContaining(".settings"));
+      expect(mockReadFileSync).toHaveBeenCalledWith(expect.stringContaining(".settings"), "utf-8");
+    });
+
+    test("exits with error when .settings file does not exist", () => {
+      mockExistsSync.mockReturnValue(false);
+      const mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+
+      readSettings();
+
+      expect(mockExit).toHaveBeenCalledWith(1);
+      mockExit.mockRestore();
+    });
+
+    test("exits with error when .settings file has no file property", () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(JSON.stringify({ key: "authjs" }));
+      const mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+
+      readSettings();
+
+      expect(mockExit).toHaveBeenCalledWith(1);
+      mockExit.mockRestore();
+    });
+  });
+
+  describe("readMigrationFile", () => {
+    test("reads migration file and returns set of user IDs", () => {
+      const mockUsers = [
+        { userId: "1", email: "user1@example.com" },
+        { userId: "2", email: "user2@example.com" },
+        { userId: "3", email: "user3@example.com" },
+      ];
+
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
+
+      const result = readMigrationFile("samples/users.json");
+
+      expect(result).toBeInstanceOf(Set);
+      expect(result.size).toBe(3);
+      expect(result.has("1")).toBe(true);
+      expect(result.has("2")).toBe(true);
+      expect(result.has("3")).toBe(true);
+    });
+
+    test("exits with error when migration file does not exist", () => {
+      mockExistsSync.mockReturnValue(false);
+      const mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
+
+      readMigrationFile("samples/nonexistent.json");
+
+      expect(mockExit).toHaveBeenCalledWith(1);
+      mockExit.mockRestore();
+    });
+
+    test("handles empty user array", () => {
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(JSON.stringify([]));
+
+      const result = readMigrationFile("samples/empty.json");
+
+      expect(result).toBeInstanceOf(Set);
+      expect(result.size).toBe(0);
+    });
+
+    test("skips users without userId field", () => {
+      const mockUsers = [
+        { userId: "1", email: "user1@example.com" },
+        { email: "user2@example.com" }, // no userId
+        { userId: "3", email: "user3@example.com" },
+      ];
+
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
+
+      const result = readMigrationFile("samples/users.json");
+
+      expect(result.size).toBe(2);
+      expect(result.has("1")).toBe(true);
+      expect(result.has("3")).toBe(true);
+    });
+  });
+
+  describe("findIntersection", () => {
+    test("finds users that exist in both Clerk and migration file", () => {
+      const clerkUsers = [
+        { id: "clerk_1", externalId: "1" },
+        { id: "clerk_2", externalId: "2" },
+        { id: "clerk_3", externalId: "3" },
+        { id: "clerk_4", externalId: "4" },
+      ] as any[];
+
+      const migrationUserIds = new Set(["2", "3", "5"]);
+
+      const result = findIntersection(clerkUsers, migrationUserIds);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe("clerk_2");
+      expect(result[1].id).toBe("clerk_3");
+    });
+
+    test("returns empty array when no users match", () => {
+      const clerkUsers = [
+        { id: "clerk_1", externalId: "1" },
+        { id: "clerk_2", externalId: "2" },
+      ] as any[];
+
+      const migrationUserIds = new Set(["5", "6"]);
+
+      const result = findIntersection(clerkUsers, migrationUserIds);
+
+      expect(result).toHaveLength(0);
+    });
+
+    test("ignores Clerk users without externalId", () => {
+      const clerkUsers = [
+        { id: "clerk_1", externalId: "1" },
+        { id: "clerk_2" }, // no externalId
+        { id: "clerk_3", externalId: "3" },
+      ] as any[];
+
+      const migrationUserIds = new Set(["1", "2", "3"]);
+
+      const result = findIntersection(clerkUsers, migrationUserIds);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe("clerk_1");
+      expect(result[1].id).toBe("clerk_3");
+    });
+
+    test("handles empty Clerk users array", () => {
+      const clerkUsers = [] as any[];
+      const migrationUserIds = new Set(["1", "2"]);
+
+      const result = findIntersection(clerkUsers, migrationUserIds);
+
+      expect(result).toHaveLength(0);
+    });
+
+    test("handles empty migration user IDs set", () => {
+      const clerkUsers = [
+        { id: "clerk_1", externalId: "1" },
+        { id: "clerk_2", externalId: "2" },
+      ] as any[];
+      const migrationUserIds = new Set<string>();
+
+      const result = findIntersection(clerkUsers, migrationUserIds);
+
+      expect(result).toHaveLength(0);
     });
   });
 

@@ -1,4 +1,4 @@
-# Clerk User Import Script
+# Clerk User Migration Script
 
 ## Description
 
@@ -13,22 +13,22 @@ git clone git@github.com:clerk/migration-script
 
 cd migration-script
 
-npm install
+bun install
 ```
 
-## Users file
+### Users file
 
 The script is designed to import from multiple sources, including moving users from one Clerk instance to another. You may need to edit the handler for your source. Please see below for more information on that.
 
 The script will import from a CSV or JSON. It accounts for empty fields in a CSV and will remove them when converting from CSV to a javascript object.
 
-The only required fields are `userId` and `email`. 
+The only required fields are `userId` and an identifier (one of `email`, `phone` or `username`). 
 
-### Samples
+#### Samples
 
-The samples/ folder contains some samples, including issues that will produce errors when running the import.
+The samples/ folder contains some samples you can test with. The samples include issues that will produce errors when running the import.
 
-## Secret Key
+### Secret Key
 
 Create a `.env` file in the root of the folder and add your `CLERK_SECRET_KEY` to it. You can find your secret key in the [Clerk dashboard](https://dashboard.clerk.dev/).
 
@@ -50,12 +50,30 @@ The script can be run on the same data multiple times, Clerk automatically uses 
 
 The script can be configured through the following environment variables:
 
-| Variable           | Description                                         | Default     |
-| ------------------ | --------------------------------------------------- | ----------- |
-| `CLERK_SECRET_KEY` | Your Clerk secret key                               | `undefined` |
-| `DELAY_MS`         | Delay between requests to respect rate limits       | `1000`      |
-| `RETRY_DELAY_MS`   | Delay when the rate limit is hit                    | `10000`     |
-| `OFFSET`           | Offset to start migration (number of users to skip) | `0`         |
+| Variable           | Description                                         |
+| ------------------ | --------------------------------------------------- | 
+| `CLERK_SECRET_KEY` | Your Clerk secret key                               |  
+| `DELAY_MS`         | Delay between requests to respect rate limits       | 
+| `RETRY_DELAY_MS`   | Delay when the rate limit is hit                    |
+| `OFFSET`           | Offset to start migration (number of users to skip) |
+
+
+## Other commands
+
+### Delete users
+
+```
+bun delete
+```
+This will delete all migrated users from the instance. It should not delete pre-existing users, but it is not recommended to use this with a production instance that has pre-existing users. Please use caution with this command. 
+
+### Clean logs
+
+```
+bun clean-logs
+```
+All migrations and deletions will create logs in the `./logs` folder. This command will delete those logs.
+
 
 ## Handling the Foreign Key constraint
 
