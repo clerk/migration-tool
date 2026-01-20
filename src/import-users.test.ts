@@ -113,7 +113,7 @@ describe("importUsers", () => {
         },
       ];
 
-      await importUsers(users);
+      await importUsers(users, true);
 
       expect(mockCreateUser).toHaveBeenCalledTimes(1);
       expect(mockCreateUser).toHaveBeenCalledWith({

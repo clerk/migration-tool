@@ -14,7 +14,7 @@ let successful = 0;
 let failed = 0;
 const errorCounts = new Map<string, number>();
 
-const createUser = async (userData: User) => {
+const createUser = async (userData: User, skipPasswordRequirement: boolean) => {
   const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
 
   // Extract primary email and additional emails
@@ -50,13 +50,14 @@ const createUser = async (userData: User) => {
   if (userData.privateMetadata) userParams.privateMetadata = userData.privateMetadata;
   if (userData.publicMetadata) userParams.publicMetadata = userData.publicMetadata;
 
-  // Handle password - if present, include digest and hasher; otherwise skip password requirement
+  // Handle password - if present, include digest and hasher; otherwise skip password requirement if allowed
   if (userData.password && userData.passwordHasher) {
     userParams.passwordDigest = userData.password;
     userParams.passwordHasher = userData.passwordHasher;
-  } else {
+  } else if (skipPasswordRequirement) {
     userParams.skipPasswordRequirement = true;
   }
+  // If user has no password and skipPasswordRequirement is false, the API will return an error
 
   // Create the user with the primary email
   const createdUser = await clerk.users.createUser(
@@ -92,13 +93,14 @@ async function processUserToClerk(
   userData: User,
   total: number,
   dateTime: string,
+  skipPasswordRequirement: boolean,
 ) {
   try {
     const parsedUserData = userSchema.safeParse(userData);
     if (!parsedUserData.success) {
       throw parsedUserData.error;
     }
-    await createUser(parsedUserData.data);
+    await createUser(parsedUserData.data, skipPasswordRequirement);
     successful++;
     processed++;
     s.message(`Migrating users: [${processed}/${total}]`);
@@ -113,7 +115,7 @@ async function processUserToClerk(
     const clerkError = error as { status?: number; errors?: ClerkAPIError[] };
     if (clerkError.status === 429) {
       await cooldown(env.RETRY_DELAY_MS);
-      return processUserToClerk(userData, total, dateTime);
+      return processUserToClerk(userData, total, dateTime, skipPasswordRequirement);
     }
 
     // Track error for summary
@@ -154,7 +156,7 @@ const displaySummary = (summary: ImportSummary) => {
   p.note(message.trim(), "Complete");
 };
 
-export const importUsers = async (users: User[]) => {
+export const importUsers = async (users: User[], skipPasswordRequirement: boolean = false) => {
   const dateTime = getDateTimeStamp();
 
   // Reset counters for each import run
@@ -168,7 +170,7 @@ export const importUsers = async (users: User[]) => {
   s.message(`Migrating users: [0/${total}]`);
 
   for (const user of users) {
-    await processUserToClerk(user, total, dateTime);
+    await processUserToClerk(user, total, dateTime, skipPasswordRequirement);
     await cooldown(env.DELAY);
   }
   s.stop();

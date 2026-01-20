@@ -6,6 +6,7 @@ import csvParser from "csv-parser";
 import { handlers } from "./handlers";
 import { checkIfFileExists, getFileType, createImportFilePath } from "./utils";
 import { env } from "./envs-constants";
+import { transformKeys as transformKeysFromFunctions } from "./functions";
 
 const SETTINGS_FILE = ".settings";
 
@@ -17,7 +18,7 @@ type Settings = {
 
 const DEV_USER_LIMIT = 500;
 
-const detectInstanceType = (): "dev" | "prod" => {
+export const detectInstanceType = (): "dev" | "prod" => {
   const secretKey = env.CLERK_SECRET_KEY;
   if (secretKey.startsWith("sk_test_")) {
     return "dev";
@@ -47,9 +48,10 @@ type FieldAnalysis = {
   presentOnSome: string[];
   identifiers: IdentifierCounts;
   totalUsers: number;
+  fieldCounts: Record<string, number>;
 };
 
-const loadSettings = (): Settings => {
+export const loadSettings = (): Settings => {
   try {
     const settingsPath = path.join(process.cwd(), SETTINGS_FILE);
     if (fs.existsSync(settingsPath)) {
@@ -62,7 +64,7 @@ const loadSettings = (): Settings => {
   return {};
 };
 
-const saveSettings = (settings: Settings): void => {
+export const saveSettings = (settings: Settings): void => {
   try {
     const settingsPath = path.join(process.cwd(), SETTINGS_FILE);
     fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
@@ -71,7 +73,7 @@ const saveSettings = (settings: Settings): void => {
   }
 };
 
-const loadRawUsers = async (file: string, handlerKey: string): Promise<Record<string, unknown>[]> => {
+export const loadRawUsers = async (file: string, handlerKey: string): Promise<Record<string, unknown>[]> => {
   const filePath = createImportFilePath(file);
   const type = getFileType(filePath);
   const handler = handlers.find((h) => h.key === handlerKey);
@@ -80,15 +82,11 @@ const loadRawUsers = async (file: string, handlerKey: string): Promise<Record<st
     throw new Error(`Handler not found for key: ${handlerKey}`);
   }
 
-  // Helper to transform keys using handler
-  const transformKeys = (data: Record<string, unknown>): Record<string, unknown> => {
-    const transformed: Record<string, unknown> = {};
-    const transformer = handler.transformer as Record<string, string>;
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== "" && value !== '"{}"' && value !== null) {
-        const transformedKey = transformer[key] || key;
-        transformed[transformedKey] = value;
-      }
+  const transformUser = (data: Record<string, unknown>): Record<string, unknown> => {
+    const transformed = transformKeysFromFunctions(data, handler);
+    // Apply postTransform if defined
+    if ("postTransform" in handler && typeof handler.postTransform === "function") {
+      handler.postTransform(transformed);
     }
     return transformed;
   };
@@ -98,23 +96,23 @@ const loadRawUsers = async (file: string, handlerKey: string): Promise<Record<st
       const users: Record<string, unknown>[] = [];
       fs.createReadStream(filePath)
         .pipe(csvParser({ skipComments: true }))
-        .on("data", (data) => users.push(transformKeys(data)))
+        .on("data", (data) => users.push(transformUser(data)))
         .on("error", (err) => reject(err))
         .on("end", () => resolve(users));
     });
   } else {
     const rawUsers = JSON.parse(fs.readFileSync(filePath, "utf-8"));
-    return rawUsers.map(transformKeys);
+    return rawUsers.map(data => transformUser(data));
   }
 };
 
-const hasValue = (value: unknown): boolean => {
+export const hasValue = (value: unknown): boolean => {
   if (value === undefined || value === null || value === "") return false;
   if (Array.isArray(value)) return value.length > 0;
   return true;
 };
 
-const analyzeFields = (users: Record<string, unknown>[]): FieldAnalysis => {
+export const analyzeFields = (users: Record<string, unknown>[]): FieldAnalysis => {
   const totalUsers = users.length;
 
   if (totalUsers === 0) {
@@ -130,6 +128,7 @@ const analyzeFields = (users: Record<string, unknown>[]): FieldAnalysis => {
         hasAnyIdentifier: 0,
       },
       totalUsers: 0,
+      fieldCounts: {},
     };
   }
 
@@ -183,10 +182,10 @@ const analyzeFields = (users: Record<string, unknown>[]): FieldAnalysis => {
     }
   }
 
-  return { presentOnAll, presentOnSome, identifiers, totalUsers };
+  return { presentOnAll, presentOnSome, identifiers, totalUsers, fieldCounts };
 };
 
-const formatCount = (count: number, total: number, label: string): string => {
+export const formatCount = (count: number, total: number, label: string): string => {
   if (count === total) {
     return `All users have ${label}`;
   } else if (count === 0) {
@@ -196,7 +195,7 @@ const formatCount = (count: number, total: number, label: string): string => {
   }
 };
 
-const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
+export const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
   const { identifiers, totalUsers } = analysis;
 
   let identifierMessage = "";
@@ -260,32 +259,104 @@ const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
   p.note(identifierMessage.trim(), "Identifiers");
 };
 
-const displayOtherFieldsAnalysis = (analysis: FieldAnalysis): boolean => {
+export const displayPasswordAnalysis = async (analysis: FieldAnalysis): Promise<boolean | null> => {
+  const { totalUsers, fieldCounts } = analysis;
+  const usersWithPasswords = fieldCounts.password || 0;
+
+  let passwordMessage = "";
+
+  if (usersWithPasswords === totalUsers) {
+    passwordMessage += `${color.green("●")} All users have passwords\n`;
+  } else if (usersWithPasswords > 0) {
+    passwordMessage += `${color.yellow("○")} ${usersWithPasswords} of ${totalUsers} users have passwords\n`;
+  } else {
+    passwordMessage += `${color.red("○")} No users have passwords\n`;
+  }
+
+  passwordMessage += "\n";
+  passwordMessage += color.bold("Dashboard Configuration:\n");
+  passwordMessage += `  ${color.green("●")} Enable Password in the Dashboard\n`;
+
+  p.note(passwordMessage.trim(), "Password");
+
+  // Ask if user wants to migrate users without passwords
+  if (usersWithPasswords < totalUsers) {
+    const migrateWithoutPassword = await p.confirm({
+      message: "Do you want to migrate users who don't have a password?",
+      initialValue: true,
+    });
+
+    if (p.isCancel(migrateWithoutPassword)) {
+      return null; // User cancelled
+    }
+
+    return migrateWithoutPassword;
+  }
+
+  return false; // All users have passwords, no need for skipPasswordRequirement
+};
+
+export const displayUserModelAnalysis = (analysis: FieldAnalysis): boolean => {
+  const { totalUsers, fieldCounts } = analysis;
+  const usersWithFirstName = fieldCounts.firstName || 0;
+  const usersWithLastName = fieldCounts.lastName || 0;
+
+  // Count users who have BOTH first and last name
+  const usersWithBothNames = Math.min(usersWithFirstName, usersWithLastName);
+  const someUsersHaveNames = usersWithFirstName > 0 || usersWithLastName > 0;
+  const noUsersHaveNames = usersWithFirstName === 0 && usersWithLastName === 0;
+
+  let nameMessage = "";
+
+  // Show combined first and last name stats
+  if (usersWithBothNames === totalUsers) {
+    nameMessage += `${color.green("●")} All users have first and last names\n`;
+  } else if (someUsersHaveNames && !noUsersHaveNames) {
+    nameMessage += `${color.yellow("○")} Some users have first and/or last names\n`;
+  } else {
+    nameMessage += `${color.dim("○")} No users have first or last names\n`;
+  }
+
+  nameMessage += "\n";
+  nameMessage += color.bold("Dashboard Configuration:\n");
+
+  if (usersWithBothNames === totalUsers) {
+    nameMessage += `  ${color.green("●")} First and last name must be enabled in the Dashboard and could be required\n`;
+  } else if (someUsersHaveNames) {
+    nameMessage += `  ${color.yellow("○")} First and last name must be enabled in the Dashboard but not required\n`;
+  } else {
+    nameMessage += `  ${color.dim("○")} First and last name could be enabled or disabled in the Dashboard but cannot be required\n`;
+  }
+
+  p.note(nameMessage.trim(), "User Model");
+
+  // Return true if confirmation is needed (when users have name data)
+  return someUsersHaveNames;
+};
+
+export const displayOtherFieldsAnalysis = (analysis: FieldAnalysis): boolean => {
+  // Filter out password, firstName, and lastName since they have dedicated sections
+  const excludedFields = ["Password", "First Name", "Last Name"];
+  const filteredPresentOnAll = analysis.presentOnAll.filter(f => !excludedFields.includes(f));
+  const filteredPresentOnSome = analysis.presentOnSome.filter(f => !excludedFields.includes(f));
+
   let fieldsMessage = "";
 
-  if (analysis.presentOnAll.length > 0) {
+  if (filteredPresentOnAll.length > 0) {
     fieldsMessage += color.bold("Fields present on ALL users:\n");
     fieldsMessage += color.dim("These fields must be enabled in the Clerk Dashboard and could be set as required.");
-    for (const field of analysis.presentOnAll) {
+    for (const field of filteredPresentOnAll) {
       fieldsMessage += `\n  ${color.green("●")} ${color.reset(field)}`;
     }
   }
 
-  if (analysis.presentOnSome.length > 0) {
+  if (filteredPresentOnSome.length > 0) {
     if (fieldsMessage) fieldsMessage += "\n\n";
     fieldsMessage += color.bold("Fields present on SOME users:\n");
     fieldsMessage += color.dim("These fields must be enabled in the Clerk Dashboard but must be set as optional.");
-    for (const field of analysis.presentOnSome) {
+    for (const field of filteredPresentOnSome) {
       fieldsMessage += `\n  ${color.yellow("○")} ${color.reset(field)}`;
     }
-  }
-
-  // Add note about passwords
-  const hasPasswordField = analysis.presentOnAll.includes("Password") || analysis.presentOnSome.includes("Password");
-  if (hasPasswordField) {
-    fieldsMessage += "\n";
-    fieldsMessage += color.dim("Note: Passwords can be optional even if not present on all users.\n");
-    fieldsMessage += color.dim("The script will use skipPasswordRequirement for users without passwords.\n");
   }
 
   if (fieldsMessage) {
@@ -410,12 +481,45 @@ export const runCLI = async () => {
     process.exit(0);
   }
 
-  // Step 5: Display and confirm other field settings (if any)
+  // Step 5: Display password analysis and get migration preference
+  const skipPasswordRequirement = await displayPasswordAnalysis(analysis);
+
+  if (skipPasswordRequirement === null) {
+    p.cancel("Migration cancelled.");
+    process.exit(0);
+  }
+
+  const confirmPassword = await p.confirm({
+    message: "Have you enabled Password in the Dashboard?",
+    initialValue: true,
+  });
+
+  if (p.isCancel(confirmPassword) || !confirmPassword) {
+    p.cancel("Migration cancelled. Please enable Password in the Dashboard and try again.");
+    process.exit(0);
+  }
+
+  // Step 6: Display user model analysis
+  const needsUserModelConfirmation = displayUserModelAnalysis(analysis);
+
+  if (needsUserModelConfirmation) {
+    const confirmUserModel = await p.confirm({
+      message: "Have you configured first and last name settings in the Dashboard?",
+      initialValue: true,
+    });
+
+    if (p.isCancel(confirmUserModel) || !confirmUserModel) {
+      p.cancel("Migration cancelled. Please configure user model settings and try again.");
+      process.exit(0);
+    }
+  }
+
+  // Step 7: Display and confirm other field settings (if any)
   const hasOtherFields = displayOtherFieldsAnalysis(analysis);
 
   if (hasOtherFields) {
     const confirmFields = await p.confirm({
-      message: "Have you configured the field settings in the Dashboard?",
+      message: "Have you configured the other field settings in the Dashboard?",
       initialValue: true,
     });
 
@@ -425,7 +529,7 @@ export const runCLI = async () => {
     }
   }
 
-  // Step 6: Final confirmation
+  // Step 8: Final confirmation
   const beginMigration = await p.confirm({
     message: "Begin Migration?",
     initialValue: true,
@@ -443,5 +547,10 @@ export const runCLI = async () => {
     offset: initialArgs.offset,
   });
 
-  return { ...initialArgs, instance: instanceType, begin: beginMigration };
+  return {
+    ...initialArgs,
+    instance: instanceType,
+    begin: beginMigration,
+    skipPasswordRequirement: skipPasswordRequirement || false,
+  };
 };
