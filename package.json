@@ -9,6 +9,7 @@
   "scripts": {
     "start": "bun index.ts",
     "delete": "bun ./src/delete-users.ts",
+    "clean-logs": "bun ./src/clean-logs.ts",
     "lint": "eslint . --config .eslintrc.js",
     "lint:fix": "eslint . --fix --config .eslintrc.js",
     "format": "prettier . --write",
