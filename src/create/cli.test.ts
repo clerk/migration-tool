@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, test, vi, beforeEach } from "vitest";
 import fs from "fs";
 import path from "path";
 import {
@@ -155,7 +155,7 @@ describe("saveSettings", () => {
 
   test("writes settings to .settings file", () => {
     const settings = { key: "clerk", file: "users.json", offset: "10" };
-    vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+    vi.mocked(fs.writeFileSync).mockImplementation(() => { });
 
     saveSettings(settings);
 
@@ -177,7 +177,7 @@ describe("saveSettings", () => {
 
   test("formats JSON with 2-space indentation", () => {
     const settings = { key: "clerk", file: "users.json", offset: "0" };
-    vi.mocked(fs.writeFileSync).mockImplementation(() => {});
+    vi.mocked(fs.writeFileSync).mockImplementation(() => { });
 
     saveSettings(settings);
 

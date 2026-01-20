@@ -1,8 +1,9 @@
+import "dotenv/config";
 import { createClerkClient, User } from "@clerk/backend";
 import * as p from "@clack/prompts";
 import color from "picocolors";
-import { cooldown } from "./utils";
-import { env } from "./envs-constants";
+import { cooldown } from "../utils";
+import { env } from "../envs-constants";
 
 const LIMIT = 500;
 const users: User[] = [];
@@ -41,7 +42,7 @@ export const deleteUsers = async (users: User[]) => {
         await cooldown(env.DELAY);
       })
   }
-  s.stop();
+  s.stop(`Deleted ${count} users`);
 };
 
 export const processUsers = async () => {

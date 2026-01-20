@@ -4,8 +4,8 @@ import fs from "fs";
 import path from "path";
 import csvParser from "csv-parser";
 import { handlers } from "./handlers";
-import { checkIfFileExists, getFileType, createImportFilePath } from "./utils";
-import { env } from "./envs-constants";
+import { checkIfFileExists, getFileType, createImportFilePath } from "../utils";
+import { env } from "../envs-constants";
 import { transformKeys as transformKeysFromFunctions } from "./functions";
 
 const SETTINGS_FILE = ".settings";

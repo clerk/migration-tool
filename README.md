@@ -39,7 +39,7 @@ CLERK_SECRET_KEY=your-secret-key
 ### Run the script
 
 ```bash
-npm start
+bun migrate
 ```
 
 The script will begin process the users and attempting to import them into Clerk. The script has a built in delay to respect the rate limits for the Clerk Backend API. If the script does hit a rate limit then it will wait the required 10 seconds and resume. Any errors will be logged to a `migration-log.json` file.

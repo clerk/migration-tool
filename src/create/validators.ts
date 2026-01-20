@@ -1,5 +1,5 @@
 import * as z from "zod";
-import { PASSWORD_HASHERS } from "./types";
+import { PASSWORD_HASHERS } from "../types";
 
 // ============================================================================
 //

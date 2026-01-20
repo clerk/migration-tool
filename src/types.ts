@@ -1,6 +1,6 @@
 import { ClerkAPIError } from "@clerk/types";
-import { handlers } from "./handlers";
-import { userSchema } from "./validators";
+import { handlers } from "./create/handlers";
+import { userSchema } from "./create/validators";
 import * as z from "zod";
 
 export const PASSWORD_HASHERS = [

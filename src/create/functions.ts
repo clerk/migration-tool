@@ -1,11 +1,11 @@
 import fs from "fs";
 import csvParser from "csv-parser";
 import * as p from "@clack/prompts";
-import { validationLogger } from "./logger";
+import { validationLogger } from "../logger";
 import { handlers } from "./handlers";
 import { userSchema } from "./validators";
-import { HandlerMapKeys, HandlerMapUnion, User, PASSWORD_HASHERS } from "./types";
-import { createImportFilePath, getDateTimeStamp, getFileType } from "./utils";
+import { HandlerMapKeys, HandlerMapUnion, User, PASSWORD_HASHERS } from "../types";
+import { createImportFilePath, getDateTimeStamp, getFileType } from "../utils";
 
 const s = p.spinner();
 

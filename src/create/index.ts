@@ -1,9 +1,9 @@
 import "dotenv/config";
 
-import { env } from "./src/envs-constants";
-import { runCLI } from "./src/cli";
-import { loadUsersFromFile } from "./src/functions";
-import { importUsers } from "./src/import-users";
+import { env } from "../envs-constants";
+import { runCLI } from "./cli";
+import { loadUsersFromFile } from "./functions";
+import { importUsers } from "./import-users";
 
 async function main() {
   const args = await runCLI();

@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, beforeEach, afterEach } from "vitest";
+import { describe, expect, test, vi, beforeEach } from "vitest";
 
 // Use vi.hoisted() to create mocks that can be referenced in vi.mock()
 const { mockGetUserList, mockDeleteUser } = vi.hoisted(() => ({
@@ -36,8 +36,8 @@ vi.mock("picocolors", () => ({
 }));
 
 // Mock cooldown to track calls
-vi.mock("./utils", async () => {
-  const actual = await vi.importActual("./utils");
+vi.mock("../utils", async () => {
+  const actual = await vi.importActual("../utils");
   return {
     ...actual,
     cooldown: vi.fn(() => Promise.resolve()),
@@ -45,7 +45,7 @@ vi.mock("./utils", async () => {
 });
 
 // Mock env constants
-vi.mock("./envs-constants", () => ({
+vi.mock("../envs-constants", () => ({
   env: {
     CLERK_SECRET_KEY: "test_secret_key",
     DELAY: 0,
@@ -54,7 +54,7 @@ vi.mock("./envs-constants", () => ({
 }));
 
 // Import after mocks are set up
-import { cooldown } from "./utils";
+import { cooldown } from "../utils";
 
 // Get reference to mocked cooldown
 const mockCooldown = vi.mocked(cooldown);
@@ -72,7 +72,7 @@ describe("delete-users", () => {
     // Reset modules to clear module-level state (users array)
     vi.resetModules();
     // Re-import the module to get fresh state
-    const deleteUsersModule = await import("./delete-users");
+    const deleteUsersModule = await import("./index");
     fetchUsers = deleteUsersModule.fetchUsers;
     deleteUsers = deleteUsersModule.deleteUsers;
 

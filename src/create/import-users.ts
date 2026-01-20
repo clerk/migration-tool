@@ -1,12 +1,12 @@
 import { createClerkClient } from "@clerk/backend";
 import { ClerkAPIError } from "@clerk/types";
-import { env } from "./envs-constants";
+import { env } from "../envs-constants";
 import * as p from "@clack/prompts";
 import color from "picocolors";
-import { errorLogger, importLogger } from "./logger";
-import { cooldown, getDateTimeStamp } from "./utils";
+import { errorLogger, importLogger } from "../logger";
+import { cooldown, getDateTimeStamp } from "../utils";
 import { userSchema } from "./validators";
-import { ImportSummary, User } from "./types";
+import { ImportSummary, User } from "../types";
 
 const s = p.spinner();
 let processed = 0;
@@ -173,7 +173,7 @@ export const importUsers = async (users: User[], skipPasswordRequirement: boolea
     await processUserToClerk(user, total, dateTime, skipPasswordRequirement);
     await cooldown(env.DELAY);
   }
-  s.stop();
+  s.stop(`Migrated ${total} users`);
 
   // Display summary
   const summary: ImportSummary = {
