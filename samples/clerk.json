@@ -6,7 +6,8 @@
 		"username": null,
 		"primary_email_address": "johndoe@gmail.com",
 		"email_addresses": [
-			"johndoe@gmail.com", "test@gmail.com"
+			"johndoe@gmail.com",
+			"test@gmail.com"
 		],
 		"primary_phone_number": null,
 		"phone_numbers": null,
@@ -16,10 +17,10 @@
 			"username": "johndoe"
 		},
 		"public_metadata": {
-      "username": "johndoe"
+			"username": "johndoe"
 		},
 		"private_metadata": {
-      "username": "johndoe"
+			"username": "johndoe"
 		},
 		"has_image": true,
 		"image_url": "https://storage.googleapis.com/images.clerk.dev/oauth_google/img_2fT3OnxW5K5bLcar5WWBq7Kdrlu",
@@ -35,20 +36,21 @@
 		"username": null,
 		"primary_email_address": "janedoe@gmail.com",
 		"email_addresses": [
-			"test2@gmail.com", "janedoe@gmail.com"
+			"test2@gmail.com",
+			"janedoe@gmail.com"
 		],
 		"primary_phone_number": null,
 		"phone_numbers": null,
 		"password_digest": null,
 		"password_hasher": null,
-		"unsafe_metadata": {
-      "username": "janedoe"
-		},
 		"public_metadata": {
-      "username": "janedoe"
+			"example": "This is a test"
 		},
 		"private_metadata": {
-      "username": "janedoe"
+			"example": true
+		},
+		"unsafe_metadata": {
+			"example": "{{user.externalId || user.id}}"
 		},
 		"has_image": true,
 		"image_url": "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvb2F1dGhfZ29vZ2xlL2ltZ18yaENhZFlib0pDbWNiOUlmTHFkREJ5Q2twUkEifQ",
@@ -58,4 +60,3 @@
 		"totp_secret": null
 	}
 ]
-

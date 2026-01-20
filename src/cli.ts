@@ -30,7 +30,6 @@ const ANALYZED_FIELDS = [
   { key: "firstName", label: "First Name" },
   { key: "lastName", label: "Last Name" },
   { key: "password", label: "Password" },
-  { key: "mfaEnabled", label: "MFA Enabled" },
   { key: "totpSecret", label: "TOTP Secret" },
 ];
 

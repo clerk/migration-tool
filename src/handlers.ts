@@ -15,7 +15,6 @@ const clerkHandler = {
     verified_phone_numbers: "phoneNumbers",
     unverified_phone_numbers: "unverifiedPhoneNumbers",
     username: "username",
-    mfa_enabled: "mfaEnabled",
     totp_secret: "totpSecret",
     backup_codes_enabled: "backupCodesEnabled",
     backup_codes: "backupCodes",

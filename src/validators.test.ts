@@ -177,14 +177,6 @@ describe("userSchema", () => {
   });
 
   describe("boolean fields", () => {
-    test("passes with mfaEnabled boolean", () => {
-      const result = userSchema.safeParse({
-        userId: "user_123",
-        email: "test@example.com",
-        mfaEnabled: true,
-      });
-      expect(result.success).toBe(true);
-    });
 
     test("passes with backupCodesEnabled boolean", () => {
       const result = userSchema.safeParse({
@@ -193,15 +185,6 @@ describe("userSchema", () => {
         backupCodesEnabled: false,
       });
       expect(result.success).toBe(true);
-    });
-
-    test("fails with mfaEnabled as string", () => {
-      const result = userSchema.safeParse({
-        userId: "user_123",
-        email: "test@example.com",
-        mfaEnabled: "true",
-      });
-      expect(result.success).toBe(false);
     });
   });
 
@@ -216,7 +199,6 @@ describe("userSchema", () => {
         password: "$2a$10$hashedpassword",
         passwordHasher: "bcrypt",
         phone: ["+1234567890"],
-        mfaEnabled: true,
         totpSecret: "JBSWY3DPEHPK3PXP",
         backupCodesEnabled: true,
         backupCodes: "code1,code2,code3",

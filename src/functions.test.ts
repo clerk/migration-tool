@@ -2,26 +2,6 @@ import { describe, expect, test } from "vitest";
 import { loadUsersFromFile, transformKeys } from "./functions";
 import { handlers } from "./handlers";
 
-// test("loadUsersFromFile CSV", async () => {
-//   const userSupabase = await loadUsersFromFile(
-//     "/samples/supabase.csv",
-//     "clerk",
-//   );
-//
-//   expect(userSupabase).toMatchInlineSnapshot(`
-//     [
-//       {
-//         "email": "test@test.com",
-//         "userId": "76b196c8-d5c4-4907-9746-ed06ef829a67",
-//       },
-//       {
-//         "email": "test2@test2.com",
-//         "userId": "926f3b49-9687-4d05-8557-2673387a1f3c",
-//       },
-//     ]
-//   `);
-// });
-
 test("Clerk - loadUsersFromFile - JSON", async () => {
   const usersFromClerk = await loadUsersFromFile(
     "/samples/clerk.json",
@@ -37,7 +17,15 @@ test("Clerk - loadUsersFromFile - JSON", async () => {
         ],
         "firstName": "John",
         "lastName": "Doe",
-        "mfaEnabled": false,
+        "privateMetadata": {
+          "username": "johndoe",
+        },
+        "publicMetadata": {
+          "username": "johndoe",
+        },
+        "unsafeMetadata": {
+          "username": "johndoe",
+        },
         "userId": "user_2fT3OpCuU3elx0CXE3cNyStBC9u",
       },
       {
@@ -47,7 +35,15 @@ test("Clerk - loadUsersFromFile - JSON", async () => {
         ],
         "firstName": "Jane",
         "lastName": "Doe",
-        "mfaEnabled": false,
+        "privateMetadata": {
+          "example": true,
+        },
+        "publicMetadata": {
+          "example": "This is a test",
+        },
+        "unsafeMetadata": {
+          "example": "{{user.externalId || user.id}}",
+        },
         "userId": "user_2fTPmPJJGj6SZV1e8xN7yapuoim",
       },
     ]
@@ -163,7 +159,6 @@ describe("transformKeys", () => {
         emailAddresses: ["john@example.com", "other@example.com"],
         password: "$2a$10$hash",
         passwordHasher: "bcrypt",
-        mfaEnabled: true,
         totpSecret: "SECRET",
         backupCodesEnabled: false,
       });
@@ -298,7 +293,6 @@ describe("transformKeys", () => {
 
       expect(result).toEqual({
         userId: "user_123",
-        mfaEnabled: false,
         backupCodesEnabled: false,
       });
     });

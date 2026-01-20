@@ -27,13 +27,6 @@ export const PASSWORD_HASHERS = [
 
 export type User = z.infer<typeof userSchema>;
 
-// emulate what Clack CLI expects for an option in a Select / MultiSelect
-export type OptionType = {
-  value: string;
-  label: string | undefined;
-  hint?: string | undefined;
-};
-
 // create union of string literals from handlers transformer object keys
 export type HandlerMapKeys = (typeof handlers)[number]["key"];
 
@@ -41,34 +34,34 @@ export type HandlerMapKeys = (typeof handlers)[number]["key"];
 export type HandlerMapUnion = (typeof handlers)[number];
 
 export type ErrorPayload = {
-  userId: string;
-  status: string;
-  errors: ClerkAPIError[];
+	userId: string;
+	status: string;
+	errors: ClerkAPIError[];
 };
 
 export type ValidationErrorPayload = {
-  error: string;
-  path: (string | number)[];
-  id: string;
-  row: number;
+	error: string;
+	path: (string | number)[];
+	id: string;
+	row: number;
 };
 
 export type ErrorLog = {
-  type: string;
-  userId: string;
-  status: string;
-  error: string | undefined;
+	type: string;
+	userId: string;
+	status: string;
+	error: string | undefined;
 };
 
 export type ImportLogEntry = {
-  userId: string;
-  status: "success" | "error";
-  error?: string;
+	userId: string;
+	status: "success" | "error";
+	error?: string;
 };
 
 export type ImportSummary = {
-  totalProcessed: number;
-  successful: number;
-  failed: number;
-  errorBreakdown: Map<string, number>;
+	totalProcessed: number;
+	successful: number;
+	failed: number;
+	errorBreakdown: Map<string, number>;
 };

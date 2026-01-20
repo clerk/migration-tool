@@ -1,19 +1,12 @@
 import * as z from "zod";
 import { PASSWORD_HASHERS } from "./types";
 
-const unsafeMetadataSchema = z.object({});
-// username: z.string().optional(),
-// isAccessToBeta: z.boolean().optional(),
-// });
-
-const publicMetadataSchema = z.object({});
-
-const privateMetadataSchema = z.object({});
-
 // ============================================================================
 //
-// ONLY EDIT BELOW THIS IF YOU ARE ADDING A NEW IMPORT SOURCE
-// THAT IS NOT YET SUPPORTED
+// ONLY EDIT BELOW THIS IF YOU ARE ADDING A NEW FIELD
+//
+// Generally you only need to add or edit a handler and do not need to touch
+// any of the schema.
 //
 // ============================================================================
 
@@ -41,14 +34,14 @@ export const userSchema = z.object({
 	// Password
 	password: z.string().optional(),
 	passwordHasher: passwordHasherEnum.optional(),
-	// MFA
-	mfaEnabled: z.boolean().optional(),
+	// 2FA
 	totpSecret: z.string().optional(),
 	backupCodesEnabled: z.boolean().optional(),
 	backupCodes: z.string().optional(),
-	// unsafeMetadata: unsafeMetadataSchema,
-	// publicMetadata: publicMetadataSchema,
-	// privateMetadata: privateMetadataSchema,
+	// Metadata - accept any value
+	unsafeMetadata: z.any().optional(),
+	publicMetadata: z.any().optional(),
+	privateMetadata: z.any().optional(),
 }).refine(
 	(data) => !data.password || data.passwordHasher,
 	{

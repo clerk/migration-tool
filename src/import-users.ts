@@ -46,9 +46,9 @@ const createUser = async (userData: User) => {
   if (userData.username) userParams.username = userData.username;
   if (primaryPhone) userParams.phoneNumber = [primaryPhone];
   if (userData.totpSecret) userParams.totpSecret = userData.totpSecret;
-  // if (userData.unsafeMetadata) userParams.unsafeMetadata = userData.unsafeMetadata;
-  // if (userData.privateMetadata) userParams.privateMetadata = userData.privateMetadata;
-  // if (userData.publicMetadata) userParams.publicMetadata = userData.publicMetadata;
+  if (userData.unsafeMetadata) userParams.unsafeMetadata = userData.unsafeMetadata;
+  if (userData.privateMetadata) userParams.privateMetadata = userData.privateMetadata;
+  if (userData.publicMetadata) userParams.publicMetadata = userData.publicMetadata;
 
   // Handle password - if present, include digest and hasher; otherwise skip password requirement
   if (userData.password && userData.passwordHasher) {

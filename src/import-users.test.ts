@@ -260,7 +260,7 @@ describe("importUsers", () => {
   describe("validation", () => {
     test("skips createUser for invalid users (missing userId)", async () => {
       // Mock errorLogger to prevent TypeError from ZodError structure mismatch
-      vi.spyOn(logger, "errorLogger").mockImplementation(() => {});
+      vi.spyOn(logger, "errorLogger").mockImplementation(() => { });
 
       const users = [
         { email: ["noid@example.com"] } as any,
@@ -305,7 +305,6 @@ describe("importUsers edge cases", () => {
         username: "fulluser",
         phone: ["+1111111111"],
         totpSecret: "SECRET123",
-        mfaEnabled: true,
         backupCodesEnabled: true,
       },
     ];
