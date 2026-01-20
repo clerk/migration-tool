@@ -10,7 +10,8 @@ const s = p.spinner();
 let total: number;
 let count = 0;
 
-const fetchUsers = async (offset: number) => {
+// Exported for testing
+export const fetchUsers = async (offset: number) => {
   const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY })
   const { data } = await clerk.users.getUserList({ offset, limit: LIMIT });
 
@@ -21,14 +22,15 @@ const fetchUsers = async (offset: number) => {
   }
 
   if (data.length === LIMIT) {
-    await cooldown(1000);
+    await cooldown(env.DELAY);
     return fetchUsers(offset + LIMIT);
   }
 
   return users;
 };
 
-const deleteUsers = async (users: User[]) => {
+// Exported for testing
+export const deleteUsers = async (users: User[]) => {
   s.message(`Deleting users: [0/${total}]`);
   for (const user of users) {
     const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY })
@@ -36,7 +38,7 @@ const deleteUsers = async (users: User[]) => {
       .then(async () => {
         count++;
         s.message(`Deleting users: [${count}/${total}]`);
-        await cooldown(1000);
+        await cooldown(env.DELAY);
       })
   }
   s.stop();

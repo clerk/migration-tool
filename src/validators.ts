@@ -12,6 +12,9 @@ import { PASSWORD_HASHERS } from "./types";
 
 const passwordHasherEnum = z.enum(PASSWORD_HASHERS as unknown as [string, ...string[]]);
 
+// Email validation using regex to avoid deprecated .email() method
+const emailString = z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+
 // default schema -- incoming data will be transformed to this format
 // All fields are optional except:
 // - userId is required (for logging purposes)
@@ -20,9 +23,9 @@ const passwordHasherEnum = z.enum(PASSWORD_HASHERS as unknown as [string, ...str
 export const userSchema = z.object({
 	userId: z.string(),
 	// Email fields
-	email: z.union([z.string().email(), z.array(z.string().email())]).optional(),
-	emailAddresses: z.union([z.string().email(), z.array(z.string().email())]).optional(),
-	unverifiedEmailAddresses: z.union([z.string().email(), z.array(z.string().email())]).optional(),
+	email: z.union([emailString, z.array(emailString)]).optional(),
+	emailAddresses: z.union([emailString, z.array(emailString)]).optional(),
+	unverifiedEmailAddresses: z.union([emailString, z.array(emailString)]).optional(),
 	// Phone fields
 	phone: z.union([z.string(), z.array(z.string())]).optional(),
 	phoneNumbers: z.union([z.string(), z.array(z.string())]).optional(),

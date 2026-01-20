@@ -87,13 +87,13 @@ test("Supabase - loadUsersFromFile - JSON", async () => {
   expect(usersFromSupabase).toMatchInlineSnapshot(`
     [
       {
-        "emailAddresses": "janedoe@clerk.dev",
+        "email": "janedoe@clerk.dev",
         "password": "$2a$10$hg4EXrEHfcqoKhNtENsYCO5anpp/C9WCUAAAtXEqpZkdCcxL/hcGG",
         "passwordHasher": "bcrypt",
         "userId": "2971a33d-5b7c-4c11-b8fe-61b7f185f211",
       },
       {
-        "emailAddresses": "johndoe@clerk.dev",
+        "email": "johndoe@clerk.dev",
         "password": "$2a$10$hg4EXrEHfcqoKhNtENsYCO5anpp/C9WCUAAAtXEqpZkdCcxL/hcGG",
         "passwordHasher": "bcrypt",
         "userId": "2971a33d-5b7c-4c11-b8fe-61b7f185f234",
@@ -108,7 +108,31 @@ test("Auth0 - loadUsersFromFile - JSON", async () => {
     "auth0",
   );
 
-  expect(usersFromAuth0).toMatchInlineSnapshot(`[]`);
+  expect(usersFromAuth0).toMatchInlineSnapshot(`
+    [
+      {
+        "email": "johndoe@clerk.dev",
+        "password": "$2b$10$o1bU5mlWpsft6RQFZeCfh.6.ixhdeH7fdfJCm2U1g.XX4Ojnxc3Hm",
+        "passwordHasher": "bcrypt",
+        "userId": "657353cd18710d662aeb4e9e",
+        "username": "johndoe",
+      },
+      {
+        "email": "johnhancock@clerk.com",
+        "password": "$2b$10$qQiiDhcEm3krRmTj9a2lb.Q4M4W/dkVFQUm/aj1jNxWljt0HSNecK",
+        "passwordHasher": "bcrypt",
+        "userId": "6573d4d69fa97e13efcca49f",
+        "username": "johnhancock",
+      },
+      {
+        "email": "elmo@clerk.dev",
+        "password": "$2b$10$4a8p79G/F11ZWS3/NGOf9eP9ExnXb0EGZf2FUPB5Wc0pzEoHQM3g.",
+        "passwordHasher": "bcrypt",
+        "userId": "6573813ce94488fb5f75e089",
+        "username": "elmo",
+      },
+    ]
+  `);
 });
 
 // ============================================================================
@@ -146,7 +170,6 @@ describe("transformKeys", () => {
         verified_email_addresses: ["john@example.com", "other@example.com"],
         password_digest: "$2a$10$hash",
         password_hasher: "bcrypt",
-        mfa_enabled: true,
         totp_secret: "SECRET",
         backup_codes_enabled: false,
       };
@@ -168,6 +191,7 @@ describe("transformKeys", () => {
       const data = {
         id: "uuid-123",
         email: "jane@example.com",
+        email_confirmed_at: "2024-01-01 12:00:00+00",
         first_name: "Jane",
         last_name: "Smith",
         encrypted_password: "$2a$10$hash",
@@ -178,7 +202,8 @@ describe("transformKeys", () => {
 
       expect(result).toEqual({
         userId: "uuid-123",
-        emailAddresses: "jane@example.com",
+        email: "jane@example.com",
+        emailConfirmedAt: "2024-01-01 12:00:00+00",
         firstName: "Jane",
         lastName: "Smith",
         password: "$2a$10$hash",
@@ -188,8 +213,10 @@ describe("transformKeys", () => {
 
     test("transforms Auth0-specific keys", () => {
       const data = {
-        id: "auth0|123",
+        _id: { $oid: "auth0123" },
         email: "user@example.com",
+        email_verified: true,
+        username: "bobuser",
         given_name: "Bob",
         family_name: "Jones",
         phone_number: "+1987654321",
@@ -199,9 +226,12 @@ describe("transformKeys", () => {
 
       const result = transformKeys(data, auth0Handler);
 
+      // transformKeys now extracts nested paths like "_id.$oid"
       expect(result).toEqual({
-        userId: "auth0|123",
-        emailAddresses: "user@example.com",
+        userId: "auth0123",
+        email: "user@example.com",
+        emailVerified: true,
+        username: "bobuser",
         firstName: "Bob",
         lastName: "Jones",
         phone: "+1987654321",
@@ -285,7 +315,6 @@ describe("transformKeys", () => {
     test("keeps falsy but valid values (false, 0)", () => {
       const data = {
         id: "user_123",
-        mfa_enabled: false,
         backup_codes_enabled: false,
       };
 

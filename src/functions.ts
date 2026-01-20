@@ -9,6 +9,33 @@ import { createImportFilePath, getDateTimeStamp, getFileType } from "./utils";
 
 const s = p.spinner();
 
+// Helper to selectively flatten nested objects based on transformer config
+// Only flattens paths that are explicitly referenced in the transformer
+function flattenObjectSelectively(
+  obj: Record<string, unknown>,
+  transformer: Record<string, string>,
+  prefix = ""
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(obj)) {
+    const currentPath = prefix ? `${prefix}.${key}` : key;
+
+    // Check if this path (or any nested path) is in the transformer
+    const hasNestedMapping = Object.keys(transformer).some(k => k.startsWith(currentPath + "."));
+
+    if (hasNestedMapping && value && typeof value === "object" && !Array.isArray(value)) {
+      // This object has nested mappings, so recursively flatten it
+      Object.assign(result, flattenObjectSelectively(value as Record<string, unknown>, transformer, currentPath));
+    } else {
+      // Either it's not an object, or it's not mapped with nested paths - keep as-is
+      result[currentPath] = value;
+    }
+  }
+
+  return result;
+}
+
 // transform incoming data datas to match default schema
 export function transformKeys<T extends HandlerMapUnion>(
   data: Record<string, unknown>,
@@ -16,16 +43,18 @@ export function transformKeys<T extends HandlerMapUnion>(
 ): Record<string, unknown> {
   const transformedData: Record<string, unknown> = {};
   const transformer = keys.transformer as Record<string, string>;
-  for (const [key, value] of Object.entries(data)) {
-    if (value !== "" && value !== '"{}"' && value !== null) {
-      if (Object.prototype.hasOwnProperty.call(data, key)) {
-        let transformedKey = key;
-        if (transformer[key]) transformedKey = transformer[key];
 
-        transformedData[transformedKey] = data[key];
-      }
+  // Selectively flatten the input data based on transformer config
+  const flatData = flattenObjectSelectively(data, transformer);
+
+  // Then apply transformations
+  for (const [key, value] of Object.entries(flatData)) {
+    if (value !== "" && value !== '"{}"' && value !== null) {
+      const transformedKey = transformer[key] || key;
+      transformedData[transformedKey] = value;
     }
   }
+
   return transformedData;
 }
 
@@ -92,6 +121,11 @@ const transformUsers = (
       if (allPhones.length > 0) {
         transformedUser.phone = allPhones;
       }
+    }
+
+    // Apply handler-specific post-transformation if defined
+    if (transformerKeys && "postTransform" in transformerKeys && typeof transformerKeys.postTransform === "function") {
+      transformerKeys.postTransform(transformedUser);
     }
     const validationResult = userSchema.safeParse(transformedUser);
     // Check if validation was successful

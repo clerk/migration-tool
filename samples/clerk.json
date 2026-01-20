@@ -24,7 +24,6 @@
 		},
 		"has_image": true,
 		"image_url": "https://storage.googleapis.com/images.clerk.dev/oauth_google/img_2fT3OnxW5K5bLcar5WWBq7Kdrlu",
-		"mfa_enabled": false,
 		"backup_codes_enabled": false,
 		"backup_codes": null,
 		"totp_secret": null
@@ -54,7 +53,6 @@
 		},
 		"has_image": true,
 		"image_url": "https://img.clerk.com/eyJ0eXBlIjoicHJveHkiLCJzcmMiOiJodHRwczovL2ltYWdlcy5jbGVyay5kZXYvb2F1dGhfZ29vZ2xlL2ltZ18yaENhZFlib0pDbWNiOUlmTHFkREJ5Q2twUkEifQ",
-		"mfa_enabled": false,
 		"backup_codes_enabled": false,
 		"backup_codes": null,
 		"totp_secret": null

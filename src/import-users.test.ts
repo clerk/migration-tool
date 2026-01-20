@@ -55,7 +55,7 @@ import * as logger from "./logger";
 // Helper to clean up logs directory
 const cleanupLogs = () => {
   if (existsSync("logs")) {
-    rmSync("logs", { recursive: true });
+    rmSync("logs", { recursive: true, force: true, maxRetries: 3 });
   }
 };
 
