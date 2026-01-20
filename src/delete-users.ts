@@ -12,7 +12,7 @@ let count = 0;
 
 const fetchUsers = async (offset: number) => {
   const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY })
-  const { data, totalCount } = await clerk.users.getUserList({ offset, limit: LIMIT });
+  const { data } = await clerk.users.getUserList({ offset, limit: LIMIT });
 
   if (data.length > 0) {
     for (const user of data) {

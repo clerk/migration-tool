@@ -61,7 +61,6 @@ describe("delete-users module", () => {
         { id: "user_1", firstName: "John" },
         { id: "user_2", firstName: "Jane" },
       ],
-      totalCount: 2,
     });
     mockDeleteUser.mockResolvedValue({});
   });

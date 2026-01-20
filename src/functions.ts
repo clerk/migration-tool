@@ -202,7 +202,6 @@ export const loadUsersFromFile = async (
     );
 
     s.stop("Users Loaded");
-    // p.log.step('Users loaded')
     return transformedData;
   }
 };
