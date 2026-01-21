@@ -21,30 +21,60 @@ vi.mock("@clerk/backend", () => ({
 
 // Mock @clack/prompts to prevent console output during tests
 vi.mock("@clack/prompts", () => ({
+  note: vi.fn(),
+  outro: vi.fn(),
   spinner: vi.fn(() => ({
     start: vi.fn(),
     stop: vi.fn(),
     message: vi.fn(),
   })),
-  outro: vi.fn(),
-  note: vi.fn(),
+}));
+
+// Mock picocolors to prevent console output during tests
+vi.mock("picocolors", () => ({
+  default: {
+    bold: vi.fn((s) => s),
+    dim: vi.fn((s) => s),
+    gray: vi.fn((s) => s),
+    green: vi.fn((s) => s),
+    red: vi.fn((s) => s),
+    yellow: vi.fn((s) => s),
+    blue: vi.fn((s) => s),
+    cyan: vi.fn((s) => s),
+    white: vi.fn((s) => s),
+    black: vi.fn((s) => s),
+    bgCyan: vi.fn((s) => s),
+  },
 }));
 
 // Mock cooldown to speed up tests
-vi.mock("./utils", async () => {
-  const actual = await vi.importActual("./utils");
-  return {
-    ...actual,
-    cooldown: vi.fn(() => Promise.resolve()),
-  };
-});
+vi.mock("../utils", () => ({
+  cooldown: vi.fn(() => Promise.resolve()),
+  getDateTimeStamp: vi.fn(() => "2024-01-01T12:00:00"),
+  tryCatch: async (promise: Promise<any>) => {
+    try {
+      const data = await promise;
+      return [data, null];
+    } catch (throwable) {
+      if (throwable instanceof Error) return [null, throwable];
+      throw throwable;
+    }
+  },
+}));
+
+// Mock logger module
+vi.mock("../logger", () => ({
+  errorLogger: vi.fn(),
+  importLogger: vi.fn(),
+}));
 
 // Mock env constants
-vi.mock("./envs-constants", () => ({
+vi.mock("../envs-constants", () => ({
   env: {
     CLERK_SECRET_KEY: "test_secret_key",
     DELAY: 0,
     RETRY_DELAY_MS: 0,
+    OFFSET: 0,
   },
 }));
 

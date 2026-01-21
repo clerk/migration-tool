@@ -1,5 +1,5 @@
 import { describe, expect, test, beforeEach, afterEach } from "vitest";
-import { errorLogger, validationLogger, importLogger } from "./logger";
+import { errorLogger, validationLogger, importLogger, deleteErrorLogger, deleteLogger } from "./logger";
 import { readFileSync, existsSync, rmSync } from "node:fs";
 
 // Helper to clean up logs directory
@@ -13,7 +13,7 @@ describe("errorLogger", () => {
   beforeEach(cleanupLogs);
   afterEach(cleanupLogs);
 
-  test("logs a single error to errors.log", () => {
+  test("logs a single error to import-errors.log", () => {
     const dateTime = "error-single-test";
 
     errorLogger(
@@ -30,7 +30,7 @@ describe("errorLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log).toHaveLength(1);
     expect(log[0]).toEqual({
       type: "User Creation Error",
@@ -58,7 +58,7 @@ describe("errorLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log[0]).toEqual({
       type: "User Creation Error",
       userId: "user_abc123",
@@ -90,7 +90,7 @@ describe("errorLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log).toHaveLength(2);
     expect(log[0].error).toBe("The email address format is invalid.");
     expect(log[1].error).toBe("Password does not meet requirements.");
@@ -119,7 +119,7 @@ describe("errorLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log).toHaveLength(2);
     expect(log[0].userId).toBe("user_1");
     expect(log[1].userId).toBe("user_2");
@@ -143,7 +143,7 @@ describe("errorLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log[0].status).toBe("429");
     expect(log[0].error).toBe("Rate limit exceeded. Please try again later.");
   });
@@ -153,7 +153,7 @@ describe("validationLogger", () => {
   beforeEach(cleanupLogs);
   afterEach(cleanupLogs);
 
-  test("logs a validation error to errors.log", () => {
+  test("logs a validation error to import-errors.log", () => {
     const dateTime = "validation-basic-test";
 
     validationLogger(
@@ -166,7 +166,7 @@ describe("validationLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log).toHaveLength(1);
     expect(log[0]).toEqual({
       type: "Validation Error",
@@ -190,7 +190,7 @@ describe("validationLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log[0].path).toEqual(["unsafeMetadata", "customField"]);
   });
 
@@ -207,7 +207,7 @@ describe("validationLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log[0].path).toEqual(["email", 1]);
   });
 
@@ -244,7 +244,7 @@ describe("validationLogger", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log).toHaveLength(3);
     expect(log[0].row).toBe(1);
     expect(log[1].row).toBe(2);
@@ -308,11 +308,184 @@ describe("importLogger", () => {
   });
 });
 
+describe("deleteErrorLogger", () => {
+  beforeEach(cleanupLogs);
+  afterEach(cleanupLogs);
+
+  test("logs a single error to delete-errors.log", () => {
+    const dateTime = "delete-error-single-test";
+
+    deleteErrorLogger(
+      {
+        errors: [
+          {
+            code: "user_not_found",
+            message: "User not found",
+          },
+        ],
+        status: "error",
+        userId: "user_123",
+      },
+      dateTime,
+    );
+
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-delete-errors.log`, "utf8"));
+    expect(log).toHaveLength(1);
+    expect(log[0]).toEqual({
+      type: "User Deletion Error",
+      userId: "user_123",
+      status: "error",
+      error: undefined, // longMessage is undefined
+    });
+  });
+
+  test("logs error with longMessage", () => {
+    const dateTime = "delete-error-longmessage-test";
+
+    deleteErrorLogger(
+      {
+        errors: [
+          {
+            code: "permission_denied",
+            message: "Permission denied",
+            longMessage: "You do not have permission to delete this user.",
+          },
+        ],
+        status: "403",
+        userId: "user_abc123",
+      },
+      dateTime,
+    );
+
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-delete-errors.log`, "utf8"));
+    expect(log[0]).toEqual({
+      type: "User Deletion Error",
+      userId: "user_abc123",
+      status: "403",
+      error: "You do not have permission to delete this user.",
+    });
+  });
+
+  test("logs multiple errors from same payload as separate entries", () => {
+    const dateTime = "delete-error-multiple-test";
+
+    deleteErrorLogger(
+      {
+        errors: [
+          {
+            code: "error_1",
+            message: "First error",
+            longMessage: "The first error occurred.",
+          },
+          {
+            code: "error_2",
+            message: "Second error",
+            longMessage: "The second error occurred.",
+          },
+        ],
+        status: "400",
+        userId: "user_xyz",
+      },
+      dateTime,
+    );
+
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-delete-errors.log`, "utf8"));
+    expect(log).toHaveLength(2);
+    expect(log[0].error).toBe("The first error occurred.");
+    expect(log[1].error).toBe("The second error occurred.");
+  });
+
+  test("appends to existing log file", () => {
+    const dateTime = "delete-error-append-test";
+
+    // First error
+    deleteErrorLogger(
+      {
+        errors: [{ code: "err1", message: "First error" }],
+        status: "400",
+        userId: "user_1",
+      },
+      dateTime,
+    );
+
+    // Second error
+    deleteErrorLogger(
+      {
+        errors: [{ code: "err2", message: "Second error" }],
+        status: "500",
+        userId: "user_2",
+      },
+      dateTime,
+    );
+
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-delete-errors.log`, "utf8"));
+    expect(log).toHaveLength(2);
+    expect(log[0].userId).toBe("user_1");
+    expect(log[1].userId).toBe("user_2");
+  });
+});
+
+describe("deleteLogger", () => {
+  beforeEach(cleanupLogs);
+  afterEach(cleanupLogs);
+
+  test("logs a successful deletion", () => {
+    const dateTime = "delete-success-test";
+
+    deleteLogger(
+      { userId: "user_123", status: "success" },
+      dateTime,
+    );
+
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-delete.log`, "utf8"));
+    expect(log).toHaveLength(1);
+    expect(log[0]).toEqual({
+      userId: "user_123",
+      status: "success",
+    });
+  });
+
+  test("logs a failed deletion with error", () => {
+    const dateTime = "delete-error-test";
+
+    deleteLogger(
+      { userId: "user_456", status: "error", error: "User not found" },
+      dateTime,
+    );
+
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-delete.log`, "utf8"));
+    expect(log).toHaveLength(1);
+    expect(log[0]).toEqual({
+      userId: "user_456",
+      status: "error",
+      error: "User not found",
+    });
+  });
+
+  test("logs multiple deletions in sequence", () => {
+    const dateTime = "delete-multiple-test";
+
+    deleteLogger({ userId: "user_1", status: "success" }, dateTime);
+    deleteLogger({ userId: "user_2", status: "error", error: "Permission denied" }, dateTime);
+    deleteLogger({ userId: "user_3", status: "success" }, dateTime);
+
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-delete.log`, "utf8"));
+    expect(log).toHaveLength(3);
+    expect(log[0].userId).toBe("user_1");
+    expect(log[0].status).toBe("success");
+    expect(log[1].userId).toBe("user_2");
+    expect(log[1].status).toBe("error");
+    expect(log[1].error).toBe("Permission denied");
+    expect(log[2].userId).toBe("user_3");
+    expect(log[2].status).toBe("success");
+  });
+});
+
 describe("mixed logging", () => {
   beforeEach(cleanupLogs);
   afterEach(cleanupLogs);
 
-  test("error and validation logs go to same errors.log file", () => {
+  test("error and validation logs go to same import-errors.log file", () => {
     const dateTime = "mixed-errors-test";
 
     errorLogger(
@@ -334,7 +507,7 @@ describe("mixed logging", () => {
       dateTime,
     );
 
-    const log = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const log = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     expect(log).toHaveLength(2);
     expect(log[0].type).toBe("User Creation Error");
     expect(log[1].type).toBe("Validation Error");
@@ -362,7 +535,7 @@ describe("mixed logging", () => {
       dateTime,
     );
 
-    const errorLog = JSON.parse(readFileSync(`logs/${dateTime}-errors.log`, "utf8"));
+    const errorLog = JSON.parse(readFileSync(`logs/${dateTime}-import-errors.log`, "utf8"));
     const importLog = JSON.parse(readFileSync(`logs/${dateTime}-import.log`, "utf8"));
 
     expect(errorLog).toHaveLength(1);

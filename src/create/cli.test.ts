@@ -14,7 +14,21 @@ import {
 } from "./cli";
 
 // Mock modules
-vi.mock("fs");
+vi.mock("fs", async () => {
+  const actualFs = await import("fs");
+  return {
+    default: {
+      ...actualFs.default,
+      existsSync: vi.fn(actualFs.existsSync),
+      readFileSync: vi.fn(actualFs.readFileSync),
+      writeFileSync: vi.fn(actualFs.writeFileSync),
+    },
+    ...actualFs,
+    existsSync: vi.fn(actualFs.existsSync),
+    readFileSync: vi.fn(actualFs.readFileSync),
+    writeFileSync: vi.fn(actualFs.writeFileSync),
+  };
+});
 vi.mock("@clack/prompts", () => ({
   note: vi.fn(),
   spinner: vi.fn(() => ({
@@ -22,6 +36,18 @@ vi.mock("@clack/prompts", () => ({
     stop: vi.fn(),
     message: vi.fn(),
   })),
+}));
+vi.mock("picocolors", () => ({
+  default: {
+    bold: vi.fn((s) => s),
+    dim: vi.fn((s) => s),
+    green: vi.fn((s) => s),
+    red: vi.fn((s) => s),
+    yellow: vi.fn((s) => s),
+    blue: vi.fn((s) => s),
+    cyan: vi.fn((s) => s),
+    reset: vi.fn((s) => s),
+  },
 }));
 
 // Import the mocked module to get access to the mock

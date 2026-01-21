@@ -2,11 +2,12 @@ import "dotenv/config";
 import { createClerkClient, User } from "@clerk/backend";
 import * as p from "@clack/prompts";
 import color from "picocolors";
-import { cooldown, tryCatch, getDateTimeStamp } from "../utils";
+import { cooldown, tryCatch, getDateTimeStamp, createImportFilePath, getFileType } from "../utils";
 import { env } from "../envs-constants";
-import { errorLogger } from "../logger";
+import { deleteErrorLogger, deleteLogger } from "../logger";
 import * as fs from "fs";
 import * as path from "path";
+import csvParser from "csv-parser";
 
 const LIMIT = 500;
 const users: User[] = [];
@@ -48,12 +49,13 @@ export const readSettings = () => {
 
 /**
  * Reads a migration file and extracts user IDs
+ * Supports both JSON and CSV files
  * @param filePath - The relative path to the migration file
- * @returns A Set of user IDs from the migration file
+ * @returns A Promise that resolves to a Set of user IDs from the migration file
  * @throws Exits the process if the migration file is not found
  */
-export const readMigrationFile = (filePath: string) => {
-  const fullPath = path.join(process.cwd(), filePath);
+export const readMigrationFile = async (filePath: string): Promise<Set<string>> => {
+  const fullPath = createImportFilePath(filePath);
 
   if (!fs.existsSync(fullPath)) {
     p.log.error(
@@ -64,14 +66,43 @@ export const readMigrationFile = (filePath: string) => {
     process.exit(1);
   }
 
+  const type = getFileType(fullPath);
+  const userIds = new Set<string>();
+
+  // Handle CSV files
+  if (type === "text/csv") {
+    return new Promise((resolve, reject) => {
+      fs.createReadStream(fullPath)
+        .pipe(csvParser({ skipComments: true }))
+        .on("data", (data) => {
+          // CSV files have 'id' column for user IDs
+          if (data.id) {
+            userIds.add(data.id);
+          }
+        })
+        .on("error", (err) => {
+          p.log.error(color.red(`Error reading CSV file: ${err.message}`));
+          reject(err);
+        })
+        .on("end", () => {
+          resolve(userIds);
+        });
+    });
+  }
+
+  // Handle JSON files
   const fileContent = fs.readFileSync(fullPath, "utf-8");
   const users = JSON.parse(fileContent);
 
   // Extract user IDs from the migration file
-  const userIds = new Set<string>();
   for (const user of users) {
+    // JSON files have 'userId' property
     if (user.userId) {
       userIds.add(user.userId);
+    }
+    // Also check for 'id' property as fallback
+    else if (user.id) {
+      userIds.add(user.id);
     }
   }
 
@@ -84,6 +115,11 @@ export const readMigrationFile = (filePath: string) => {
  * @returns An array of all Clerk users
  */
 export const fetchUsers = async (offset: number) => {
+  // Clear the users array on the initial call (offset 0)
+  if (offset === 0) {
+    users.length = 0;
+  }
+
   const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY })
   const { data } = await clerk.users.getUserList({ offset, limit: LIMIT });
 
@@ -118,6 +154,9 @@ export const findIntersection = (clerkUsers: User[], migrationUserIds: Set<strin
   });
 };
 
+// Track error messages and counts
+const errorCounts = new Map<string, number>();
+
 /**
  * Deletes an array of users from Clerk
  *
@@ -130,6 +169,9 @@ export const findIntersection = (clerkUsers: User[], migrationUserIds: Set<strin
  * @returns A promise that resolves when all users are processed
  */
 export const deleteUsers = async (users: User[], dateTime: string) => {
+  // Reset error counts
+  errorCounts.clear();
+
   s.message(`Deleting users: [0/${total}]`);
   for (const user of users) {
     const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
@@ -137,8 +179,11 @@ export const deleteUsers = async (users: User[], dateTime: string) => {
 
     if (error) {
       failed++;
-      // Log the error
-      errorLogger(
+      const errorMessage = error.message || "Unknown error";
+      errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
+
+      // Log to error log file
+      deleteErrorLogger(
         {
           userId: user.externalId || user.id,
           status: "error",
@@ -146,8 +191,20 @@ export const deleteUsers = async (users: User[], dateTime: string) => {
         },
         dateTime,
       );
+
+      // Log to delete log file
+      deleteLogger(
+        { userId: user.externalId || user.id, status: "error", error: errorMessage },
+        dateTime,
+      );
     } else {
       count++;
+
+      // Log successful deletion
+      deleteLogger(
+        { userId: user.externalId || user.id, status: "success" },
+        dateTime,
+      );
     }
 
     const processed = count + failed;
@@ -159,6 +216,36 @@ export const deleteUsers = async (users: User[], dateTime: string) => {
     ? `Deleted ${count} users (${failed} failed)`
     : `Deleted ${count} users`;
   s.stop(summaryMessage);
+};
+
+/**
+ * Displays a formatted summary of the deletion operation
+ *
+ * Shows:
+ * - Total users processed
+ * - Successful deletions
+ * - Failed deletions
+ * - Breakdown of errors by type (wrapped to 75 characters)
+ */
+const displaySummary = () => {
+  if (failed === 0) {
+    // No summary needed if all succeeded
+    return;
+  }
+
+  let message = `Total users processed: ${total}\n`;
+  message += `${color.green("Successfully deleted:")} ${count}\n`;
+  message += `${color.red("Failed with errors:")} ${failed}`;
+
+  if (errorCounts.size > 0) {
+    message += `\n\n${color.bold("Error Breakdown:")}\n`;
+    for (const [error, errorCount] of errorCounts) {
+      const prefix = `${color.red("•")} ${errorCount} user${errorCount === 1 ? "" : "s"}: `;
+      message += `${prefix}${error}\n`;
+    }
+  }
+
+  p.note(message.trim(), "Deletion Summary");
 };
 
 /**
@@ -182,7 +269,7 @@ export const processUsers = async () => {
   const migrationFilePath = readSettings();
   s.start();
   s.message("Reading migration file");
-  const migrationUserIds = readMigrationFile(migrationFilePath);
+  const migrationUserIds = await readMigrationFile(migrationFilePath);
   s.stop(`Found ${migrationUserIds.size} users in migration file`);
 
   // Fetch Clerk users
@@ -209,7 +296,18 @@ export const processUsers = async () => {
   s.start();
   await deleteUsers(usersToDelete, dateTime);
 
+  // Display summary if there were errors
+  displaySummary();
+
   p.outro("User deletion complete");
 };
 
-processUsers();
+processUsers().catch((error) => {
+  console.error("\n");
+  p.log.error(color.red("Error during user deletion:"));
+  p.log.error(color.red(error.message));
+  if (error.stack) {
+    console.error(error.stack);
+  }
+  process.exit(1);
+});

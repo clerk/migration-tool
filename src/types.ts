@@ -116,3 +116,16 @@ export type ImportSummary = {
 	failed: number;
 	errorBreakdown: Map<string, number>;
 };
+
+/**
+ * Log entry for a user deletion attempt
+ *
+ * @property userId - The user ID
+ * @property status - Whether the deletion succeeded or failed
+ * @property error - Error message if deletion failed
+ */
+export type DeleteLogEntry = {
+	userId: string;
+	status: "success" | "error";
+	error?: string;
+};

@@ -1,10 +1,8 @@
 import { describe, expect, test, vi, beforeEach } from "vitest";
 
-// Use vi.hoisted() to create mocks that can be referenced in vi.mock()
-const { mockGetUserList, mockDeleteUser } = vi.hoisted(() => ({
-  mockGetUserList: vi.fn(),
-  mockDeleteUser: vi.fn(),
-}));
+// Create mock functions at module level
+const mockGetUserList = vi.fn();
+const mockDeleteUser = vi.fn();
 
 // Mock @clerk/backend before importing the module
 vi.mock("@clerk/backend", () => ({
@@ -42,15 +40,20 @@ vi.mock("picocolors", () => ({
 }));
 
 // Mock cooldown and getDateTimeStamp
-vi.mock("../utils", async () => {
-  const actual = await vi.importActual("../utils");
-  return {
-    ...actual,
-    cooldown: vi.fn(() => Promise.resolve()),
-    getDateTimeStamp: vi.fn(() => "2024-01-01T12:00:00"),
-    tryCatch: actual.tryCatch,
-  };
-});
+vi.mock("../utils", () => ({
+  cooldown: vi.fn(() => Promise.resolve()),
+  getDateTimeStamp: vi.fn(() => "2024-01-01T12:00:00"),
+  createImportFilePath: vi.fn((file: string) => file),
+  getFileType: vi.fn(() => "application/json"),
+  tryCatch: async (promise: Promise<any>) => {
+    try {
+      const data = await promise;
+      return [data, null];
+    } catch (error) {
+      return [null, error];
+    }
+  },
+}));
 
 // Mock env constants
 vi.mock("../envs-constants", () => ({
@@ -71,16 +74,19 @@ vi.mock("fs", () => ({
 vi.mock("../logger", () => ({
   errorLogger: vi.fn(),
   importLogger: vi.fn(),
+  deleteErrorLogger: vi.fn(),
+  deleteLogger: vi.fn(),
 }));
 
 // Import after mocks are set up
 import { cooldown } from "../utils";
-import { errorLogger } from "../logger";
+import { deleteErrorLogger, deleteLogger } from "../logger";
 import * as fs from "fs";
 
-// Get reference to mocked functions
-const mockCooldown = vi.mocked(cooldown);
-const mockErrorLogger = vi.mocked(errorLogger);
+// Get reference to mocked functions - cast to mock type since vi.mocked is not available
+const mockCooldown = cooldown as ReturnType<typeof vi.fn>;
+const mockDeleteErrorLogger = deleteErrorLogger as ReturnType<typeof vi.fn>;
+const mockDeleteLogger = deleteLogger as ReturnType<typeof vi.fn>;
 
 describe("delete-users", () => {
   let fetchUsers: any;
@@ -89,8 +95,8 @@ describe("delete-users", () => {
   let readMigrationFile: any;
   let findIntersection: any;
 
-  const mockExistsSync = vi.mocked(fs.existsSync);
-  const mockReadFileSync = vi.mocked(fs.readFileSync);
+  const mockExistsSync = fs.existsSync as ReturnType<typeof vi.fn>;
+  const mockReadFileSync = fs.readFileSync as ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -109,9 +115,7 @@ describe("delete-users", () => {
       return JSON.stringify([]);
     });
 
-    // Reset modules to clear module-level state (users array)
-    vi.resetModules();
-    // Re-import the module to get fresh state
+    // Import the module to get functions - note: vi.resetModules() is not available in Bun's Vitest
     const deleteUsersModule = await import("./index");
     fetchUsers = deleteUsersModule.fetchUsers;
     deleteUsers = deleteUsersModule.deleteUsers;
@@ -119,8 +123,6 @@ describe("delete-users", () => {
     readMigrationFile = deleteUsersModule.readMigrationFile;
     findIntersection = deleteUsersModule.findIntersection;
 
-    // Wait for the auto-executed processUsers() to complete
-    await new Promise(resolve => setTimeout(resolve, 10));
     vi.clearAllMocks();
   });
 
@@ -339,14 +341,22 @@ describe("delete-users", () => {
       expect(mockDeleteUser).toHaveBeenCalledTimes(3);
       // Should call cooldown after each user (even failures)
       expect(mockCooldown).toHaveBeenCalledTimes(3);
-      // Should log the error for user_2
-      expect(mockErrorLogger).toHaveBeenCalledTimes(1);
-      expect(mockErrorLogger).toHaveBeenCalledWith(
+
+      // Should log to both error log and delete log for user_2
+      expect(mockDeleteErrorLogger).toHaveBeenCalledTimes(1);
+      expect(mockDeleteErrorLogger).toHaveBeenCalledWith(
         {
           userId: "ext_2",
           status: "error",
           errors: [{ message: "Delete failed", longMessage: "Delete failed" }]
         },
+        dateTime
+      );
+
+      // Should also log to delete log file
+      expect(mockDeleteLogger).toHaveBeenCalledTimes(3); // 2 success + 1 error
+      expect(mockDeleteLogger).toHaveBeenCalledWith(
+        { userId: "ext_2", status: "error", error: "Delete failed" },
         dateTime
       );
     });
@@ -360,12 +370,17 @@ describe("delete-users", () => {
 
       await deleteUsers(users, dateTime);
 
-      expect(mockErrorLogger).toHaveBeenCalledWith(
+      expect(mockDeleteErrorLogger).toHaveBeenCalledWith(
         {
           userId: "user_1",
           status: "error",
           errors: [{ message: "API error", longMessage: "API error" }]
         },
+        dateTime
+      );
+
+      expect(mockDeleteLogger).toHaveBeenCalledWith(
+        { userId: "user_1", status: "error", error: "API error" },
         dateTime
       );
     });
@@ -387,7 +402,8 @@ describe("delete-users", () => {
       await deleteUsers(users, dateTime);
 
       expect(mockDeleteUser).toHaveBeenCalledTimes(4);
-      expect(mockErrorLogger).toHaveBeenCalledTimes(2);
+      expect(mockDeleteErrorLogger).toHaveBeenCalledTimes(2);
+      expect(mockDeleteLogger).toHaveBeenCalledTimes(4); // All 4 users logged (2 success + 2 error)
     });
   });
 
@@ -426,7 +442,7 @@ describe("delete-users", () => {
   });
 
   describe("readMigrationFile", () => {
-    test("reads migration file and returns set of user IDs", () => {
+    test("reads JSON migration file and returns set of user IDs", async () => {
       const mockUsers = [
         { userId: "1", email: "user1@example.com" },
         { userId: "2", email: "user2@example.com" },
@@ -436,7 +452,7 @@ describe("delete-users", () => {
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
 
-      const result = readMigrationFile("samples/users.json");
+      const result = await readMigrationFile("samples/users.json");
 
       expect(result).toBeInstanceOf(Set);
       expect(result.size).toBe(3);
@@ -445,37 +461,53 @@ describe("delete-users", () => {
       expect(result.has("3")).toBe(true);
     });
 
-    test("exits with error when migration file does not exist", () => {
+    test("reads JSON file with 'id' field instead of 'userId'", async () => {
+      const mockUsers = [
+        { id: "user_1", email: "user1@example.com" },
+        { id: "user_2", email: "user2@example.com" },
+      ];
+
+      mockExistsSync.mockReturnValue(true);
+      mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
+
+      const result = await readMigrationFile("samples/users.json");
+
+      expect(result.size).toBe(2);
+      expect(result.has("user_1")).toBe(true);
+      expect(result.has("user_2")).toBe(true);
+    });
+
+    test("exits with error when migration file does not exist", async () => {
       mockExistsSync.mockReturnValue(false);
       const mockExit = vi.spyOn(process, "exit").mockImplementation(() => undefined as never);
 
-      readMigrationFile("samples/nonexistent.json");
+      await readMigrationFile("samples/nonexistent.json");
 
       expect(mockExit).toHaveBeenCalledWith(1);
       mockExit.mockRestore();
     });
 
-    test("handles empty user array", () => {
+    test("handles empty user array in JSON file", async () => {
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(JSON.stringify([]));
 
-      const result = readMigrationFile("samples/empty.json");
+      const result = await readMigrationFile("samples/empty.json");
 
       expect(result).toBeInstanceOf(Set);
       expect(result.size).toBe(0);
     });
 
-    test("skips users without userId field", () => {
+    test("skips users without userId or id field in JSON", async () => {
       const mockUsers = [
         { userId: "1", email: "user1@example.com" },
-        { email: "user2@example.com" }, // no userId
+        { email: "user2@example.com" }, // no userId or id
         { userId: "3", email: "user3@example.com" },
       ];
 
       mockExistsSync.mockReturnValue(true);
       mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
 
-      const result = readMigrationFile("samples/users.json");
+      const result = await readMigrationFile("samples/users.json");
 
       expect(result.size).toBe(2);
       expect(result.has("1")).toBe(true);

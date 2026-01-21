@@ -157,7 +157,6 @@ async function processUserToClerk(
     // Success
     successful++;
     processed++;
-    s.message(`Migrating users: [${processed}/${total}]`);
 
     // Log successful import
     importLogger(
@@ -192,6 +191,7 @@ async function processUserToClerk(
       dateTime,
     );
   }
+  s.message(`Migrating users: [${processed}/${total}] (${successful} successful, ${failed} failed)`);
 }
 
 /**
@@ -206,19 +206,19 @@ async function processUserToClerk(
  * @param summary - The import summary statistics
  */
 const displaySummary = (summary: ImportSummary) => {
-  let message = color.bold("Migration Summary\n\n");
-  message += `  Total users processed: ${summary.totalProcessed}\n`;
-  message += `  ${color.green("Successfully imported:")} ${summary.successful}\n`;
-  message += `  ${color.red("Failed with errors:")} ${summary.failed}\n`;
+  let message = `Total users processed: ${summary.totalProcessed}\n`;
+  message += `${color.green("Successfully imported:")} ${summary.successful}\n`;
+  message += `${color.red("Failed with errors:")} ${summary.failed}`;
 
   if (summary.errorBreakdown.size > 0) {
-    message += `\n${color.bold("Error Breakdown:")}\n`;
+    message += `\n\n${color.bold("Error Breakdown:")}\n`;
     for (const [error, count] of summary.errorBreakdown) {
-      message += `  ${color.red("•")} ${count} user${count === 1 ? "" : "s"}: ${error}\n`;
+      const prefix = `${color.red("•")} ${count} user${count === 1 ? "" : "s"}: `;
+      message += `${prefix}${error}\n`;
     }
   }
 
-  p.note(message.trim(), "Complete");
+  p.note(message.trim(), "Migration Summary");
 };
 
 /**

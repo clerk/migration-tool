@@ -5,6 +5,7 @@ import {
   ErrorPayload,
   ImportLogEntry,
   ValidationErrorPayload,
+  DeleteLogEntry,
 } from "./types";
 
 /**
@@ -63,7 +64,7 @@ export const errorLogger = (payload: ErrorPayload, dateTime: string) => {
       status: payload.status,
       error: err.longMessage,
     };
-    appendToLogFile(`${dateTime}-errors.log`, errorToLog);
+    appendToLogFile(`${dateTime}-import-errors.log`, errorToLog);
   }
 };
 
@@ -83,7 +84,7 @@ export const validationLogger = (
     error: payload.error,
     path: payload.path,
   };
-  appendToLogFile(`${dateTime}-errors.log`, error);
+  appendToLogFile(`${dateTime}-import-errors.log`, error);
 };
 
 /**
@@ -93,4 +94,30 @@ export const validationLogger = (
  */
 export const importLogger = (entry: ImportLogEntry, dateTime: string) => {
   appendToLogFile(`${dateTime}-import.log`, entry);
+};
+
+/**
+ * Logs user deletion errors from the Clerk API
+ * @param payload - The error payload containing user ID, status, and error details
+ * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
+ */
+export const deleteErrorLogger = (payload: ErrorPayload, dateTime: string) => {
+  for (const err of payload.errors) {
+    const errorToLog: ErrorLog = {
+      type: "User Deletion Error",
+      userId: payload.userId,
+      status: payload.status,
+      error: err.longMessage,
+    };
+    appendToLogFile(`${dateTime}-delete-errors.log`, errorToLog);
+  }
+};
+
+/**
+ * Logs user deletion attempts
+ * @param entry - The delete log entry containing user ID and status
+ * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
+ */
+export const deleteLogger = (entry: DeleteLogEntry, dateTime: string) => {
+  appendToLogFile(`${dateTime}-delete.log`, entry);
 };
