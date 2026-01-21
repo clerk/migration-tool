@@ -13,7 +13,11 @@ const s = p.spinner();
 let total: number;
 let count = 0;
 
-// Exported for testing
+/**
+ * Reads the .settings file to get the migration source file path
+ * @returns The file path of the migration source
+ * @throws Exits the process if .settings file is not found or missing the file property
+ */
 export const readSettings = () => {
   const settingsPath = path.join(process.cwd(), ".settings");
 
@@ -40,7 +44,12 @@ export const readSettings = () => {
   return settings.file as string;
 };
 
-// Exported for testing
+/**
+ * Reads a migration file and extracts user IDs
+ * @param filePath - The relative path to the migration file
+ * @returns A Set of user IDs from the migration file
+ * @throws Exits the process if the migration file is not found
+ */
 export const readMigrationFile = (filePath: string) => {
   const fullPath = path.join(process.cwd(), filePath);
 
@@ -67,7 +76,11 @@ export const readMigrationFile = (filePath: string) => {
   return userIds;
 };
 
-// Exported for testing
+/**
+ * Recursively fetches all users from Clerk, paginating through results
+ * @param offset - The offset for pagination (starts at 0)
+ * @returns An array of all Clerk users
+ */
 export const fetchUsers = async (offset: number) => {
   const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY })
   const { data } = await clerk.users.getUserList({ offset, limit: LIMIT });
@@ -86,7 +99,16 @@ export const fetchUsers = async (offset: number) => {
   return users;
 };
 
-// Exported for testing
+/**
+ * Finds the intersection of Clerk users and migration file users
+ *
+ * Matches Clerk users whose externalId matches a userId in the migration file.
+ * This identifies which migrated users exist in Clerk.
+ *
+ * @param clerkUsers - Array of users fetched from Clerk
+ * @param migrationUserIds - Set of user IDs from the migration file
+ * @returns Array of Clerk users that were part of the migration
+ */
 export const findIntersection = (clerkUsers: User[], migrationUserIds: Set<string>) => {
   return clerkUsers.filter(user => {
     // Match Clerk user's externalId with migration file's userId
@@ -94,8 +116,18 @@ export const findIntersection = (clerkUsers: User[], migrationUserIds: Set<strin
   });
 };
 
-// Exported for testing
 export const deleteUsers = async (users: User[]) => {
+/**
+ * Deletes an array of users from Clerk
+ *
+ * Deletes users sequentially with rate limiting between each deletion.
+ * Updates a spinner progress message after each deletion.
+ * Logs any errors that occur during deletion.
+ *
+ * @param users - Array of Clerk users to delete
+ * @param dateTime - Timestamp for error logging
+ * @returns A promise that resolves when all users are processed
+ */
   s.message(`Deleting users: [0/${total}]`);
   for (const user of users) {
     const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY })

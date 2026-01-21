@@ -1,3 +1,19 @@
+/**
+ * Handler for migrating users from Supabase Auth
+ *
+ * Maps Supabase Auth user export format to Clerk's import format.
+ * Handles Supabase-specific features:
+ * - Email confirmation status routing (email_confirmed_at)
+ * - Bcrypt encrypted passwords
+ * - Phone numbers
+ *
+ * @property {string} key - Handler identifier used in CLI
+ * @property {string} value - Internal value for the handler
+ * @property {string} label - Display name shown in CLI prompts
+ * @property {Object} transformer - Field mapping configuration
+ * @property {Function} postTransform - Custom transformation logic for email confirmation
+ * @property {Object} defaults - Default values applied to all users (passwordHasher: bcrypt)
+ */
 const supabaseHandler = {
   key: "supabase",
   value: "supabase",

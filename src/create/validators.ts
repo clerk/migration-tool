@@ -10,16 +10,30 @@ import { PASSWORD_HASHERS } from "../types";
 //
 // ============================================================================
 
+/**
+ * Zod enum of supported password hashing algorithms
+ */
 const passwordHasherEnum = z.enum(PASSWORD_HASHERS as unknown as [string, ...string[]]);
 
-// Email validation using regex to avoid deprecated .email() method
+/**
+ * Email validation string using regex pattern
+ * Uses regex to avoid deprecated Zod .email() method
+ */
 const emailString = z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
 
-// default schema -- incoming data will be transformed to this format
-// All fields are optional except:
-// - userId is required (for logging purposes)
-// - passwordHasher is required when password is provided
-// - user must have either a verified email or verified phone number
+/**
+ * User validation schema for Clerk user imports
+ *
+ * Validates user data before sending to Clerk API.
+ * All fields are optional except:
+ * - userId is required (for tracking and logging)
+ * - passwordHasher is required when password is provided
+ * - user must have at least one verified identifier (email or phone)
+ *
+ * @remarks
+ * Fields can accept single values or arrays (e.g., email: string | string[])
+ * Metadata fields accept any value for flexibility
+ */
 export const userSchema = z.object({
 	userId: z.string(),
 	// Email fields

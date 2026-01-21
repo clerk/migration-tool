@@ -3,6 +3,12 @@ import { handlers } from "./create/handlers";
 import { userSchema } from "./create/validators";
 import * as z from "zod";
 
+/**
+ * List of supported password hashing algorithms in Clerk
+ *
+ * When migrating users with existing passwords, specify which algorithm
+ * was used to hash the passwords so Clerk can validate them correctly.
+ */
 export const PASSWORD_HASHERS = [
 	"argon2i",
 	"argon2id",
@@ -25,20 +31,42 @@ export const PASSWORD_HASHERS = [
 	"sha512_symfony",
 ] as const;
 
+/**
+ * User object validated against the user schema
+ */
 export type User = z.infer<typeof userSchema>;
 
-// create union of string literals from handlers transformer object keys
+/**
+ * Union type of all handler keys (e.g., "clerk" | "auth0" | "supabase" | "authjs")
+ */
 export type HandlerMapKeys = (typeof handlers)[number]["key"];
 
-// create a union of all transformer objects in handlers array
+/**
+ * Union type of all handler configuration objects
+ */
 export type HandlerMapUnion = (typeof handlers)[number];
 
+/**
+ * Error information from a failed user creation attempt
+ *
+ * @property userId - The user ID that failed to import
+ * @property status - HTTP status or error status
+ * @property errors - Array of Clerk API error objects
+ */
 export type ErrorPayload = {
 	userId: string;
 	status: string;
 	errors: ClerkAPIError[];
 };
 
+/**
+ * Validation error information for a user that failed schema validation
+ *
+ * @property error - Description of the validation error
+ * @property path - Path to the field that failed validation
+ * @property id - User ID of the invalid user
+ * @property row - Row number in the source file (0-indexed)
+ */
 export type ValidationErrorPayload = {
 	error: string;
 	path: (string | number)[];
@@ -46,6 +74,14 @@ export type ValidationErrorPayload = {
 	row: number;
 };
 
+/**
+ * Formatted error log entry for file storage
+ *
+ * @property type - Type of error (e.g., "User Creation Error", "Validation Error")
+ * @property userId - The user ID associated with the error
+ * @property status - HTTP status or error status
+ * @property error - Error message
+ */
 export type ErrorLog = {
 	type: string;
 	userId: string;
@@ -53,12 +89,27 @@ export type ErrorLog = {
 	error: string | undefined;
 };
 
+/**
+ * Log entry for a user import attempt
+ *
+ * @property userId - The user ID
+ * @property status - Whether the import succeeded or failed
+ * @property error - Error message if import failed
+ */
 export type ImportLogEntry = {
 	userId: string;
 	status: "success" | "error";
 	error?: string;
 };
 
+/**
+ * Summary statistics for a user import operation
+ *
+ * @property totalProcessed - Total number of users processed
+ * @property successful - Number of successful imports
+ * @property failed - Number of failed imports
+ * @property errorBreakdown - Map of error messages to occurrence counts
+ */
 export type ImportSummary = {
 	totalProcessed: number;
 	successful: number;

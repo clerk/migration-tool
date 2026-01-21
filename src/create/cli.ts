@@ -18,6 +18,11 @@ type Settings = {
 
 const DEV_USER_LIMIT = 500;
 
+/**
+ * Detects whether the Clerk instance is development or production based on the secret key
+ *
+ * @returns "dev" if the secret key starts with "sk_test_", otherwise "prod"
+ */
 export const detectInstanceType = (): "dev" | "prod" => {
   const secretKey = env.CLERK_SECRET_KEY;
   if (secretKey.startsWith("sk_test_")) {
@@ -51,6 +56,14 @@ type FieldAnalysis = {
   fieldCounts: Record<string, number>;
 };
 
+/**
+ * Loads saved settings from the .settings file in the current directory
+ *
+ * Reads previously saved migration parameters to use as defaults in the CLI.
+ * Returns an empty object if the file doesn't exist or is corrupted.
+ *
+ * @returns The saved settings object with key, file, and offset properties
+ */
 export const loadSettings = (): Settings => {
   try {
     const settingsPath = path.join(process.cwd(), SETTINGS_FILE);
@@ -64,6 +77,14 @@ export const loadSettings = (): Settings => {
   return {};
 };
 
+/**
+ * Saves migration settings to the .settings file in the current directory
+ *
+ * Persists the current migration parameters (handler key, file path, offset)
+ * so they can be used as defaults in future runs. Fails silently if unable to write.
+ *
+ * @param settings - The settings object to save
+ */
 export const saveSettings = (settings: Settings): void => {
   try {
     const settingsPath = path.join(process.cwd(), SETTINGS_FILE);
@@ -73,6 +94,18 @@ export const saveSettings = (settings: Settings): void => {
   }
 };
 
+/**
+ * Loads and transforms users from a file without validation
+ *
+ * Reads users from JSON or CSV files and applies the handler's field transformations
+ * and postTransform logic. Used for analyzing file contents before migration.
+ * Does not validate against the schema.
+ *
+ * @param file - The file path to load users from
+ * @param handlerKey - The handler key identifying which platform to migrate from
+ * @returns Array of transformed user objects (not validated)
+ * @throws Error if handler is not found for the given key
+ */
 export const loadRawUsers = async (file: string, handlerKey: string): Promise<Record<string, unknown>[]> => {
   const filePath = createImportFilePath(file);
   const type = getFileType(filePath);
@@ -106,12 +139,34 @@ export const loadRawUsers = async (file: string, handlerKey: string): Promise<Re
   }
 };
 
+/**
+ * Checks if a value exists and is not empty
+ *
+ * Returns false for undefined, null, empty strings, and empty arrays.
+ * Returns true for all other values including 0, false, and non-empty objects.
+ *
+ * @param value - The value to check
+ * @returns true if the value has meaningful content, false otherwise
+ */
 export const hasValue = (value: unknown): boolean => {
   if (value === undefined || value === null || value === "") return false;
   if (Array.isArray(value)) return value.length > 0;
   return true;
 };
 
+/**
+ * Analyzes user data to determine field presence and identifier coverage
+ *
+ * Examines all users to count:
+ * - How many users have each field (firstName, lastName, password, totpSecret)
+ * - Identifier coverage (verified/unverified emails and phones, usernames)
+ * - Whether all users have at least one valid identifier
+ *
+ * Used to provide feedback about Dashboard configuration requirements.
+ *
+ * @param users - Array of user objects to analyze
+ * @returns Field analysis object with counts and identifier statistics
+ */
 export const analyzeFields = (users: Record<string, unknown>[]): FieldAnalysis => {
   const totalUsers = users.length;
 
@@ -185,6 +240,14 @@ export const analyzeFields = (users: Record<string, unknown>[]): FieldAnalysis =
   return { presentOnAll, presentOnSome, identifiers, totalUsers, fieldCounts };
 };
 
+/**
+ * Formats a count statistic into a human-readable string
+ *
+ * @param count - The number of users who have the field
+ * @param total - The total number of users
+ * @param label - The label for the field
+ * @returns A formatted string like "All users have...", "No users have...", or "X of Y users have..."
+ */
 export const formatCount = (count: number, total: number, label: string): string => {
   if (count === total) {
     return `All users have ${label}`;
@@ -195,6 +258,19 @@ export const formatCount = (count: number, total: number, label: string): string
   }
 };
 
+/**
+ * Displays identifier analysis and Dashboard configuration guidance
+ *
+ * Shows:
+ * - Count of users with each identifier type (verified emails, verified phones, usernames)
+ * - Count of users with unverified identifiers (if any)
+ * - Whether all users have at least one valid identifier
+ * - Dashboard configuration recommendations (required vs optional identifiers)
+ *
+ * Uses color coding: green for complete coverage, yellow for partial, red for missing.
+ *
+ * @param analysis - The field analysis results
+ */
 export const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
   const { identifiers, totalUsers } = analysis;
 
@@ -259,6 +335,17 @@ export const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
   p.note(identifierMessage.trim(), "Identifiers");
 };
 
+/**
+ * Displays password analysis and prompts for migration preference
+ *
+ * Shows how many users have passwords and provides Dashboard configuration guidance.
+ * If some users lack passwords, prompts whether to migrate those users anyway.
+ *
+ * @param analysis - The field analysis results
+ * @returns true if users without passwords should be migrated (skipPasswordRequirement),
+ *          false if all users have passwords,
+ *          null if the user cancelled
+ */
 export const displayPasswordAnalysis = async (analysis: FieldAnalysis): Promise<boolean | null> => {
   const { totalUsers, fieldCounts } = analysis;
   const usersWithPasswords = fieldCounts.password || 0;
@@ -296,6 +383,15 @@ export const displayPasswordAnalysis = async (analysis: FieldAnalysis): Promise<
   return false; // All users have passwords, no need for skipPasswordRequirement
 };
 
+/**
+ * Displays user model analysis (first/last name) and Dashboard configuration guidance
+ *
+ * Shows how many users have first and last names and provides recommendations
+ * for Dashboard configuration (required vs optional vs disabled).
+ *
+ * @param analysis - The field analysis results
+ * @returns true if users have name data and confirmation is needed, false otherwise
+ */
 export const displayUserModelAnalysis = (analysis: FieldAnalysis): boolean => {
   const { totalUsers, fieldCounts } = analysis;
   const usersWithFirstName = fieldCounts.firstName || 0;
@@ -334,6 +430,15 @@ export const displayUserModelAnalysis = (analysis: FieldAnalysis): boolean => {
   return someUsersHaveNames;
 };
 
+/**
+ * Displays analysis of other fields (excluding identifiers, password, and names)
+ *
+ * Shows fields like TOTP Secret that are present on all or some users,
+ * with Dashboard configuration guidance.
+ *
+ * @param analysis - The field analysis results
+ * @returns true if there are other fields to display, false otherwise
+ */
 export const displayOtherFieldsAnalysis = (analysis: FieldAnalysis): boolean => {
   // Filter out password, firstName, and lastName since they have dedicated sections
   const excludedFields = ["Password", "First Name", "Last Name"];
@@ -367,6 +472,22 @@ export const displayOtherFieldsAnalysis = (analysis: FieldAnalysis): boolean => 
   return false;
 };
 
+/**
+ * Runs the interactive CLI for user migration
+ *
+ * Guides the user through the migration process:
+ * 1. Gathers migration parameters (handler, file, offset)
+ * 2. Analyzes the import file and displays field statistics
+ * 3. Validates instance type and user count (dev instances limited to 500 users)
+ * 4. Confirms Dashboard configuration for identifiers, password, user model, and other fields
+ * 5. Gets final confirmation before starting migration
+ *
+ * Saves settings for future runs and returns all configuration options.
+ *
+ * @returns Configuration object with handler key, file path, offset, instance type,
+ *          and skipPasswordRequirement flag
+ * @throws Exits the process if migration is cancelled or validation fails
+ */
 export const runCLI = async () => {
   p.intro(`${color.bgCyan(color.black("Clerk User Migration Utility"))}`);
 

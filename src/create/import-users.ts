@@ -14,6 +14,22 @@ let successful = 0;
 let failed = 0;
 const errorCounts = new Map<string, number>();
 
+/**
+ * Creates a single user in Clerk with all associated data
+ *
+ * Handles the full user creation process:
+ * 1. Creates the user with primary email/phone and core fields
+ * 2. Adds additional emails and phones
+ * 3. Adds verified and unverified email addresses
+ * 4. Adds verified and unverified phone numbers
+ * 5. Handles password with appropriate hasher
+ * 6. Supports backup codes if enabled
+ *
+ * @param userData - The validated user data
+ * @param skipPasswordRequirement - Whether to skip password requirement for users without passwords
+ * @returns The created Clerk user object
+ * @throws Will throw if user creation fails
+ */
 const createUser = async (userData: User, skipPasswordRequirement: boolean) => {
   const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
 
@@ -89,6 +105,19 @@ const createUser = async (userData: User, skipPasswordRequirement: boolean) => {
   return createdUser;
 };
 
+/**
+ * Processes a single user for import to Clerk
+ *
+ * Validates the user data, creates the user in Clerk, and handles errors.
+ * Implements retry logic for rate limit errors (429).
+ * Updates progress counters and logs results.
+ *
+ * @param userData - The user data to import
+ * @param total - Total number of users being processed (for progress display)
+ * @param dateTime - Timestamp for log file naming
+ * @param skipPasswordRequirement - Whether to skip password requirement
+ * @returns A promise that resolves when the user is processed
+ */
 async function processUserToClerk(
   userData: User,
   total: number,
@@ -140,6 +169,17 @@ async function processUserToClerk(
   }
 }
 
+/**
+ * Displays a formatted summary of the import operation
+ *
+ * Shows:
+ * - Total users processed
+ * - Successful imports
+ * - Failed imports
+ * - Breakdown of errors by type
+ *
+ * @param summary - The import summary statistics
+ */
 const displaySummary = (summary: ImportSummary) => {
   let message = color.bold("Migration Summary\n\n");
   message += `  Total users processed: ${summary.totalProcessed}\n`;
@@ -156,6 +196,17 @@ const displaySummary = (summary: ImportSummary) => {
   p.note(message.trim(), "Complete");
 };
 
+/**
+ * Imports an array of users to Clerk
+ *
+ * Main entry point for user migration. Processes users sequentially with
+ * rate limiting, displays progress, and shows a summary at completion.
+ * Logs all results to timestamped log files.
+ *
+ * @param users - Array of validated users to import
+ * @param skipPasswordRequirement - Whether to allow users without passwords (default: false)
+ * @returns A promise that resolves when all users are processed
+ */
 export const importUsers = async (users: User[], skipPasswordRequirement: boolean = false) => {
   const dateTime = getDateTimeStamp();
 

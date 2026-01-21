@@ -50,7 +50,7 @@ vi.mock("./envs-constants", () => ({
 
 // Import after mocks are set up
 import { importUsers } from "./import-users";
-import * as logger from "./logger";
+import * as logger from "../logger";
 
 // Helper to clean up logs directory
 const cleanupLogs = () => {

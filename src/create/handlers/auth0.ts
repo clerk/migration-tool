@@ -1,3 +1,20 @@
+/**
+ * Handler for migrating users from Auth0
+ *
+ * Maps Auth0's user export format to Clerk's import format.
+ * Handles Auth0-specific features:
+ * - Nested _id.$oid field extraction
+ * - Email verification status routing (verified vs unverified)
+ * - User metadata mapping
+ * - Bcrypt password hashes
+ *
+ * @property {string} key - Handler identifier used in CLI
+ * @property {string} value - Internal value for the handler
+ * @property {string} label - Display name shown in CLI prompts
+ * @property {Object} transformer - Field mapping configuration (supports nested paths with dot notation)
+ * @property {Function} postTransform - Custom transformation logic for email verification
+ * @property {Object} defaults - Default values applied to all users (passwordHasher: bcrypt)
+ */
 const auth0Handler = {
   key: "auth0",
   value: "auth0",

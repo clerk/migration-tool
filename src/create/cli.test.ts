@@ -30,7 +30,7 @@ import * as p from "@clack/prompts";
 // Create a module mock for envs-constants
 let mockSecretKey = "sk_test_mockkey";
 
-vi.mock("./envs-constants", () => ({
+vi.mock("../envs-constants", () => ({
   env: {
     get CLERK_SECRET_KEY() {
       return mockSecretKey;
@@ -39,7 +39,7 @@ vi.mock("./envs-constants", () => ({
 }));
 
 // Mock the utils module
-vi.mock("./utils", () => ({
+vi.mock("../utils", () => ({
   createImportFilePath: vi.fn((file: string) => file),
   getFileType: vi.fn((file: string) => {
     if (file.endsWith(".csv")) return "text/csv";

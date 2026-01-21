@@ -7,6 +7,10 @@ import {
   ValidationErrorPayload,
 } from "./types";
 
+/**
+ * Ensures a folder exists, creating it if necessary
+ * @param folderPath - The absolute path to the folder
+ */
 const confirmOrCreateFolder = (folderPath: string) => {
   try {
     if (!fs.existsSync(folderPath)) {
@@ -17,8 +21,17 @@ const confirmOrCreateFolder = (folderPath: string) => {
   }
 };
 
+/**
+ * Gets the absolute path to the logs directory
+ * @returns The absolute path to the logs folder
+ */
 const getLogPath = () => path.join(__dirname, "..", "logs");
 
+/**
+ * Appends an entry to a log file, creating the file if it doesn't exist
+ * @param filePath - The relative file path within the logs directory
+ * @param entry - The log entry to append (will be JSON stringified)
+ */
 function appendToLogFile(filePath: string, entry: unknown) {
   try {
     const logPath = getLogPath();
@@ -37,6 +50,11 @@ function appendToLogFile(filePath: string, entry: unknown) {
   }
 }
 
+/**
+ * Logs user creation errors from the Clerk API
+ * @param payload - The error payload containing user ID, status, and error details
+ * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
+ */
 export const errorLogger = (payload: ErrorPayload, dateTime: string) => {
   for (const err of payload.errors) {
     const errorToLog: ErrorLog = {
@@ -49,6 +67,11 @@ export const errorLogger = (payload: ErrorPayload, dateTime: string) => {
   }
 };
 
+/**
+ * Logs validation errors that occur during user data transformation
+ * @param payload - The validation error payload containing row, ID, error message, and field path
+ * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
+ */
 export const validationLogger = (
   payload: ValidationErrorPayload,
   dateTime: string,
@@ -63,6 +86,11 @@ export const validationLogger = (
   appendToLogFile(`${dateTime}-errors.log`, error);
 };
 
+/**
+ * Logs successful user imports
+ * @param entry - The import log entry containing user ID and timestamp
+ * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
+ */
 export const importLogger = (entry: ImportLogEntry, dateTime: string) => {
   appendToLogFile(`${dateTime}-import.log`, entry);
 };

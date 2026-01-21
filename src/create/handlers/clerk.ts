@@ -1,3 +1,15 @@
+/**
+ * Handler for migrating users from one Clerk instance to another
+ *
+ * Maps Clerk's user export format to the import format.
+ * Supports all Clerk user fields including identifiers, passwords, MFA settings,
+ * and metadata.
+ *
+ * @property {string} key - Handler identifier used in CLI
+ * @property {string} value - Internal value for the handler
+ * @property {string} label - Display name shown in CLI prompts
+ * @property {Object} transformer - Field mapping configuration
+ */
 const clerkHandler = {
   key: "clerk",
   value: "clerk",

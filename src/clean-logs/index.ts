@@ -5,6 +5,14 @@ import color from "picocolors";
 
 const LOGS_DIR = path.join(process.cwd(), "logs");
 
+/**
+ * Deletes all log files from the logs directory
+ *
+ * Prompts the user for confirmation before deleting any files.
+ * Only deletes files, not subdirectories.
+ *
+ * @returns A promise that resolves when the operation is complete
+ */
 const cleanLogs = async () => {
   p.intro(
     `${color.bgCyan(color.black("Clerk User Migration Utility - Clean Logs"))}`,

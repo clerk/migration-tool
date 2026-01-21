@@ -9,8 +9,24 @@ import { createImportFilePath, getDateTimeStamp, getFileType } from "../utils";
 
 const s = p.spinner();
 
-// Helper to selectively flatten nested objects based on transformer config
-// Only flattens paths that are explicitly referenced in the transformer
+/**
+ * Selectively flattens nested objects based on transformer configuration
+ *
+ * Only flattens paths that are explicitly referenced in the transformer config.
+ * This allows handlers to map nested fields (e.g., "_id.$oid" in Auth0) to
+ * flat fields in the target schema.
+ *
+ * @param obj - The object to flatten
+ * @param transformer - The transformer config mapping source paths to target fields
+ * @param prefix - Internal parameter for recursive flattening (current path prefix)
+ * @returns Flattened object with dot-notation keys for nested paths
+ *
+ * @example
+ * const obj = { _id: { $oid: "123" }, email: "test@example.com" }
+ * const transformer = { "_id.$oid": "userId", "email": "email" }
+ * flattenObjectSelectively(obj, transformer)
+ * // Returns: { "_id.$oid": "123", "email": "test@example.com" }
+ */
 function flattenObjectSelectively(
   obj: Record<string, unknown>,
   transformer: Record<string, string>,
@@ -36,7 +52,24 @@ function flattenObjectSelectively(
   return result;
 }
 
-// transform incoming data datas to match default schema
+/**
+ * Transforms data keys from source format to Clerk's import schema
+ *
+ * Maps field names from the source platform (Auth0, Supabase, etc.) to
+ * Clerk's expected field names using the handler's transformer configuration.
+ * Flattens nested objects as needed and filters out empty values.
+ *
+ * @template T - The handler type being used for transformation
+ * @param data - The raw user data from the source platform
+ * @param keys - The handler configuration with transformer mapping
+ * @returns Transformed user object with Clerk field names
+ *
+ * @example
+ * const auth0User = { "_id": { "$oid": "123" }, "email": "test@example.com" }
+ * const handler = handlers.find(h => h.key === "auth0")
+ * transformKeys(auth0User, handler)
+ * // Returns: { userId: "123", email: "test@example.com" }
+ */
 export function transformKeys<T extends HandlerMapUnion>(
   data: Record<string, unknown>,
   keys: T,
@@ -58,6 +91,25 @@ export function transformKeys<T extends HandlerMapUnion>(
   return transformedData;
 }
 
+/**
+ * Transforms and validates an array of users for import
+ *
+ * Processes each user through:
+ * 1. Field transformation using the handler's transformer config
+ * 2. Special handling for Clerk-to-Clerk migrations (email/phone array consolidation)
+ * 3. Handler-specific postTransform logic (if defined)
+ * 4. Schema validation
+ * 5. Validation error logging for failed users
+ *
+ * Throws immediately if an invalid password hasher is detected.
+ * Logs other validation errors and excludes invalid users from the result.
+ *
+ * @param users - Array of raw user data to transform
+ * @param key - Handler key identifying the source platform
+ * @param dateTime - Timestamp for log file naming
+ * @returns Array of successfully transformed and validated users
+ * @throws Error if an invalid password hasher is detected
+ */
 const transformUsers = (
   users: User[],
   key: HandlerMapKeys,
@@ -166,6 +218,16 @@ const transformUsers = (
   return transformedData;
 };
 
+/**
+ * Adds default field values from the handler configuration to all users
+ *
+ * Some handlers define default values that should be applied to all users.
+ * For example, the Supabase handler defaults passwordHasher to "bcrypt".
+ *
+ * @param users - Array of user objects
+ * @param key - Handler key identifying which defaults to apply
+ * @returns Array of users with default fields applied (if handler has defaults)
+ */
 const addDefaultFields = (users: User[], key: string) => {
   const handler = handlers.find((obj) => obj.key === key);
   const defaultFields = (handler && "defaults" in handler) ? handler.defaults : null;
@@ -187,6 +249,24 @@ const addDefaultFields = (users: User[], key: string) => {
   }
 };
 
+/**
+ * Loads, transforms, and validates users from a JSON or CSV file
+ *
+ * Main entry point for loading user data. Performs the following:
+ * 1. Reads users from file (supports JSON and CSV)
+ * 2. Applies handler default fields
+ * 3. Transforms field names to Clerk schema
+ * 4. Validates each user against schema
+ * 5. Logs validation errors
+ * 6. Returns only successfully validated users
+ *
+ * Displays a spinner during the loading process.
+ *
+ * @param file - File path to load users from (relative or absolute)
+ * @param key - Handler key identifying the source platform
+ * @returns Array of validated users ready for import
+ * @throws Error if file cannot be read or contains invalid data
+ */
 export const loadUsersFromFile = async (
   file: string,
   key: HandlerMapKeys,
