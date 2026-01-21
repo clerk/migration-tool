@@ -28,6 +28,8 @@ The only required fields are `userId` and an identifier (one of `email`, `phone`
 
 The samples/ folder contains some samples you can test with. The samples include issues that will produce errors when running the import.
 
+Some sample users have passwords. The password is `Kk4aPMeiaRpAs2OeX1NE`.
+
 ### Secret Key
 
 Create a `.env` file in the root of the folder and add your `CLERK_SECRET_KEY` to it. You can find your secret key in the [Clerk dashboard](https://dashboard.clerk.dev/).
@@ -74,6 +76,10 @@ bun clean-logs
 ```
 All migrations and deletions will create logs in the `./logs` folder. This command will delete those logs.
 
+
+## Migrating OAuth connections
+
+OAuth connections can not be directly migrated. The creation of the connection requires the user to consent, which can't happen on a migration like this. Instead you can rely on Clerk's [Account Linking](https://clerk.com/docs/guides/configure/auth-strategies/social-connections/account-linking) to handle this.
 
 ## Handling the Foreign Key constraint
 

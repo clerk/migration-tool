@@ -1,9 +1,9 @@
 import "dotenv/config";
 
 import { env } from "../envs-constants";
-import { runCLI } from "../cli";
-import { loadUsersFromFile } from "../functions";
-import { importUsers } from "../import-users";
+import { runCLI } from "./cli";
+import { loadUsersFromFile } from "./functions";
+import { importUsers } from "./import-users";
 
 /**
  * Main entry point for the user migration script
