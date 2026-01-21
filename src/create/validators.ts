@@ -16,12 +16,6 @@ import { PASSWORD_HASHERS } from "../types";
 const passwordHasherEnum = z.enum(PASSWORD_HASHERS as unknown as [string, ...string[]]);
 
 /**
- * Email validation string using regex pattern
- * Uses regex to avoid deprecated Zod .email() method
- */
-const emailString = z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
-
-/**
  * User validation schema for Clerk user imports
  *
  * Validates user data before sending to Clerk API.
@@ -37,9 +31,9 @@ const emailString = z.string().regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
 export const userSchema = z.object({
 	userId: z.string(),
 	// Email fields
-	email: z.union([emailString, z.array(emailString)]).optional(),
-	emailAddresses: z.union([emailString, z.array(emailString)]).optional(),
-	unverifiedEmailAddresses: z.union([emailString, z.array(emailString)]).optional(),
+	email: z.union([z.email(), z.array(z.email())]).optional(),
+	emailAddresses: z.union([z.email(), z.array(z.email())]).optional(),
+	unverifiedEmailAddresses: z.union([z.email(), z.array(z.email())]).optional(),
 	// Phone fields
 	phone: z.union([z.string(), z.array(z.string())]).optional(),
 	phoneNumbers: z.union([z.string(), z.array(z.string())]).optional(),
