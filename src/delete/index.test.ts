@@ -41,12 +41,14 @@ vi.mock("picocolors", () => ({
   },
 }));
 
-// Mock cooldown to track calls
+// Mock cooldown and getDateTimeStamp
 vi.mock("../utils", async () => {
   const actual = await vi.importActual("../utils");
   return {
     ...actual,
     cooldown: vi.fn(() => Promise.resolve()),
+    getDateTimeStamp: vi.fn(() => "2024-01-01T12:00:00"),
+    tryCatch: actual.tryCatch,
   };
 });
 
@@ -65,12 +67,20 @@ vi.mock("fs", () => ({
   readFileSync: vi.fn(),
 }));
 
+// Mock logger module
+vi.mock("../logger", () => ({
+  errorLogger: vi.fn(),
+  importLogger: vi.fn(),
+}));
+
 // Import after mocks are set up
 import { cooldown } from "../utils";
+import { errorLogger } from "../logger";
 import * as fs from "fs";
 
-// Get reference to mocked cooldown
+// Get reference to mocked functions
 const mockCooldown = vi.mocked(cooldown);
+const mockErrorLogger = vi.mocked(errorLogger);
 
 describe("delete-users", () => {
   let fetchUsers: any;
@@ -253,6 +263,8 @@ describe("delete-users", () => {
   });
 
   describe("deleteUsers", () => {
+    const dateTime = "2024-01-01T12:00:00";
+
     test("deletes all users sequentially", async () => {
       mockDeleteUser.mockResolvedValue({});
 
@@ -262,7 +274,7 @@ describe("delete-users", () => {
         { id: "user_3", firstName: "Bob" },
       ] as any[];
 
-      await deleteUsers(users);
+      await deleteUsers(users, dateTime);
 
       expect(mockDeleteUser).toHaveBeenCalledTimes(3);
       expect(mockDeleteUser).toHaveBeenNthCalledWith(1, "user_1");
@@ -279,7 +291,7 @@ describe("delete-users", () => {
         { id: "user_3", firstName: "Bob" },
       ] as any[];
 
-      await deleteUsers(users);
+      await deleteUsers(users, dateTime);
 
       // Should call cooldown after each deletion (3 times) with env.DELAY
       expect(mockCooldown).toHaveBeenCalledTimes(3);
@@ -295,7 +307,7 @@ describe("delete-users", () => {
         { id: "user_3", firstName: "Bob" },
       ] as any[];
 
-      await deleteUsers(users);
+      await deleteUsers(users, dateTime);
 
       // Verify all deletions completed
       expect(mockDeleteUser).toHaveBeenCalledTimes(3);
@@ -303,31 +315,79 @@ describe("delete-users", () => {
     });
 
     test("handles empty user array", async () => {
-      await deleteUsers([]);
+      await deleteUsers([], dateTime);
 
       expect(mockDeleteUser).not.toHaveBeenCalled();
       expect(mockCooldown).not.toHaveBeenCalled();
     });
 
-    test("continues deletion if one fails", async () => {
+    test("continues deletion if one fails and logs error", async () => {
       mockDeleteUser
         .mockResolvedValueOnce({})
         .mockRejectedValueOnce(new Error("Delete failed"))
         .mockResolvedValueOnce({});
 
       const users = [
+        { id: "user_1", externalId: "ext_1", firstName: "John" },
+        { id: "user_2", externalId: "ext_2", firstName: "Jane" },
+        { id: "user_3", externalId: "ext_3", firstName: "Bob" },
+      ] as any[];
+
+      await deleteUsers(users, dateTime);
+
+      // Should attempt all three deletions
+      expect(mockDeleteUser).toHaveBeenCalledTimes(3);
+      // Should call cooldown after each user (even failures)
+      expect(mockCooldown).toHaveBeenCalledTimes(3);
+      // Should log the error for user_2
+      expect(mockErrorLogger).toHaveBeenCalledTimes(1);
+      expect(mockErrorLogger).toHaveBeenCalledWith(
+        {
+          userId: "ext_2",
+          status: "error",
+          errors: [{ message: "Delete failed", longMessage: "Delete failed" }]
+        },
+        dateTime
+      );
+    });
+
+    test("logs errors with user id when externalId is not present", async () => {
+      mockDeleteUser.mockRejectedValueOnce(new Error("API error"));
+
+      const users = [
+        { id: "user_1", firstName: "John" }, // no externalId
+      ] as any[];
+
+      await deleteUsers(users, dateTime);
+
+      expect(mockErrorLogger).toHaveBeenCalledWith(
+        {
+          userId: "user_1",
+          status: "error",
+          errors: [{ message: "API error", longMessage: "API error" }]
+        },
+        dateTime
+      );
+    });
+
+    test("tracks successful and failed deletions separately", async () => {
+      mockDeleteUser
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error("Error 1"))
+        .mockResolvedValueOnce({})
+        .mockRejectedValueOnce(new Error("Error 2"));
+
+      const users = [
         { id: "user_1", firstName: "John" },
         { id: "user_2", firstName: "Jane" },
         { id: "user_3", firstName: "Bob" },
+        { id: "user_4", firstName: "Alice" },
       ] as any[];
 
-      // This should not throw, but user_2 deletion will fail silently
-      // Note: Current implementation doesn't handle errors, so this will actually throw
-      // If error handling is needed, it should be added to the implementation
-      await expect(deleteUsers(users)).rejects.toThrow("Delete failed");
+      await deleteUsers(users, dateTime);
 
-      // Should still attempt first two deletions
-      expect(mockDeleteUser).toHaveBeenCalledTimes(2);
+      expect(mockDeleteUser).toHaveBeenCalledTimes(4);
+      expect(mockErrorLogger).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -494,6 +554,8 @@ describe("delete-users", () => {
 
   describe("integration: full delete process", () => {
     test("fetches and deletes 750 users across 2 pages", async () => {
+      const dateTime = "2024-01-01T12:00:00";
+
       // Setup pagination mock
       const firstPage = Array.from({ length: 500 }, (_, i) => ({
         id: `user_${i}`,
@@ -520,7 +582,7 @@ describe("delete-users", () => {
       vi.clearAllMocks();
 
       // Delete users
-      await deleteUsers(users);
+      await deleteUsers(users, dateTime);
       expect(mockDeleteUser).toHaveBeenCalledTimes(750);
       expect(mockCooldown).toHaveBeenCalledTimes(750); // After each deletion
     });

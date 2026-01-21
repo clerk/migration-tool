@@ -4,7 +4,7 @@ import fs from "fs";
 import path from "path";
 import csvParser from "csv-parser";
 import { handlers } from "./handlers";
-import { checkIfFileExists, getFileType, createImportFilePath } from "../utils";
+import { checkIfFileExists, getFileType, createImportFilePath, tryCatch } from "../utils";
 import { env } from "../envs-constants";
 import { transformKeys as transformKeysFromFunctions } from "./functions";
 
@@ -541,19 +541,18 @@ export const runCLI = async () => {
   const spinner = p.spinner();
   spinner.start("Analyzing import file...");
 
-  let analysis: FieldAnalysis;
-  let userCount: number;
-  try {
-    const users = await loadRawUsers(initialArgs.file, initialArgs.key);
-    userCount = users.length;
-    spinner.stop(`Found ${userCount} users in file`);
+  const [users, error] = await tryCatch(loadRawUsers(initialArgs.file, initialArgs.key));
 
-    analysis = analyzeFields(users);
-  } catch (error) {
+  if (error) {
     spinner.stop("Error analyzing file");
     p.cancel("Failed to analyze import file. Please check the file format.");
     process.exit(1);
   }
+
+  const userCount = users.length;
+  spinner.stop(`Found ${userCount} users in file`);
+
+  const analysis = analyzeFields(users);
 
   // Step 3: Check instance type and validate
   const instanceType = detectInstanceType();

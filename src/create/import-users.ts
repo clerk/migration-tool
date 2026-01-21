@@ -4,7 +4,7 @@ import { env } from "../envs-constants";
 import * as p from "@clack/prompts";
 import color from "picocolors";
 import { errorLogger, importLogger } from "../logger";
-import { cooldown, getDateTimeStamp } from "../utils";
+import { cooldown, getDateTimeStamp, tryCatch } from "../utils";
 import { userSchema } from "./validators";
 import { ImportSummary, User } from "../types";
 
@@ -76,29 +76,49 @@ const createUser = async (userData: User, skipPasswordRequirement: boolean) => {
   // If user has no password and skipPasswordRequirement is false, the API will return an error
 
   // Create the user with the primary email
-  const createdUser = await clerk.users.createUser(
-    userParams as Parameters<typeof clerk.users.createUser>[0]
+  const [createdUser, createError] = await tryCatch(
+    clerk.users.createUser(userParams as Parameters<typeof clerk.users.createUser>[0])
   );
 
+  if (createError) {
+    throw createError;
+  }
+
   // Add additional emails to the created user
+  // Use tryCatch to make these non-fatal - if they fail, log but continue
   for (const email of additionalEmails) {
     if (email) {
-      await clerk.emailAddresses.createEmailAddress({
-        userId: createdUser.id,
-        emailAddress: email,
-        primary: false,
-      });
+      const [, emailError] = await tryCatch(
+        clerk.emailAddresses.createEmailAddress({
+          userId: createdUser.id,
+          emailAddress: email,
+          primary: false,
+        })
+      );
+
+      if (emailError) {
+        // Log warning but don't fail the entire user creation
+        console.warn(`Failed to add additional email ${email} for user ${userData.userId}: ${emailError.message}`);
+      }
     }
   }
 
   // Add additional phones to the created user
+  // Use tryCatch to make these non-fatal - if they fail, log but continue
   for (const phone of additionalPhones) {
     if (phone) {
-      await clerk.phoneNumbers.createPhoneNumber({
-        userId: createdUser.id,
-        phoneNumber: phone,
-        primary: false,
-      });
+      const [, phoneError] = await tryCatch(
+        clerk.phoneNumbers.createPhoneNumber({
+          userId: createdUser.id,
+          phoneNumber: phone,
+          primary: false,
+        })
+      );
+
+      if (phoneError) {
+        // Log warning but don't fail the entire user creation
+        console.warn(`Failed to add additional phone ${phone} for user ${userData.userId}: ${phoneError.message}`);
+      }
     }
   }
 
@@ -125,11 +145,16 @@ async function processUserToClerk(
   skipPasswordRequirement: boolean,
 ) {
   try {
+    // Validate user data
     const parsedUserData = userSchema.safeParse(userData);
     if (!parsedUserData.success) {
       throw parsedUserData.error;
     }
+
+    // Create user (may throw for main user creation, but additional emails/phones use tryCatch internally)
     await createUser(parsedUserData.data, skipPasswordRequirement);
+
+    // Success
     successful++;
     processed++;
     s.message(`Migrating users: [${processed}/${total}]`);

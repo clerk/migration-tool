@@ -2,8 +2,9 @@ import "dotenv/config";
 import { createClerkClient, User } from "@clerk/backend";
 import * as p from "@clack/prompts";
 import color from "picocolors";
-import { cooldown } from "../utils";
+import { cooldown, tryCatch, getDateTimeStamp } from "../utils";
 import { env } from "../envs-constants";
+import { errorLogger } from "../logger";
 import * as fs from "fs";
 import * as path from "path";
 
@@ -12,6 +13,7 @@ const users: User[] = [];
 const s = p.spinner();
 let total: number;
 let count = 0;
+let failed = 0;
 
 /**
  * Reads the .settings file to get the migration source file path
@@ -116,7 +118,6 @@ export const findIntersection = (clerkUsers: User[], migrationUserIds: Set<strin
   });
 };
 
-export const deleteUsers = async (users: User[]) => {
 /**
  * Deletes an array of users from Clerk
  *
@@ -128,19 +129,50 @@ export const deleteUsers = async (users: User[]) => {
  * @param dateTime - Timestamp for error logging
  * @returns A promise that resolves when all users are processed
  */
+export const deleteUsers = async (users: User[], dateTime: string) => {
   s.message(`Deleting users: [0/${total}]`);
   for (const user of users) {
-    const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY })
-    await clerk.users.deleteUser(user.id)
-      .then(async () => {
-        count++;
-        s.message(`Deleting users: [${count}/${total}]`);
-        await cooldown(env.DELAY);
-      })
+    const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
+    const [, error] = await tryCatch(clerk.users.deleteUser(user.id));
+
+    if (error) {
+      failed++;
+      // Log the error
+      errorLogger(
+        {
+          userId: user.externalId || user.id,
+          status: "error",
+          errors: [{ message: error.message, longMessage: error.message }]
+        },
+        dateTime,
+      );
+    } else {
+      count++;
+    }
+
+    const processed = count + failed;
+    s.message(`Deleting users: [${processed}/${total}] (${count} successful, ${failed} failed)`);
+    await cooldown(env.DELAY);
   }
-  s.stop(`Deleted ${count} users`);
+
+  const summaryMessage = failed > 0
+    ? `Deleted ${count} users (${failed} failed)`
+    : `Deleted ${count} users`;
+  s.stop(summaryMessage);
 };
 
+/**
+ * Main function to process and delete migrated users
+ *
+ * Workflow:
+ * 1. Reads the migration source file from .settings
+ * 2. Extracts user IDs from the migration file
+ * 3. Fetches all users from Clerk
+ * 4. Finds the intersection (migrated users that exist in Clerk)
+ * 5. Deletes the intersecting users
+ *
+ * @returns A promise that resolves when the deletion process is complete
+ */
 export const processUsers = async () => {
   p.intro(
     `${color.bgCyan(color.black("Clerk User Migration Utility - Deleting Migrated Users"))}`,
@@ -173,8 +205,9 @@ export const processUsers = async () => {
   }
 
   // Delete users
+  const dateTime = getDateTimeStamp();
   s.start();
-  await deleteUsers(usersToDelete);
+  await deleteUsers(usersToDelete, dateTime);
 
   p.outro("User deletion complete");
 };
