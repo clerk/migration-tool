@@ -134,3 +134,230 @@ declare global {
 You could continue to generate unique ids for the database as done previously, and then store those in `externalId`. This way all users would have an `externalId` that would be used for DB interactions.
 
 You could add a column in your user table inside of your database called `ClerkId`. Use that column to store the userId from Clerk directly into your database.
+
+## Supported Schema Fields
+
+The migration script validates all user data against a Zod schema defined in `src/migrate/validator.ts`. Below is a complete list of supported fields.
+
+### Required Fields
+
+| Field    | Type     | Description                                                        |
+| -------- | -------- | ------------------------------------------------------------------ |
+| `userId` | `string` | Unique identifier for the user (required for tracking and logging) |
+
+### Identifier Fields
+
+At least one verified identifier (email or phone) is required.
+
+| Field                      | Type                 | Description                         |
+| -------------------------- | -------------------- | ----------------------------------- |
+| `email`                    | `string \| string[]` | Primary verified email address(es)  |
+| `emailAddresses`           | `string \| string[]` | Additional verified email addresses |
+| `unverifiedEmailAddresses` | `string \| string[]` | Unverified email addresses          |
+| `phone`                    | `string \| string[]` | Primary verified phone number(s)    |
+| `phoneNumbers`             | `string \| string[]` | Additional verified phone numbers   |
+| `unverifiedPhoneNumbers`   | `string \| string[]` | Unverified phone numbers            |
+| `username`                 | `string`             | Username for the user               |
+
+### User Information
+
+| Field       | Type     | Description       |
+| ----------- | -------- | ----------------- |
+| `firstName` | `string` | User's first name |
+| `lastName`  | `string` | User's last name  |
+
+### Password Fields
+
+| Field            | Type     | Description                                                 |
+| ---------------- | -------- | ----------------------------------------------------------- |
+| `password`       | `string` | Hashed password from source platform                        |
+| `passwordHasher` | `enum`   | Hashing algorithm used (required when password is provided) |
+
+**Supported Password Hashers:**
+
+- `argon2i`, `argon2id`
+- `bcrypt`, `bcrypt_peppered`, `bcrypt_sha256_django`
+- `hmac_sha256_utf16_b64`
+- `md5`, `md5_salted`, `md5_phpass`
+- `pbkdf2_sha1`, `pbkdf2_sha256`, `pbkdf2_sha256_django`, `pbkdf2_sha512`
+- `scrypt_firebase`, `scrypt_werkzeug`
+- `sha256`, `sha256_salted`, `sha512_symfony`
+- `ldap_ssha`
+
+### Two-Factor Authentication
+
+| Field                | Type       | Description                      |
+| -------------------- | ---------- | -------------------------------- |
+| `totpSecret`         | `string`   | TOTP secret for 2FA              |
+| `backupCodesEnabled` | `boolean`  | Whether backup codes are enabled |
+| `backupCodes`        | `string[]` | Array of backup codes            |
+
+### Metadata
+
+| Field             | Type  | Description                                                  |
+| ----------------- | ----- | ------------------------------------------------------------ |
+| `unsafeMetadata`  | `any` | Publicly accessible metadata (readable by client and server) |
+| `publicMetadata`  | `any` | Publicly accessible metadata (readable by client and server) |
+| `privateMetadata` | `any` | Server-side only metadata (not accessible to client)         |
+
+### Clerk API Configuration Fields
+
+| Field                       | Type      | Description                                     |
+| --------------------------- | --------- | ----------------------------------------------- |
+| `bypassClientTrust`         | `boolean` | Skip client trust verification                  |
+| `createOrganizationEnabled` | `boolean` | Whether user can create organizations           |
+| `createOrganizationsLimit`  | `number`  | Maximum number of organizations user can create |
+| `createdAt`                 | `string`  | Custom creation timestamp                       |
+| `deleteSelfEnabled`         | `boolean` | Whether user can delete their own account       |
+| `legalAcceptedAt`           | `string`  | Timestamp when legal terms were accepted        |
+| `skipLegalChecks`           | `boolean` | Skip legal acceptance checks                    |
+| `skipPasswordChecks`        | `boolean` | Skip password requirements during import        |
+
+## Creating a Custom Transformer
+
+Transformers map your source platform's user data format to Clerk's expected schema. Each transformer is defined in `src/migrate/transformers/`.
+
+### Transformer Structure
+
+A transformer is an object with the following properties:
+
+```typescript
+{
+  key: string,           // Unique identifier for CLI selection
+  value: string,         // Internal value (usually same as key)
+  label: string,         // Display name shown in CLI
+  transformer: object,   // Field mapping configuration
+  postTransform?: function,  // Optional: Custom transformation logic
+  defaults?: object      // Optional: Default values for all users
+}
+```
+
+### Example: Basic Transformer
+
+Here's a simple transformer for a fictional platform:
+
+```typescript
+// src/migrate/transformers/myplatform.ts
+const myPlatformTransformer = {
+	key: 'myplatform',
+	value: 'myplatform',
+	label: 'My Platform',
+	transformer: {
+		// Source field → Target Clerk field
+		user_id: 'userId',
+		email_address: 'email',
+		first: 'firstName',
+		last: 'lastName',
+		phone_number: 'phone',
+		hashed_password: 'password',
+	},
+	defaults: {
+		passwordHasher: 'bcrypt',
+	},
+};
+
+export default myPlatformTransformer;
+```
+
+### Example: Advanced Transformer with Nested Fields
+
+For platforms with nested data structures:
+
+```typescript
+const advancedTransformer = {
+	key: 'advanced',
+	value: 'advanced',
+	label: 'Advanced Platform',
+	transformer: {
+		// Supports dot notation for nested fields
+		'user._id.$oid': 'userId', // Extracts user._id.$oid
+		'profile.email': 'email', // Extracts profile.email
+		'profile.name.first': 'firstName',
+		'profile.name.last': 'lastName',
+		'auth.passwordHash': 'password',
+		'metadata.public': 'publicMetadata',
+	},
+	defaults: {
+		passwordHasher: 'bcrypt',
+	},
+};
+
+export default advancedTransformer;
+```
+
+### Example: Transformer with Post-Transform Logic
+
+For complex transformations like handling verification status:
+
+```typescript
+const verificationTransformer = {
+	key: 'verification',
+	value: 'verification',
+	label: 'Platform with Verification',
+	transformer: {
+		id: 'userId',
+		email: 'email',
+		email_verified: 'emailVerified',
+		password_hash: 'password',
+	},
+	postTransform: (user: Record<string, unknown>) => {
+		// Route email based on verification status
+		const emailVerified = user.emailVerified as boolean | undefined;
+		const email = user.email as string | undefined;
+
+		if (email) {
+			if (emailVerified === true) {
+				// Keep verified email in email field
+				user.email = email;
+			} else {
+				// Move unverified email to unverifiedEmailAddresses
+				user.unverifiedEmailAddresses = email;
+				delete user.email;
+			}
+		}
+
+		// Clean up temporary field
+		delete user.emailVerified;
+	},
+	defaults: {
+		passwordHasher: 'sha256',
+	},
+};
+
+export default verificationTransformer;
+```
+
+### Registering Your Transformer
+
+After creating your transformer file:
+
+1. Create the transformer file in `src/migrate/transformers/myplatform.ts`
+2. Export it in `src/migrate/transformers/index.ts`:
+
+```typescript
+import clerkTransformer from './clerk';
+import auth0Transformer from './auth0';
+import supabaseTransformer from './supabase';
+import authjsTransformer from './authjs';
+import myPlatformTransformer from './myplatform'; // Add your import
+
+export const transformers = [
+	clerkTransformer,
+	auth0Transformer,
+	supabaseTransformer,
+	authjsTransformer,
+	myPlatformTransformer, // Add to array
+];
+```
+
+The CLI will automatically detect and display your transformer in the platform selection menu.
+
+### Transformer Best Practices
+
+1. **Field Mapping**: Map source fields to valid Clerk schema fields (see Supported Schema Fields above)
+2. **Nested Fields**: Use dot notation (e.g., `'user.profile.email'`) for nested source data
+3. **Verification Status**: Use `postTransform` to route emails/phones to verified or unverified arrays
+4. **Password Hashers**: Always specify the correct `passwordHasher` in defaults if passwords are included
+5. **Metadata**: Map platform-specific data to `publicMetadata` or `privateMetadata`
+6. **Required Identifier**: Ensure at least one verified email or phone is mapped
+7. **Cleanup**: Remove temporary fields in `postTransform` that aren't part of the schema
