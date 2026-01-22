@@ -52,12 +52,12 @@ function transformUsers(
 
 		// Transform email to array for clerk transformer (merges primary + verified + unverified emails)
 		if (key === 'clerk') {
-			// Helper to parse email field - could be array (JSON) or comma-separated string (CSV)
+			// Helper to parse email field - could be array (JSON) or comma/pipe-separated string (CSV)
 			const parseEmails = (field: unknown): string[] => {
 				if (Array.isArray(field)) return field as string[];
 				if (typeof field === 'string' && field) {
 					return field
-						.split(',')
+						.split(/[,|]/)
 						.map((e: string) => e.trim())
 						.filter(Boolean);
 				}
@@ -79,13 +79,16 @@ function transformUsers(
 			if (allEmails.length > 0) {
 				transformedUser.email = allEmails;
 			}
+			// Remove the individual email fields after consolidation to avoid validation errors
+			delete transformedUser.emailAddresses;
+			delete transformedUser.unverifiedEmailAddresses;
 
-			// Helper to parse phone field - could be array (JSON) or comma-separated string (CSV)
+			// Helper to parse phone field - could be array (JSON) or comma/pipe-separated string (CSV)
 			const parsePhones = (field: unknown): string[] => {
 				if (Array.isArray(field)) return field as string[];
 				if (typeof field === 'string' && field) {
 					return field
-						.split(',')
+						.split(/[,|]/)
 						.map((p: string) => p.trim())
 						.filter(Boolean);
 				}
@@ -107,6 +110,9 @@ function transformUsers(
 			if (allPhones.length > 0) {
 				transformedUser.phone = allPhones;
 			}
+			// Remove the individual phone fields after consolidation to avoid validation errors
+			delete transformedUser.phoneNumbers;
+			delete transformedUser.unverifiedPhoneNumbers;
 		}
 
 		// Apply transformer-specific post-transformation if defined

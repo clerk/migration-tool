@@ -4,7 +4,7 @@
     "first_name": "Jane",
     "last_name": "Doe",
     "username": null,
-    "primary_email_address": "janedoe@test.com",
+    "primary_email_address": "jane.doe@test.com",
     "email_addresses": [
       "janedoe@test.com"
     ],

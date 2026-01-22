@@ -420,3 +420,72 @@ describe('transformKeys', () => {
 		});
 	});
 });
+
+// ============================================================================
+// Clerk transformer - pipe separator tests
+// ============================================================================
+
+describe('Clerk transformer - email and phone parsing with pipe separators', () => {
+	test('parses pipe-separated emails in CSV format', async () => {
+		// This test verifies the fix for rows with pipe-separated emails
+		// like: verified_email_addresses: "email1@test.com|email2@test.com"
+		const users = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
+
+		const userWithPipeSeparatedEmails = users.find(
+			(u) => u.userId === 'user_pipe_email_test'
+		);
+
+		expect(userWithPipeSeparatedEmails).toBeDefined();
+		expect(Array.isArray(userWithPipeSeparatedEmails?.email)).toBe(true);
+		expect(userWithPipeSeparatedEmails?.email).toEqual([
+			'primary@test.com',
+			'secondary@test.com',
+		]);
+	});
+
+	test('parses pipe-separated phones in CSV format', async () => {
+		const users = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
+
+		const userWithPipeSeparatedPhones = users.find(
+			(u) => u.userId === 'user_pipe_phone_test'
+		);
+
+		expect(userWithPipeSeparatedPhones).toBeDefined();
+		expect(Array.isArray(userWithPipeSeparatedPhones?.phone)).toBe(true);
+		expect(userWithPipeSeparatedPhones?.phone).toEqual([
+			'+12125550200',
+			'+12125550201',
+		]);
+	});
+
+	test('parses mixed comma and pipe separators for emails', async () => {
+		const users = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
+
+		const userWithMixedSeparators = users.find(
+			(u) => u.userId === 'user_mixed_separator_test'
+		);
+
+		expect(userWithMixedSeparators).toBeDefined();
+		expect(Array.isArray(userWithMixedSeparators?.email)).toBe(true);
+		expect(userWithMixedSeparators?.email).toEqual([
+			'first@test.com',
+			'second@test.com',
+			'third@test.com',
+		]);
+	});
+
+	test('parses mixed comma and pipe separators for phones', async () => {
+		const users = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
+
+		const userWithMixedPhoneSeparators = users.find(
+			(u) => u.userId === 'user_mixed_phone_separator_test'
+		);
+
+		expect(userWithMixedPhoneSeparators).toBeDefined();
+		expect(Array.isArray(userWithMixedPhoneSeparators?.phone)).toBe(true);
+		expect(userWithMixedPhoneSeparators?.phone).toEqual([
+			'+12125550300',
+			'+12125550301',
+		]);
+	});
+});

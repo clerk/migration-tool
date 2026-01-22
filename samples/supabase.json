@@ -4,7 +4,7 @@
     "id": "user_2YDryYFVMM1W1plDDKz7Gzf4we6",
     "aud": "authenticated",
     "role": "authenticated",
-    "email": "janedoe@test.com",
+    "email": "jane.doe@test.com",
     "first_name": "Jane",
     "last_name": "Doe",
     "encrypted_password": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",

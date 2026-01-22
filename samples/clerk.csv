@@ -1,6 +1,6 @@
 # Password for users with passwords: Kk4aPMeiaRpAs2OeX1NE
 id,first_name,last_name,username,primary_email_address,primary_phone_number,verified_email_addresses,unverified_email_addresses,verified_phone_numbers,unverified_phone_numbers,totp_secret,password_digest,password_hasher
-user_2YDryYFVMM1W1plDDKz7Gzf4we6,Jane,Doe,,janedoe@test.com,,janedoe@test.com,,,,,$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2,bcrypt
+user_2YDryYFVMM1W1plDDKz7Gzf4we6,Jane,Doe,,jane.doe@test.com,,janedoe@test.com,,,,,$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2,bcrypt
 user_2ZZCgLE7kJG2CRBxTZ6YUIvzS10,John,Doe,,johndoe@test.com,,johndoe@test.com,,,,,,
 user_2cWszPHuo6P2lCdnhhZbVMfbAIC,John,Hancock,,johnhancock@test.com,,johnhancock@test.com,,,,,$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2,bcrypt
 user_2cukOsyNsh0J3MCEvrgM6PkoB0I,Jane,Hancock,,janehancock@test.com,,janehancock@test.com,,,,,,
@@ -65,3 +65,7 @@ user_3fR8S9T0U1V2W3X4Y5Z6A7B8C9D,,,phoneuser7,,+12125550106,,,+12125550106,,,
 user_3fS9T0U1V2W3X4Y5Z6A7B8C9D0E,,,phoneuser8,,+12125550107,,,+12125550107,,,
 user_3fT0U1V2W3X4Y5Z6A7B8C9D0E1F,,,phoneuser9,,+12125550108,,,+12125550108,,,
 user_3fU1V2W3X4Y5Z6A7B8C9D0E1F2G,,,phoneuser10,,+12125550109,,,+12125550109,,,
+user_pipe_email_test,Pipe,Email,pipeemail,primary@test.com,,primary@test.com|secondary@test.com,,,,,,
+user_pipe_phone_test,Pipe,Phone,pipephone,,+12125550200,,,,+12125550200|+12125550201,,,
+user_mixed_separator_test,Mixed,Separator,mixedsep,first@test.com,,first@test.com,second@test.com|third@test.com,,,,,
+user_mixed_phone_separator_test,Mixed,Phone,,mixedphone@test.com,+12125550300,mixedphone@test.com,,,+12125550300|+12125550301,,,
