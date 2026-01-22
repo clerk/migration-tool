@@ -14,7 +14,13 @@
     "lint:fix": "eslint . --fix --config .eslintrc.js",
     "format": "prettier . --write",
     "format:test": "prettier .",
-    "test": "vitest"
+    "test": "vitest",
+    "prepare": "husky"
+  },
+  "lint-staged": {
+    "*.{js,jsx,ts,tsx,json,css,scss,md}": [
+      "prettier --write"
+    ]
   },
   "dependencies": {
     "@clack/prompts": "^1.0.0-alpha.9",
@@ -24,6 +30,7 @@
     "csv-parser": "^3.2.0",
     "dotenv": "16.6.1",
     "mime-types": "^3.0.2",
+    "p-limit": "^7.2.0",
     "picocolors": "^1.1.1",
     "zod": "^4.3.5"
   },
@@ -34,6 +41,8 @@
     "eslint": "^9.39.2",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
     "prettier": "^3.8.0",
     "vitest": "^4.0.17"
   }
