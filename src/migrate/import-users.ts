@@ -1,9 +1,9 @@
 import { createClerkClient } from '@clerk/backend';
-import { ClerkAPIError } from '@clerk/types';
+import type { ClerkAPIError } from '@clerk/types';
 import { env } from '../envs-constants';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
-import { errorLogger, importLogger, closeAllStreams } from '../logger';
+import { closeAllStreams, errorLogger, importLogger } from '../logger';
 import { getDateTimeStamp, tryCatch } from '../utils';
 import { userSchema } from './validator';
 import type { ImportSummary, User } from '../types';
@@ -20,7 +20,9 @@ let lastProcessedUserId: string | null = null;
  * Gets the last processed user ID
  * @returns The user ID of the last processed user, or null if none processed
  */
-export const getLastProcessedUserId = (): string | null => lastProcessedUserId;
+export function getLastProcessedUserId(): string | null {
+	return lastProcessedUserId;
+}
 
 /**
  * Maximum number of retries for rate limit (429) errors
@@ -49,28 +51,27 @@ const RETRY_DELAY_MS = 10000;
  * @returns The created Clerk user object
  * @throws Will throw if user creation fails
  */
-const createUser = async (
+async function createUser(
 	userData: User,
 	skipPasswordRequirement: boolean,
-	limit: ReturnType<typeof pLimit>
-) => {
+	limit: ReturnType<typeof pLimit>,
+	dateTime: string
+) {
 	const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
 
 	// Extract primary email and additional emails
-	const emails = userData.email
-		? Array.isArray(userData.email)
-			? userData.email
-			: [userData.email]
-		: [];
+	let emails: string[] = [];
+	if (userData.email) {
+		emails = Array.isArray(userData.email) ? userData.email : [userData.email];
+	}
 	const primaryEmail = emails[0];
 	const additionalEmails = emails.slice(1);
 
 	// Extract primary phone and additional phones
-	const phones = userData.phone
-		? Array.isArray(userData.phone)
-			? userData.phone
-			: [userData.phone]
-		: [];
+	let phones: string[] = [];
+	if (userData.phone) {
+		phones = Array.isArray(userData.phone) ? userData.phone : [userData.phone];
+	}
 	const primaryPhone = phones[0];
 	const additionalPhones = phones.slice(1);
 
@@ -153,9 +154,20 @@ const createUser = async (
 				);
 
 				if (emailError) {
-					// Log warning but don't fail the entire user creation
-					console.warn(
-						`Failed to add additional email ${email} for user ${userData.userId}: ${emailError.message}`
+					// Log error but don't fail the entire user creation
+					errorLogger(
+						{
+							userId: userData.userId,
+							status: 'additional_email_error',
+							errors: [
+								{
+									code: 'additional_email_failed',
+									message: `Failed to add additional email ${email}`,
+									longMessage: `Failed to add additional email ${email}: ${emailError.message}`,
+								},
+							],
+						},
+						dateTime
 					);
 				}
 			})
@@ -177,9 +189,20 @@ const createUser = async (
 				);
 
 				if (phoneError) {
-					// Log warning but don't fail the entire user creation
-					console.warn(
-						`Failed to add additional phone ${phone} for user ${userData.userId}: ${phoneError.message}`
+					// Log error but don't fail the entire user creation
+					errorLogger(
+						{
+							userId: userData.userId,
+							status: 'additional_phone_error',
+							errors: [
+								{
+									code: 'additional_phone_failed',
+									message: `Failed to add additional phone ${phone}`,
+									longMessage: `Failed to add additional phone ${phone}: ${phoneError.message}`,
+								},
+							],
+						},
+						dateTime
 					);
 				}
 			})
@@ -189,7 +212,7 @@ const createUser = async (
 	await Promise.all([...emailPromises, ...phonePromises]);
 
 	return createdUser;
-};
+}
 
 /**
  * Processes a single user for import to Clerk
@@ -222,7 +245,12 @@ async function processUserToClerk(
 		}
 
 		// Create user (may throw for main user creation, but additional emails/phones use tryCatch internally)
-		await createUser(parsedUserData.data, skipPasswordRequirement, limit);
+		await createUser(
+			parsedUserData.data,
+			skipPasswordRequirement,
+			limit,
+			dateTime
+		);
 
 		// Success
 		successful++;
@@ -246,38 +274,37 @@ async function processUserToClerk(
 					limit,
 					retryCount + 1
 				);
-			} else {
-				// Max retries exceeded - log as permanent failure
-				const errorMessage = `Rate limit exceeded after ${MAX_RETRIES} retries`;
-				failed++;
-				processed++;
-				lastProcessedUserId = userData.userId;
-				s.message(`Migrating users: [${processed}/${total}]`);
-				errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
-
-				// Log to error log file
-				errorLogger(
-					{
-						userId: userData.userId,
-						status: '429',
-						errors: [
-							{
-								code: 'rate_limit_exceeded',
-								message: errorMessage,
-								longMessage: errorMessage,
-							},
-						],
-					},
-					dateTime
-				);
-
-				// Log to import log file
-				importLogger(
-					{ userId: userData.userId, status: 'error', error: errorMessage },
-					dateTime
-				);
-				return;
 			}
+			// Max retries exceeded - log as permanent failure
+			const errorMessage = `Rate limit exceeded after ${MAX_RETRIES} retries`;
+			failed++;
+			processed++;
+			lastProcessedUserId = userData.userId;
+			s.message(`Migrating users: [${processed}/${total}]`);
+			errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
+
+			// Log to error log file
+			errorLogger(
+				{
+					userId: userData.userId,
+					status: '429',
+					errors: [
+						{
+							code: 'rate_limit_exceeded',
+							message: errorMessage,
+							longMessage: errorMessage,
+						},
+					],
+				},
+				dateTime
+			);
+
+			// Log to import log file
+			importLogger(
+				{ userId: userData.userId, status: 'error', error: errorMessage },
+				dateTime
+			);
+			return;
 		}
 
 		// Track error for summary
@@ -324,7 +351,7 @@ async function processUserToClerk(
  *
  * @param summary - The import summary statistics
  */
-const displaySummary = (summary: ImportSummary) => {
+function displaySummary(summary: ImportSummary) {
 	let message = `Total users processed: ${summary.totalProcessed}\n`;
 	message += `${color.green('Successfully imported:')} ${summary.successful}\n`;
 	message += `${color.red('Failed with errors:')} ${summary.failed}`;
@@ -338,7 +365,7 @@ const displaySummary = (summary: ImportSummary) => {
 	}
 
 	p.note(message.trim(), 'Migration Summary');
-};
+}
 
 /**
  * Imports an array of users to Clerk
@@ -351,10 +378,10 @@ const displaySummary = (summary: ImportSummary) => {
  * @param skipPasswordRequirement - Whether to allow users without passwords (default: false)
  * @returns A promise that resolves when all users are processed
  */
-export const importUsers = async (
+export async function importUsers(
 	users: User[],
 	skipPasswordRequirement: boolean = false
-) => {
+) {
 	const dateTime = getDateTimeStamp();
 
 	// Reset counters for each import run
@@ -408,9 +435,9 @@ export const importUsers = async (
 	// Display summary
 	const summary: ImportSummary = {
 		totalProcessed: total,
-		successful: successful,
-		failed: failed,
+		successful,
+		failed,
 		errorBreakdown: errorCounts,
 	};
 	displaySummary(summary);
-};
+}

@@ -1,11 +1,11 @@
 import fs from 'fs';
 import path from 'path';
 import type {
+	DeleteLogEntry,
 	ErrorLog,
 	ErrorPayload,
 	ImportLogEntry,
 	ValidationErrorPayload,
-	DeleteLogEntry,
 } from './types';
 
 /**
@@ -18,6 +18,8 @@ const confirmOrCreateFolder = (folderPath: string) => {
 			fs.mkdirSync(folderPath);
 		}
 	} catch (err) {
+		// Logger infrastructure error - fallback when file system fails
+		// eslint-disable-next-line no-console
 		console.error('Error creating directory for logs:', err);
 	}
 };
@@ -42,8 +44,10 @@ function appendToLogFile(filePath: string, entry: unknown) {
 
 		// Use synchronous append to ensure immediate write
 		// This is more reliable for logging and testing
-		fs.appendFileSync(fullPath, JSON.stringify(entry) + '\n');
+		fs.appendFileSync(fullPath, `${JSON.stringify(entry)}\n`);
 	} catch (err) {
+		// Logger infrastructure error - fallback when file system fails
+		// eslint-disable-next-line no-console
 		console.error('Error writing to log file:', err);
 	}
 }

@@ -1,4 +1,4 @@
-import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { existsSync, rmSync } from 'node:fs';
 
 // Mock @clerk/backend before importing the module
@@ -23,6 +23,11 @@ vi.mock('@clerk/backend', () => ({
 vi.mock('@clack/prompts', () => ({
 	note: vi.fn(),
 	outro: vi.fn(),
+	log: {
+		warn: vi.fn(),
+		error: vi.fn(),
+		info: vi.fn(),
+	},
 	spinner: vi.fn(() => ({
 		start: vi.fn(),
 		stop: vi.fn(),

@@ -4,7 +4,8 @@ import * as p from '@clack/prompts';
 import { validationLogger } from '../logger';
 import { transformers } from './transformers';
 import { userSchema } from './validator';
-import type { User, PASSWORD_HASHERS, TransformerMapKeys } from '../types';
+import type { TransformerMapKeys, User } from '../types';
+import { PASSWORD_HASHERS } from '../types';
 import {
 	createImportFilePath,
 	getDateTimeStamp,
@@ -33,11 +34,11 @@ const s = p.spinner();
  * @returns Array of successfully transformed and validated users
  * @throws Error if an invalid password hasher is detected
  */
-const transformUsers = (
+function transformUsers(
 	users: User[],
 	key: TransformerMapKeys,
 	dateTime: string
-) => {
+) {
 	// This applies to smaller numbers. Pass in 10, get 5 back.
 	const transformedData: User[] = [];
 	for (let i = 0; i < users.length; i++) {
@@ -53,7 +54,7 @@ const transformUsers = (
 		if (key === 'clerk') {
 			// Helper to parse email field - could be array (JSON) or comma-separated string (CSV)
 			const parseEmails = (field: unknown): string[] => {
-				if (Array.isArray(field)) return field;
+				if (Array.isArray(field)) return field as string[];
 				if (typeof field === 'string' && field) {
 					return field
 						.split(',')
@@ -81,7 +82,7 @@ const transformUsers = (
 
 			// Helper to parse phone field - could be array (JSON) or comma-separated string (CSV)
 			const parsePhones = (field: unknown): string[] => {
-				if (Array.isArray(field)) return field;
+				if (Array.isArray(field)) return field as string[];
 				if (typeof field === 'string' && field) {
 					return field
 						.split(',')
@@ -109,11 +110,7 @@ const transformUsers = (
 		}
 
 		// Apply transformer-specific post-transformation if defined
-		if (
-			transformerKeys &&
-			'postTransform' in transformerKeys &&
-			typeof transformerKeys.postTransform === 'function'
-		) {
+		if ('postTransform' in transformerKeys) {
 			transformerKeys.postTransform(transformedUser);
 		}
 		const validationResult = userSchema.safeParse(transformedUser);
@@ -133,7 +130,10 @@ const transformUsers = (
 				transformedUser.passwordHasher
 			) {
 				const userId = transformedUser.userId as string;
-				const invalidHasher = transformedUser.passwordHasher;
+				const invalidHasher =
+					typeof transformedUser.passwordHasher === 'string'
+						? transformedUser.passwordHasher
+						: JSON.stringify(transformedUser.passwordHasher);
 				s.stop('Validation Error');
 				throw new Error(
 					`Invalid password hasher detected.\n` +
@@ -156,7 +156,7 @@ const transformUsers = (
 		}
 	}
 	return transformedData;
-};
+}
 
 /**
  * Adds default field values from the transformer configuration to all users
@@ -168,7 +168,7 @@ const transformUsers = (
  * @param key - Transformer key identifying which defaults to apply
  * @returns Array of users with default fields applied (if transformer has defaults)
  */
-const addDefaultFields = (users: User[], key: string) => {
+function addDefaultFields(users: User[], key: string) {
 	const transformer = transformers.find((obj) => obj.key === key);
 	const defaultFields =
 		transformer && 'defaults' in transformer ? transformer.defaults : null;
@@ -185,10 +185,9 @@ const addDefaultFields = (users: User[], key: string) => {
 		}
 
 		return updatedUsers;
-	} else {
-		return users;
 	}
-};
+	return users;
+}
 
 /**
  * Loads, transforms, and validates users from a JSON or CSV file
@@ -208,10 +207,10 @@ const addDefaultFields = (users: User[], key: string) => {
  * @returns Array of validated users ready for import
  * @throws Error if file cannot be read or contains invalid data
  */
-export const loadUsersFromFile = async (
+export async function loadUsersFromFile(
 	file: string,
 	key: TransformerMapKeys
-): Promise<User[]> => {
+): Promise<User[]> {
 	const dateTime = getDateTimeStamp();
 	s.start();
 	s.message('Loading users and preparing to migrate');
@@ -224,7 +223,7 @@ export const loadUsersFromFile = async (
 		return new Promise((resolve, reject) => {
 			fs.createReadStream(createImportFilePath(file))
 				.pipe(csvParser({ skipComments: true }))
-				.on('data', (data) => {
+				.on('data', (data: User) => {
 					users.push(data);
 				})
 				.on('error', (err) => {
@@ -244,19 +243,18 @@ export const loadUsersFromFile = async (
 		});
 
 		// if the file is already JSON, just read and parse and return the result
-	} else {
-		const users: User[] = JSON.parse(
-			fs.readFileSync(createImportFilePath(file), 'utf-8')
-		);
-		const usersWithDefaultFields = addDefaultFields(users, key);
-
-		const transformedData: User[] = transformUsers(
-			usersWithDefaultFields,
-			key,
-			dateTime
-		);
-
-		s.stop('Users Loaded');
-		return transformedData;
 	}
-};
+	const users = JSON.parse(
+		fs.readFileSync(createImportFilePath(file), 'utf-8')
+	) as User[];
+	const usersWithDefaultFields = addDefaultFields(users, key);
+
+	const transformedData: User[] = transformUsers(
+		usersWithDefaultFields,
+		key,
+		dateTime
+	);
+
+	s.stop('Users Loaded');
+	return transformedData;
+}

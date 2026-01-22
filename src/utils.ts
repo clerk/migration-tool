@@ -29,9 +29,8 @@ export const createImportFilePath = (file: string) => {
 export const checkIfFileExists = (file: string) => {
 	if (fs.existsSync(createImportFilePath(file))) {
 		return true;
-	} else {
-		return false;
 	}
+	return false;
 };
 
 /**
@@ -96,7 +95,7 @@ export function flattenObjectSelectively(
 
 		// Check if this path (or any nested path) is in the transformer
 		const hasNestedMapping = Object.keys(transformer).some((k) =>
-			k.startsWith(currentPath + '.')
+			k.startsWith(`${currentPath}.`)
 		);
 
 		if (
@@ -148,7 +147,7 @@ export function transformKeys<
 	transformerConfig: T
 ): Record<string, unknown> {
 	const transformedData: Record<string, unknown> = {};
-	const transformer = transformerConfig.transformer as Record<string, string>;
+	const transformer = transformerConfig.transformer;
 
 	// Selectively flatten the input data based on transformer config
 	const flatData = flattenObjectSelectively(data, transformer);

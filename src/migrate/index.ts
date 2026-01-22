@@ -2,7 +2,7 @@ import 'dotenv/config';
 
 import { runCLI } from './cli';
 import { loadUsersFromFile } from './functions';
-import { importUsers, getLastProcessedUserId } from './import-users';
+import { getLastProcessedUserId, importUsers } from './import-users';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 
@@ -35,10 +35,11 @@ async function main() {
 	await importUsers(usersToImport, args.skipPasswordRequirement);
 }
 
-main().catch((error) => {
-	console.error('\n');
-	p.log.error(color.red('Migration failed with error:'));
-	p.log.error(color.red(error.message || error));
+main().catch((error: unknown) => {
+	p.log.error(color.red('\nMigration failed with error:'));
+
+	const errorMessage = error instanceof Error ? error.message : String(error);
+	p.log.error(color.red(errorMessage));
 
 	const lastUserId = getLastProcessedUserId();
 	if (lastUserId) {
@@ -49,8 +50,8 @@ main().catch((error) => {
 		);
 	}
 
-	if (error.stack) {
-		console.error(error.stack);
+	if (error instanceof Error && error.stack) {
+		p.log.error(error.stack);
 	}
 	process.exit(1);
 });

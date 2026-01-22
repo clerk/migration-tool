@@ -22,7 +22,7 @@ This is a CLI tool for migrating users from various authentication platforms (Cl
 ### Testing
 
 - `bun run test` - Run all test files
-- `bun run test <filename>` - Run a specific test file (e.g., `bun test validator.test.ts`)
+- `bun run test <filename>` - Run a specific test file (e.g., `bun run test validator.test.ts`)
 - `bun run test --watch` - Run tests in watch mode
 
 ## Architecture

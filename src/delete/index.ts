@@ -4,13 +4,13 @@ import type { User } from '@clerk/backend';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 import {
-	tryCatch,
-	getDateTimeStamp,
 	createImportFilePath,
+	getDateTimeStamp,
 	getFileType,
+	tryCatch,
 } from '../utils';
 import { env } from '../envs-constants';
-import { deleteErrorLogger, deleteLogger, closeAllStreams } from '../logger';
+import { closeAllStreams, deleteErrorLogger, deleteLogger } from '../logger';
 import * as fs from 'fs';
 import * as path from 'path';
 import csvParser from 'csv-parser';
@@ -28,7 +28,7 @@ let failed = 0;
  * @returns The file path of the migration source
  * @throws Exits the process if .settings file is not found or missing the file property
  */
-export const readSettings = () => {
+export const readSettings = (): string => {
 	const settingsPath = path.join(process.cwd(), '.settings');
 
 	if (!fs.existsSync(settingsPath)) {
@@ -40,7 +40,9 @@ export const readSettings = () => {
 		process.exit(1);
 	}
 
-	const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
+	const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as {
+		file?: string;
+	};
 
 	if (!settings.file) {
 		p.log.error(
@@ -51,7 +53,7 @@ export const readSettings = () => {
 		process.exit(1);
 	}
 
-	return settings.file as string;
+	return settings.file;
 };
 
 /**
@@ -79,7 +81,7 @@ export const readMigrationFile = async (
 		return new Promise((resolve, reject) => {
 			fs.createReadStream(fullPath)
 				.pipe(csvParser({ skipComments: true }))
-				.on('data', (data) => {
+				.on('data', (data: { id?: string }) => {
 					// CSV files have 'id' column for user IDs
 					if (data.id) {
 						userIds.add(data.id);
@@ -97,7 +99,10 @@ export const readMigrationFile = async (
 
 	// Handle JSON files
 	const fileContent = fs.readFileSync(fullPath, 'utf-8');
-	const users = JSON.parse(fileContent);
+	const users = JSON.parse(fileContent) as Array<{
+		userId?: string;
+		id?: string;
+	}>;
 
 	// Extract user IDs from the migration file
 	for (const user of users) {
@@ -119,7 +124,7 @@ export const readMigrationFile = async (
  * @param offset - The offset for pagination (starts at 0)
  * @returns An array of all Clerk users
  */
-export const fetchUsers = async (offset: number) => {
+export const fetchUsers = async (offset: number): Promise<User[]> => {
 	// Clear the users array on the initial call (offset 0)
 	if (offset === 0) {
 		users.length = 0;
@@ -339,12 +344,11 @@ export const processUsers = async () => {
 	p.outro('User deletion complete');
 };
 
-processUsers().catch((error) => {
-	console.error('\n');
-	p.log.error(color.red('Error during user deletion:'));
+processUsers().catch((error: Error) => {
+	p.log.error(color.red('\nError during user deletion:'));
 	p.log.error(color.red(error.message));
 	if (error.stack) {
-		console.error(error.stack);
+		p.log.error(error.stack);
 	}
 	process.exit(1);
 });

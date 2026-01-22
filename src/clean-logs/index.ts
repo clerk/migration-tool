@@ -60,7 +60,9 @@ const cleanLogs = async () => {
 			}
 		} catch (error) {
 			errorCount++;
-			console.error(`Failed to delete ${file}:`, error);
+			const errorMessage =
+				error instanceof Error ? error.message : String(error);
+			p.log.error(`Failed to delete ${file}: ${errorMessage}`);
 		}
 	}
 
@@ -75,4 +77,4 @@ const cleanLogs = async () => {
 	}
 };
 
-cleanLogs();
+void cleanLogs();

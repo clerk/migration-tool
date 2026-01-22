@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
-	getDateTimeStamp,
-	createImportFilePath,
 	checkIfFileExists,
+	createImportFilePath,
+	getDateTimeStamp,
 	getFileType,
 	tryCatch,
 } from './utils';
@@ -96,13 +96,14 @@ describe('tryCatch', () => {
 	});
 
 	test('throws non-Error throwables', async () => {
+		// eslint-disable-next-line @typescript-eslint/prefer-promise-reject-errors
 		const promise = Promise.reject('string error');
 		await expect(tryCatch(promise)).rejects.toBe('string error');
 	});
 
 	test('works with async functions', async () => {
-		const asyncFn = async () => {
-			return { id: 1, name: 'test' };
+		const asyncFn = () => {
+			return Promise.resolve({ id: 1, name: 'test' });
 		};
 		const [data, error] = await tryCatch(asyncFn());
 		expect(data).toEqual({ id: 1, name: 'test' });
@@ -110,8 +111,8 @@ describe('tryCatch', () => {
 	});
 
 	test('handles async function errors', async () => {
-		const asyncFn = async () => {
-			throw new Error('async error');
+		const asyncFn = () => {
+			return Promise.reject(new Error('async error'));
 		};
 		const [data, error] = await tryCatch(asyncFn());
 		expect(data).toBeNull();

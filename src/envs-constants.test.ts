@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'vitest';
 import {
-	detectInstanceType,
-	getDefaultRateLimit,
-	getConcurrencyLimit,
 	createEnvSchema,
+	detectInstanceType,
+	getConcurrencyLimit,
+	getDefaultRateLimit,
 } from './envs-constants';
 
 describe('envs-constants', () => {

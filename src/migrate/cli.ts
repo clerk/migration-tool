@@ -6,10 +6,10 @@ import csvParser from 'csv-parser';
 import { transformers } from './transformers';
 import {
 	checkIfFileExists,
-	getFileType,
 	createImportFilePath,
-	tryCatch,
+	getFileType,
 	transformKeys as transformKeysFromFunctions,
+	tryCatch,
 } from '../utils';
 import { env } from '../envs-constants';
 
@@ -73,7 +73,7 @@ export const loadSettings = (): Settings => {
 		const settingsPath = path.join(process.cwd(), SETTINGS_FILE);
 		if (fs.existsSync(settingsPath)) {
 			const content = fs.readFileSync(settingsPath, 'utf-8');
-			return JSON.parse(content);
+			return JSON.parse(content) as Settings;
 		}
 	} catch {
 		// If settings file is corrupted or unreadable, return empty settings
@@ -141,14 +141,18 @@ export const loadRawUsers = async (
 			const users: Record<string, unknown>[] = [];
 			fs.createReadStream(filePath)
 				.pipe(csvParser({ skipComments: true }))
-				.on('data', (data) => users.push(transformUser(data)))
+				.on('data', (data: Record<string, unknown>) =>
+					users.push(transformUser(data))
+				)
 				.on('error', (err) => reject(err))
 				.on('end', () => resolve(users));
 		});
-	} else {
-		const rawUsers = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-		return rawUsers.map((data) => transformUser(data));
 	}
+	const rawUsers = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<
+		string,
+		unknown
+	>[];
+	return rawUsers.map((data) => transformUser(data));
 };
 
 /**
@@ -179,9 +183,7 @@ export const hasValue = (value: unknown): boolean => {
  * @param users - Array of user objects to analyze
  * @returns Field analysis object with counts and identifier statistics
  */
-export const analyzeFields = (
-	users: Record<string, unknown>[]
-): FieldAnalysis => {
+export function analyzeFields(users: Record<string, unknown>[]): FieldAnalysis {
 	const totalUsers = users.length;
 
 	if (totalUsers === 0) {
@@ -254,7 +256,7 @@ export const analyzeFields = (
 	}
 
 	return { presentOnAll, presentOnSome, identifiers, totalUsers, fieldCounts };
-};
+}
 
 /**
  * Formats a count statistic into a human-readable string
@@ -264,19 +266,18 @@ export const analyzeFields = (
  * @param label - The label for the field
  * @returns A formatted string like "All users have...", "No users have...", or "X of Y users have..."
  */
-export const formatCount = (
+export function formatCount(
 	count: number,
 	total: number,
 	label: string
-): string => {
+): string {
 	if (count === total) {
 		return `All users have ${label}`;
 	} else if (count === 0) {
 		return `No users have ${label}`;
-	} else {
-		return `${count} of ${total} users have ${label}`;
 	}
-};
+	return `${count} of ${total} users have ${label}`;
+}
 
 /**
  * Displays identifier analysis and Dashboard configuration guidance
@@ -291,16 +292,24 @@ export const formatCount = (
  *
  * @param analysis - The field analysis results
  */
-export const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
+export function displayIdentifierAnalysis(analysis: FieldAnalysis): void {
 	const { identifiers, totalUsers } = analysis;
 
 	let identifierMessage = '';
 
 	// Show counts for each identifier type
 	identifierMessage += color.bold('Identifier Analysis:\n');
-	identifierMessage += `  ${identifiers.verifiedEmails === totalUsers ? color.green('●') : identifiers.verifiedEmails > 0 ? color.yellow('○') : color.red('○')} ${formatCount(identifiers.verifiedEmails, totalUsers, 'verified emails')}\n`;
-	identifierMessage += `  ${identifiers.verifiedPhones === totalUsers ? color.green('●') : identifiers.verifiedPhones > 0 ? color.yellow('○') : color.red('○')} ${formatCount(identifiers.verifiedPhones, totalUsers, 'verified phone numbers')}\n`;
-	identifierMessage += `  ${identifiers.username === totalUsers ? color.green('●') : identifiers.username > 0 ? color.yellow('○') : color.red('○')} ${formatCount(identifiers.username, totalUsers, 'a username')}\n`;
+
+	// Helper to get the correct icon based on coverage
+	const getIcon = (count: number, total: number): string => {
+		if (count === total) return color.green('●');
+		if (count > 0) return color.yellow('○');
+		return color.red('○');
+	};
+
+	identifierMessage += `  ${getIcon(identifiers.verifiedEmails, totalUsers)} ${formatCount(identifiers.verifiedEmails, totalUsers, 'verified emails')}\n`;
+	identifierMessage += `  ${getIcon(identifiers.verifiedPhones, totalUsers)} ${formatCount(identifiers.verifiedPhones, totalUsers, 'verified phone numbers')}\n`;
+	identifierMessage += `  ${getIcon(identifiers.username, totalUsers)} ${formatCount(identifiers.username, totalUsers, 'a username')}\n`;
 
 	// Show unverified counts if present
 	if (identifiers.unverifiedEmails > 0) {
@@ -357,7 +366,7 @@ export const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
 	}
 
 	p.note(identifierMessage.trim(), 'Identifiers');
-};
+}
 
 /**
  * Displays password analysis and prompts for migration preference
@@ -371,9 +380,9 @@ export const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
  *          false if all users have passwords,
  *          null if the user cancelled
  */
-export const displayPasswordAnalysis = async (
+export async function displayPasswordAnalysis(
 	analysis: FieldAnalysis
-): Promise<boolean | null> => {
+): Promise<boolean | null> {
 	const { totalUsers, fieldCounts } = analysis;
 	const usersWithPasswords = fieldCounts.password || 0;
 
@@ -412,7 +421,7 @@ export const displayPasswordAnalysis = async (
 	}
 
 	return false; // All users have passwords, no need for skipPasswordRequirement
-};
+}
 
 /**
  * Displays user model analysis (first/last name) and Dashboard configuration guidance
@@ -529,7 +538,7 @@ export const displayOtherFieldsAnalysis = (
  *          and skipPasswordRequirement flag
  * @throws Exits the process if migration is cancelled or validation fails
  */
-export const runCLI = async () => {
+export async function runCLI() {
 	p.intro(`${color.bgCyan(color.black('Clerk User Migration Utility'))}`);
 
 	// Load previous settings to use as defaults
@@ -759,4 +768,4 @@ export const runCLI = async () => {
 		begin: beginMigration,
 		skipPasswordRequirement: skipPasswordRequirement || false,
 	};
-};
+}

@@ -154,8 +154,12 @@ test('Auth0 - loadUsersFromFile - JSON', async () => {
 // ============================================================================
 
 describe('transformKeys', () => {
+	// Test setup: these transformers are guaranteed to exist in the transformers array
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const clerkTransformer = transformers.find((h) => h.key === 'clerk')!;
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const supabaseTransformer = transformers.find((h) => h.key === 'supabase')!;
+	// eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 	const auth0Transformer = transformers.find((h) => h.key === 'auth0')!;
 
 	describe('key transformation', () => {

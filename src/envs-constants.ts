@@ -80,7 +80,10 @@ export type EnvSchema = z.infer<typeof envSchema>;
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
+	// Infrastructure error at module load time - occurs before CLI is initialized
+	// eslint-disable-next-line no-console
 	console.error('❌ Invalid environment variables:');
+	// eslint-disable-next-line no-console
 	console.error(JSON.stringify(parsed.error.issues, null, 2));
 	process.exit(1);
 }

@@ -1,16 +1,16 @@
-import { describe, expect, test, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
 import {
-	detectInstanceType,
-	loadSettings,
-	saveSettings,
-	hasValue,
 	analyzeFields,
-	formatCount,
+	detectInstanceType,
 	displayIdentifierAnalysis,
 	displayOtherFieldsAnalysis,
+	formatCount,
+	hasValue,
 	loadRawUsers,
+	loadSettings,
+	saveSettings,
 } from './cli';
 
 // Mock modules
