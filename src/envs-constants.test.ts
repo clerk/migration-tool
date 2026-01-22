@@ -1,8 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import {
 	detectInstanceType,
-	getDefaultDelay,
-	getDefaultRetryDelay,
+	getDefaultRateLimit,
+	getConcurrencyLimit,
 	createEnvSchema,
 } from './envs-constants';
 
@@ -38,23 +38,32 @@ describe('envs-constants', () => {
 		});
 	});
 
-	describe('getDefaultDelay', () => {
-		test('returns 10 for production', () => {
-			expect(getDefaultDelay('prod')).toBe(10);
+	describe('getDefaultRateLimit', () => {
+		test('returns 100 requests/second for production', () => {
+			expect(getDefaultRateLimit('prod')).toBe(100);
 		});
 
-		test('returns 100 for dev', () => {
-			expect(getDefaultDelay('dev')).toBe(100);
+		test('returns 10 requests/second for dev', () => {
+			expect(getDefaultRateLimit('dev')).toBe(10);
 		});
 	});
 
-	describe('getDefaultRetryDelay', () => {
-		test('returns 100 for production', () => {
-			expect(getDefaultRetryDelay('prod')).toBe(100);
+	describe('getConcurrencyLimit', () => {
+		test('returns 95% of rate limit for production (50ms leeway)', () => {
+			expect(getConcurrencyLimit(100)).toBe(95); // 100 * 0.95
 		});
 
-		test('returns 1000 for dev', () => {
-			expect(getDefaultRetryDelay('dev')).toBe(1000);
+		test('returns 95% of rate limit for dev (50ms leeway)', () => {
+			expect(getConcurrencyLimit(10)).toBe(9); // 10 * 0.95 = 9.5, floored to 9
+		});
+
+		test('returns at least 1 for very low rate limits', () => {
+			expect(getConcurrencyLimit(1)).toBe(1);
+			expect(getConcurrencyLimit(2)).toBe(1);
+		});
+
+		test('rounds down for odd rate limits', () => {
+			expect(getConcurrencyLimit(15)).toBe(14); // 15 * 0.95 = 14.25, floored to 14
 		});
 	});
 
@@ -74,8 +83,8 @@ describe('envs-constants', () => {
 
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.DELAY).toBe(10); // Production default
-				expect(result.data.RETRY_DELAY_MS).toBe(100); // Production default
+				expect(result.data.RATE_LIMIT).toBe(100); // Production default
+				expect(result.data.CONCURRENCY_LIMIT).toBe(95); // 95% of rate limit
 			}
 		});
 
@@ -87,23 +96,22 @@ describe('envs-constants', () => {
 
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.DELAY).toBe(100); // Dev default
-				expect(result.data.RETRY_DELAY_MS).toBe(1000); // Dev default
+				expect(result.data.RATE_LIMIT).toBe(10); // Dev default
+				expect(result.data.CONCURRENCY_LIMIT).toBe(9); // 95% of rate limit
 			}
 		});
 
-		test('allows custom delay values to override defaults', () => {
+		test('allows custom rate limit to override defaults', () => {
 			const schema = createEnvSchema();
 			const result = schema.safeParse({
 				CLERK_SECRET_KEY: 'sk_live_abcdefghijklmnopqrstuvwxyz123456',
-				DELAY: '42',
-				RETRY_DELAY_MS: '500',
+				RATE_LIMIT: '50',
 			});
 
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.DELAY).toBe(42);
-				expect(result.data.RETRY_DELAY_MS).toBe(500);
+				expect(result.data.RATE_LIMIT).toBe(50);
+				expect(result.data.CONCURRENCY_LIMIT).toBe(47); // 95% of custom rate limit
 			}
 		});
 	});
@@ -118,9 +126,8 @@ describe('envs-constants', () => {
 			const envModule = await import('./envs-constants');
 
 			expect(typeof envModule.env.CLERK_SECRET_KEY).toBe('string');
-			expect(typeof envModule.env.DELAY).toBe('number');
-			expect(typeof envModule.env.RETRY_DELAY_MS).toBe('number');
-			expect(typeof envModule.env.OFFSET).toBe('number');
+			expect(typeof envModule.env.RATE_LIMIT).toBe('number');
+			expect(typeof envModule.env.CONCURRENCY_LIMIT).toBe('number');
 		});
 	});
 
@@ -128,40 +135,40 @@ describe('envs-constants', () => {
 		test('production instance uses production defaults', () => {
 			const secretKey = 'sk_live_abcdefghijklmnopqrstuvwxyz123456';
 			const instanceType = detectInstanceType(secretKey);
-			const delay = getDefaultDelay(instanceType);
-			const retryDelay = getDefaultRetryDelay(instanceType);
+			const rateLimit = getDefaultRateLimit(instanceType);
+			const concurrency = getConcurrencyLimit(rateLimit);
 
 			expect(instanceType).toBe('prod');
-			expect(delay).toBe(10);
-			expect(retryDelay).toBe(100);
+			expect(rateLimit).toBe(100);
+			expect(concurrency).toBe(95);
 
 			const schema = createEnvSchema();
 			const result = schema.safeParse({ CLERK_SECRET_KEY: secretKey });
 
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.DELAY).toBe(10);
-				expect(result.data.RETRY_DELAY_MS).toBe(100);
+				expect(result.data.RATE_LIMIT).toBe(100);
+				expect(result.data.CONCURRENCY_LIMIT).toBe(95);
 			}
 		});
 
 		test('dev instance uses dev defaults', () => {
 			const secretKey = 'sk_test_abcdefghijklmnopqrstuvwxyz123456';
 			const instanceType = detectInstanceType(secretKey);
-			const delay = getDefaultDelay(instanceType);
-			const retryDelay = getDefaultRetryDelay(instanceType);
+			const rateLimit = getDefaultRateLimit(instanceType);
+			const concurrency = getConcurrencyLimit(rateLimit);
 
 			expect(instanceType).toBe('dev');
-			expect(delay).toBe(100);
-			expect(retryDelay).toBe(1000);
+			expect(rateLimit).toBe(10);
+			expect(concurrency).toBe(9);
 
 			const schema = createEnvSchema();
 			const result = schema.safeParse({ CLERK_SECRET_KEY: secretKey });
 
 			expect(result.success).toBe(true);
 			if (result.success) {
-				expect(result.data.DELAY).toBe(100);
-				expect(result.data.RETRY_DELAY_MS).toBe(1000);
+				expect(result.data.RATE_LIMIT).toBe(10);
+				expect(result.data.CONCURRENCY_LIMIT).toBe(9);
 			}
 		});
 	});

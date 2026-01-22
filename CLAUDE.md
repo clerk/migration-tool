@@ -22,7 +22,7 @@ This is a CLI tool for migrating users from various authentication platforms (Cl
 ### Testing
 
 - `bun run test` - Run all test files
-- `bun run test <filename>` - Run a specific test file (e.g., `bun test validators.test.ts`)
+- `bun run test <filename>` - Run a specific test file (e.g., `bun test validator.test.ts`)
 - `bun run test --watch` - Run tests in watch mode
 
 ## Architecture
@@ -82,7 +82,7 @@ createUser (import-users.ts)
 
 ### Schema Validation
 
-User validation is centralized in `src/migrate/validators.ts`:
+User validation is centralized in `src/migrate/validator.ts`:
 
 - Uses Zod for schema validation
 - Enforces: at least one verified identifier (email or phone)
@@ -90,20 +90,26 @@ User validation is centralized in `src/migrate/validators.ts`:
 - Fields can be single values or arrays (e.g., `email: string | string[]`)
 - All fields except `userId` are optional
 
-**Adding a new field**: Edit `userSchema` in `src/migrate/validators.ts`
+**Adding a new field**: Edit `userSchema` in `src/migrate/validator.ts`
 
 ### Rate Limiting
 
 Rate limits are auto-configured based on instance type (detected from `CLERK_SECRET_KEY`):
 
-- **Production** (`sk_live_*`): 1000 req/10s → 10ms delay
-- **Development** (`sk_test_*`): 100 req/10s → 100ms delay
+- **Production** (`sk_live_*`): 100 requests/second (Clerk's limit: 1000 req/10s)
+- **Development** (`sk_test_*`): 10 requests/second (Clerk's limit: 100 req/10s)
 
 Configuration in `src/envs-constants.ts`:
 
-- `DELAY` - Delay between normal requests
-- `RETRY_DELAY_MS` - Additional delay when hitting 429 errors
-- Override defaults via `.env` file
+- `RATE_LIMIT` - Requests per second (auto-configured based on instance type)
+- `CONCURRENCY_LIMIT` - Calculated as `rate_limit * 0.95` for aggressive throughput with 50ms leeway
+  - Production: 95 concurrent requests
+  - Development: 9 concurrent requests
+- Override defaults via `.env` file with `RATE_LIMIT`
+
+The script uses p-limit for concurrency control across **all API calls** (user creation, email creation, phone creation). This ensures maximum throughput while respecting rate limits. The script automatically retries 429 errors up to 5 times with 10-second delays.
+
+**Shared Concurrency Pool**: All API calls share the same concurrency limiter. When creating a user with additional emails/phones, each API call (createUser, createEmailAddress, createPhoneNumber) is individually rate-limited. This maximizes migration speed by processing requests as fast as possible while leaving only 50ms of leeway to avoid rate limits.
 
 ### Logging System
 
@@ -144,9 +150,9 @@ The CLI (in `src/migrate/cli.ts`) analyzes the import file before migration and 
 
 The codebase uses a consistent error handling pattern:
 
-- `tryCatch()` utility (in `src/utils.ts`) - Returns `[result, null]` or `[null, error]`
+- `tryCatch()` utility (in `src/utils.ts`) - Returns `[result, error]` (error is null on success)
 - Used extensively to make additional emails/phones non-fatal
-- Rate limit errors (429) trigger automatic retry with `cooldown()` delay
+- Rate limit errors (429) trigger automatic retry with delay
 - Validation errors are logged but don't stop the migration
 
 ## Important Implementation Notes
@@ -170,13 +176,13 @@ Invalid password hashers cause immediate failure:
 
 ### User Creation Multi-Step Process
 
-Creating a user involves multiple API calls:
+Creating a user involves multiple API calls, all managed by the shared concurrency limiter:
 
-1. Create user with primary email/phone + core fields
-2. Add additional emails (non-fatal, logs warning on failure)
-3. Add additional phones (non-fatal, logs warning on failure)
+1. Create user with primary email/phone + core fields (rate-limited)
+2. Add additional emails (each rate-limited individually, non-fatal)
+3. Add additional phones (each rate-limited individually, non-fatal)
 
-This is necessary because Clerk's API only accepts one primary identifier per creation call.
+This is necessary because Clerk's API only accepts one primary identifier per creation call. All API calls share the same concurrency pool, maximizing throughput across all operations.
 
 ### Environment Variable Detection
 

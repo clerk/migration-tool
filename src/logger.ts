@@ -57,20 +57,50 @@ export function closeAllStreams() {
 }
 
 /**
+ * Generic function to log error payloads with multiple errors
+ * @param payload - The error payload containing user ID, status, and error details
+ * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
+ * @param logFile - The log file name (e.g., 'migration' or 'user-deletion')
+ * @param errorType - The error type string (e.g., 'User Creation Error')
+ */
+function logErrorPayload(
+	payload: ErrorPayload,
+	dateTime: string,
+	logFile: string,
+	errorType: string
+) {
+	for (const err of payload.errors) {
+		const errorToLog: ErrorLog = {
+			type: errorType,
+			userId: payload.userId,
+			status: payload.status,
+			error: err.longMessage,
+		};
+		appendToLogFile(`${logFile}-${dateTime}.log`, errorToLog);
+	}
+}
+
+/**
+ * Generic function to log simple entries (success/error status)
+ * @param entry - The log entry containing user ID and status
+ * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
+ * @param logFile - The log file name (e.g., 'migration' or 'user-deletion')
+ */
+function logEntry(
+	entry: ImportLogEntry | DeleteLogEntry,
+	dateTime: string,
+	logFile: string
+) {
+	appendToLogFile(`${logFile}-${dateTime}.log`, entry);
+}
+
+/**
  * Logs user creation errors from the Clerk API
  * @param payload - The error payload containing user ID, status, and error details
  * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
  */
 export const errorLogger = (payload: ErrorPayload, dateTime: string) => {
-	for (const err of payload.errors) {
-		const errorToLog: ErrorLog = {
-			type: 'User Creation Error',
-			userId: payload.userId,
-			status: payload.status,
-			error: err.longMessage,
-		};
-		appendToLogFile(`${dateTime}-import-errors.log`, errorToLog);
-	}
+	logErrorPayload(payload, dateTime, 'migration', 'User Creation Error');
 };
 
 /**
@@ -89,16 +119,16 @@ export const validationLogger = (
 		error: payload.error,
 		path: payload.path,
 	};
-	appendToLogFile(`${dateTime}-import-errors.log`, error);
+	appendToLogFile(`migration-${dateTime}.log`, error);
 };
 
 /**
- * Logs successful user imports
+ * Logs successful user imports and errors
  * @param entry - The import log entry containing user ID and timestamp
  * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
  */
 export const importLogger = (entry: ImportLogEntry, dateTime: string) => {
-	appendToLogFile(`${dateTime}-import.log`, entry);
+	logEntry(entry, dateTime, 'migration');
 };
 
 /**
@@ -107,15 +137,7 @@ export const importLogger = (entry: ImportLogEntry, dateTime: string) => {
  * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
  */
 export const deleteErrorLogger = (payload: ErrorPayload, dateTime: string) => {
-	for (const err of payload.errors) {
-		const errorToLog: ErrorLog = {
-			type: 'User Deletion Error',
-			userId: payload.userId,
-			status: payload.status,
-			error: err.longMessage,
-		};
-		appendToLogFile(`${dateTime}-delete-errors.log`, errorToLog);
-	}
+	logErrorPayload(payload, dateTime, 'user-deletion', 'User Deletion Error');
 };
 
 /**
@@ -124,5 +146,5 @@ export const deleteErrorLogger = (payload: ErrorPayload, dateTime: string) => {
  * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
  */
 export const deleteLogger = (entry: DeleteLogEntry, dateTime: string) => {
-	appendToLogFile(`${dateTime}-delete.log`, entry);
+	logEntry(entry, dateTime, 'user-deletion');
 };

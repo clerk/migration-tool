@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { userSchema } from './validators';
+import { userSchema } from './validator';
 import { PASSWORD_HASHERS } from '../types';
 
 describe('userSchema', () => {
@@ -206,7 +206,7 @@ describe('userSchema', () => {
 				phone: ['+1234567890'],
 				totpSecret: 'JBSWY3DPEHPK3PXP',
 				backupCodesEnabled: true,
-				backupCodes: 'code1,code2,code3',
+				backupCodes: ['code1', 'code2', 'code3'],
 			});
 			expect(result.success).toBe(true);
 			if (result.success) {

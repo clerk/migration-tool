@@ -31,7 +31,7 @@ describe('errorLogger', () => {
 	beforeEach(cleanupLogs);
 	afterEach(cleanupLogs);
 
-	test('logs a single error to import-errors.log', () => {
+	test('logs a single error to migration log', () => {
 		const dateTime = 'error-single-test';
 
 		errorLogger(
@@ -48,7 +48,7 @@ describe('errorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
 			type: 'User Creation Error',
@@ -77,7 +77,7 @@ describe('errorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log[0]).toEqual({
 			type: 'User Creation Error',
 			userId: 'user_abc123',
@@ -109,7 +109,7 @@ describe('errorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(2);
 		expect(log[0].error).toBe('The email address format is invalid.');
 		expect(log[1].error).toBe('Password does not meet requirements.');
@@ -138,7 +138,7 @@ describe('errorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(2);
 		expect(log[0].userId).toBe('user_1');
 		expect(log[1].userId).toBe('user_2');
@@ -162,7 +162,7 @@ describe('errorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log[0].status).toBe('429');
 		expect(log[0].error).toBe('Rate limit exceeded. Please try again later.');
 	});
@@ -172,7 +172,7 @@ describe('validationLogger', () => {
 	beforeEach(cleanupLogs);
 	afterEach(cleanupLogs);
 
-	test('logs a validation error to import-errors.log', () => {
+	test('logs a validation error to migration log', () => {
 		const dateTime = 'validation-basic-test';
 
 		validationLogger(
@@ -185,7 +185,7 @@ describe('validationLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
 			type: 'Validation Error',
@@ -209,7 +209,7 @@ describe('validationLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log[0].path).toEqual(['unsafeMetadata', 'customField']);
 	});
 
@@ -226,7 +226,7 @@ describe('validationLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log[0].path).toEqual(['email', 1]);
 	});
 
@@ -263,7 +263,7 @@ describe('validationLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(3);
 		expect(log[0].row).toBe(1);
 		expect(log[1].row).toBe(2);
@@ -280,7 +280,7 @@ describe('importLogger', () => {
 
 		importLogger({ userId: 'user_123', status: 'success' }, dateTime);
 
-		const log = readNDJSON(`logs/${dateTime}-import.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
 			userId: 'user_123',
@@ -296,7 +296,7 @@ describe('importLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
 			userId: 'user_456',
@@ -315,7 +315,7 @@ describe('importLogger', () => {
 		);
 		importLogger({ userId: 'user_3', status: 'success' }, dateTime);
 
-		const log = readNDJSON(`logs/${dateTime}-import.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(3);
 		expect(log[0].userId).toBe('user_1');
 		expect(log[0].status).toBe('success');
@@ -331,7 +331,7 @@ describe('deleteErrorLogger', () => {
 	beforeEach(cleanupLogs);
 	afterEach(cleanupLogs);
 
-	test('logs a single error to delete-errors.log', () => {
+	test('logs a single error to user deletion log', () => {
 		const dateTime = 'delete-error-single-test';
 
 		deleteErrorLogger(
@@ -348,7 +348,7 @@ describe('deleteErrorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-delete-errors.log`);
+		const log = readNDJSON(`logs/user-deletion-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
 			type: 'User Deletion Error',
@@ -376,7 +376,7 @@ describe('deleteErrorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-delete-errors.log`);
+		const log = readNDJSON(`logs/user-deletion-${dateTime}.log`);
 		expect(log[0]).toEqual({
 			type: 'User Deletion Error',
 			userId: 'user_abc123',
@@ -408,7 +408,7 @@ describe('deleteErrorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-delete-errors.log`);
+		const log = readNDJSON(`logs/user-deletion-${dateTime}.log`);
 		expect(log).toHaveLength(2);
 		expect(log[0].error).toBe('The first error occurred.');
 		expect(log[1].error).toBe('The second error occurred.');
@@ -437,7 +437,7 @@ describe('deleteErrorLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-delete-errors.log`);
+		const log = readNDJSON(`logs/user-deletion-${dateTime}.log`);
 		expect(log).toHaveLength(2);
 		expect(log[0].userId).toBe('user_1');
 		expect(log[1].userId).toBe('user_2');
@@ -453,7 +453,7 @@ describe('deleteLogger', () => {
 
 		deleteLogger({ userId: 'user_123', status: 'success' }, dateTime);
 
-		const log = readNDJSON(`logs/${dateTime}-delete.log`);
+		const log = readNDJSON(`logs/user-deletion-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
 			userId: 'user_123',
@@ -469,7 +469,7 @@ describe('deleteLogger', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-delete.log`);
+		const log = readNDJSON(`logs/user-deletion-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
 			userId: 'user_456',
@@ -488,7 +488,7 @@ describe('deleteLogger', () => {
 		);
 		deleteLogger({ userId: 'user_3', status: 'success' }, dateTime);
 
-		const log = readNDJSON(`logs/${dateTime}-delete.log`);
+		const log = readNDJSON(`logs/user-deletion-${dateTime}.log`);
 		expect(log).toHaveLength(3);
 		expect(log[0].userId).toBe('user_1');
 		expect(log[0].status).toBe('success');
@@ -504,7 +504,7 @@ describe('mixed logging', () => {
 	beforeEach(cleanupLogs);
 	afterEach(cleanupLogs);
 
-	test('error and validation logs go to same import-errors.log file', () => {
+	test('error and validation logs go to same migration log file', () => {
 		const dateTime = 'mixed-errors-test';
 
 		errorLogger(
@@ -526,14 +526,14 @@ describe('mixed logging', () => {
 			dateTime
 		);
 
-		const log = readNDJSON(`logs/${dateTime}-import-errors.log`);
+		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(2);
 		expect(log[0].type).toBe('User Creation Error');
 		expect(log[1].type).toBe('Validation Error');
 	});
 
-	test('error logs and import logs go to separate files', () => {
-		const dateTime = 'mixed-separate-test';
+	test('error logs and import logs go to same migration log file', () => {
+		const dateTime = 'mixed-combined-test';
 
 		errorLogger(
 			{
@@ -557,14 +557,11 @@ describe('mixed logging', () => {
 
 		importLogger({ userId: 'user_2', status: 'success' }, dateTime);
 
-		const errorLog = readNDJSON(`logs/${dateTime}-import-errors.log`);
-		const importLog = readNDJSON(`logs/${dateTime}-import.log`);
+		const migrationLog = readNDJSON(`logs/migration-${dateTime}.log`);
 
-		expect(errorLog).toHaveLength(1);
-		expect(errorLog[0].type).toBe('User Creation Error');
-
-		expect(importLog).toHaveLength(2);
-		expect(importLog[0].status).toBe('error');
-		expect(importLog[1].status).toBe('success');
+		expect(migrationLog).toHaveLength(3);
+		expect(migrationLog[0].type).toBe('User Creation Error');
+		expect(migrationLog[1].status).toBe('error');
+		expect(migrationLog[2].status).toBe('success');
 	});
 });

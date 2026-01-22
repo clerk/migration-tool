@@ -1,21 +1,14 @@
 import * as z from 'zod';
-import { PASSWORD_HASHERS } from '../types';
+import { passwordHasherEnum } from '../types';
 
 // ============================================================================
 //
-// ONLY EDIT BELOW THIS IF YOU ARE ADDING A NEW FIELD
+// ONLY EDIT THIS IF YOU ARE ADDING A NEW FIELD
 //
-// Generally you only need to add or edit a handler and do not need to touch
-// any of the schema.
+// Generally you only need to add or edit a transformer and do not need to
+// touch any of the schema.
 //
 // ============================================================================
-
-/**
- * Zod enum of supported password hashing algorithms
- */
-const passwordHasherEnum = z.enum(
-	PASSWORD_HASHERS as unknown as [string, ...string[]]
-);
 
 /**
  * User validation schema for Clerk user imports
@@ -55,11 +48,20 @@ export const userSchema = z
 		// 2FA
 		totpSecret: z.string().optional(),
 		backupCodesEnabled: z.boolean().optional(),
-		backupCodes: z.string().optional(),
+		backupCodes: z.array(z.string()).optional(),
 		// Metadata - accept any value
 		unsafeMetadata: z.any().optional(),
 		publicMetadata: z.any().optional(),
 		privateMetadata: z.any().optional(),
+		// Additional Clerk API fields
+		bypassClientTrust: z.boolean().optional(),
+		createOrganizationEnabled: z.boolean().optional(),
+		createOrganizationsLimit: z.number().int().optional(),
+		createdAt: z.string().optional(),
+		deleteSelfEnabled: z.boolean().optional(),
+		legalAcceptedAt: z.string().optional(),
+		skipLegalChecks: z.boolean().optional(),
+		skipPasswordChecks: z.boolean().optional(),
 	})
 	.refine((data) => !data.password || data.passwordHasher, {
 		message: 'passwordHasher is required when password is provided',

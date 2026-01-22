@@ -165,21 +165,6 @@ export const findIntersection = (
 const errorCounts = new Map<string, number>();
 
 /**
- * Calculates the concurrency limit based on the rate limit
- *
- * Production: 1000 requests per 10 seconds = 100 requests/second → 50 concurrent
- * Dev: 100 requests per 10 seconds = 10 requests/second → 5 concurrent
- *
- * @returns The concurrency limit
- */
-const getConcurrencyLimit = (): number => {
-	// Use DELAY as a proxy for instance type
-	// Production: 10ms delay → 50 concurrent
-	// Dev: 100ms delay → 5 concurrent
-	return env.DELAY <= 10 ? 50 : 5;
-};
-
-/**
  * Deletes a single user from Clerk
  *
  * @param user - The Clerk user to delete
@@ -248,8 +233,7 @@ export const deleteUsers = async (users: User[], dateTime: string) => {
 	s.message(`Deleting users: [0/${total}]`);
 
 	// Set up concurrency limiter
-	const concurrencyLimit = getConcurrencyLimit();
-	const limit = pLimit(concurrencyLimit);
+	const limit = pLimit(env.CONCURRENCY_LIMIT);
 
 	// Process all users concurrently with the limit
 	const promises = users.map((user) => limit(() => deleteUser(user, dateTime)));

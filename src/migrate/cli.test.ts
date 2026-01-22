@@ -65,15 +65,19 @@ vi.mock('../envs-constants', () => ({
 }));
 
 // Mock the utils module
-vi.mock('../utils', () => ({
-	createImportFilePath: vi.fn((file: string) => file),
-	getFileType: vi.fn((file: string) => {
-		if (file.endsWith('.csv')) return 'text/csv';
-		if (file.endsWith('.json')) return 'application/json';
-		return 'unknown';
-	}),
-	checkIfFileExists: vi.fn(() => true),
-}));
+vi.mock('../utils', async (importOriginal) => {
+	const actual = await importOriginal();
+	return {
+		...actual,
+		createImportFilePath: vi.fn((file: string) => file),
+		getFileType: vi.fn((file: string) => {
+			if (file.endsWith('.csv')) return 'text/csv';
+			if (file.endsWith('.json')) return 'application/json';
+			return 'unknown';
+		}),
+		checkIfFileExists: vi.fn(() => true),
+	};
+});
 
 // ============================================================================
 // detectInstanceType tests
@@ -121,7 +125,7 @@ describe('loadSettings', () => {
 	});
 
 	test('loads settings from .settings file when it exists', () => {
-		const mockSettings = { key: 'clerk', file: 'users.json', offset: '0' };
+		const mockSettings = { key: 'clerk', file: 'users.json' };
 		vi.mocked(fs.existsSync).mockReturnValue(true);
 		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockSettings));
 

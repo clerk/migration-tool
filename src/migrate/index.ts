@@ -1,9 +1,10 @@
 import 'dotenv/config';
 
-import { env } from '../envs-constants';
 import { runCLI } from './cli';
 import { loadUsersFromFile } from './functions';
-import { importUsers } from './import-users';
+import { importUsers, getLastProcessedUserId } from './import-users';
+import * as p from '@clack/prompts';
+import color from 'picocolors';
 
 /**
  * Main entry point for the user migration script
@@ -11,7 +12,7 @@ import { importUsers } from './import-users';
  * Workflow:
  * 1. Runs the CLI to gather migration parameters
  * 2. Loads and transforms users from the source file
- * 3. Applies offset if specified
+ * 3. Filters users if resuming after a specific user ID
  * 4. Imports users to Clerk
  *
  * @returns A promise that resolves when migration is complete
@@ -19,14 +20,37 @@ import { importUsers } from './import-users';
 async function main() {
 	const args = await runCLI();
 
-	// we can use Zod to validate the args.keys to ensure it is TransformKeys type
+	// Load all users from file
 	const users = await loadUsersFromFile(args.file, args.key);
 
-	const usersToImport = users.slice(
-		parseInt(args.offset) > env.OFFSET ? parseInt(args.offset) : env.OFFSET
-	);
+	// If resuming after a specific user ID, filter to start after that user
+	let usersToImport = users;
+	if (args.resumeAfter) {
+		const resumeIndex = users.findIndex((u) => u.userId === args.resumeAfter);
+		if (resumeIndex !== -1) {
+			usersToImport = users.slice(resumeIndex + 1);
+		}
+	}
 
-	importUsers(usersToImport, args.skipPasswordRequirement);
+	await importUsers(usersToImport, args.skipPasswordRequirement);
 }
 
-main();
+main().catch((error) => {
+	console.error('\n');
+	p.log.error(color.red('Migration failed with error:'));
+	p.log.error(color.red(error.message || error));
+
+	const lastUserId = getLastProcessedUserId();
+	if (lastUserId) {
+		p.log.warn(color.yellow(`Last processed user ID: ${lastUserId}`));
+		p.note(
+			`To resume this migration, use:\n  bun migrate --resume-after="${lastUserId}"`,
+			'Resume Migration'
+		);
+	}
+
+	if (error.stack) {
+		console.error(error.stack);
+	}
+	process.exit(1);
+});

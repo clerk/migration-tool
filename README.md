@@ -44,20 +44,31 @@ CLERK_SECRET_KEY=your-secret-key
 bun migrate
 ```
 
-The script will begin process the users and attempting to import them into Clerk. The script has a built in delay to respect the rate limits for the Clerk Backend API. If the script does hit a rate limit then it will wait the required 10 seconds and resume. Any errors will be logged to a `migration-log.json` file.
+The script will begin processing users and attempting to import them into Clerk. The script respects rate limits for the Clerk Backend API. If the script hits a rate limit, it will wait 10 seconds and retry (up to 5 times). Any errors will be logged to timestamped log files in the `./logs` folder.
 
-The script can be run on the same data multiple times, Clerk automatically uses the email as a unique key so users can't be created again.
+The script can be run on the same data multiple times. Clerk automatically uses the email as a unique key so users won't be created again.
+
+**Error Handling & Resuming**: If the migration stops for any reason (error, interruption, etc.), the script will display the last processed user ID. You can resume the migration from that point by providing the user ID when prompted, or by using:
+
+```bash
+bun migrate --resume-after="user_xxx"
+```
 
 ### Configuration
 
 The script can be configured through the following environment variables:
 
-| Variable           | Description                                         |
-| ------------------ | --------------------------------------------------- |
-| `CLERK_SECRET_KEY` | Your Clerk secret key                               |
-| `DELAY_MS`         | Delay between requests to respect rate limits       |
-| `RETRY_DELAY_MS`   | Delay when the rate limit is hit                    |
-| `OFFSET`           | Offset to start migration (number of users to skip) |
+| Variable           | Description                                                               |
+| ------------------ | ------------------------------------------------------------------------- |
+| `CLERK_SECRET_KEY` | Your Clerk secret key                                                     |
+| `RATE_LIMIT`       | Rate limit in requests/second (auto-configured: 100 for prod, 10 for dev) |
+
+The script automatically detects production vs development instances from your `CLERK_SECRET_KEY` and sets appropriate rate limits:
+
+- **Production** (`sk_live_*`): 100 requests/second (Clerk's limit: 1000 requests per 10 seconds)
+- **Development** (`sk_test_*`): 10 requests/second (Clerk's limit: 100 requests per 10 seconds)
+
+You can override the rate limit by setting `RATE_LIMIT` in your `.env` file.
 
 ## Other commands
 

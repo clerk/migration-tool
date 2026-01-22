@@ -9,16 +9,15 @@ import {
 	getFileType,
 	createImportFilePath,
 	tryCatch,
+	transformKeys as transformKeysFromFunctions,
 } from '../utils';
 import { env } from '../envs-constants';
-import { transformKeys as transformKeysFromFunctions } from './functions';
 
 const SETTINGS_FILE = '.settings';
 
 type Settings = {
 	key?: string;
 	file?: string;
-	offset?: string;
 };
 
 const DEV_USER_LIMIT = 500;
@@ -67,7 +66,7 @@ type FieldAnalysis = {
  * Reads previously saved migration parameters to use as defaults in the CLI.
  * Returns an empty object if the file doesn't exist or is corrupted.
  *
- * @returns The saved settings object with key, file, and offset properties
+ * @returns The saved settings object with key and file properties
  */
 export const loadSettings = (): Settings => {
 	try {
@@ -85,7 +84,7 @@ export const loadSettings = (): Settings => {
 /**
  * Saves migration settings to the .settings file in the current directory
  *
- * Persists the current migration parameters (transformer key, file path, offset)
+ * Persists the current migration parameters (transformer key, file path)
  * so they can be used as defaults in future runs. Fails silently if unable to write.
  *
  * @param settings - The settings object to save
@@ -365,6 +364,7 @@ export const displayIdentifierAnalysis = (analysis: FieldAnalysis): void => {
  *
  * Shows how many users have passwords and provides Dashboard configuration guidance.
  * If some users lack passwords, prompts whether to migrate those users anyway.
+ * If no users have passwords, returns immediately without displaying anything.
  *
  * @param analysis - The field analysis results
  * @returns true if users without passwords should be migrated (skipPasswordRequirement),
@@ -377,14 +377,18 @@ export const displayPasswordAnalysis = async (
 	const { totalUsers, fieldCounts } = analysis;
 	const usersWithPasswords = fieldCounts.password || 0;
 
+	// If no users have passwords, show message and skip password section
+	if (usersWithPasswords === 0) {
+		p.note(`${color.dim('○')} No users have passwords`, 'Password');
+		return true;
+	}
+
 	let passwordMessage = '';
 
 	if (usersWithPasswords === totalUsers) {
 		passwordMessage += `${color.green('●')} All users have passwords\n`;
-	} else if (usersWithPasswords > 0) {
-		passwordMessage += `${color.yellow('○')} ${usersWithPasswords} of ${totalUsers} users have passwords\n`;
 	} else {
-		passwordMessage += `${color.red('○')} No users have passwords\n`;
+		passwordMessage += `${color.yellow('○')} ${usersWithPasswords} of ${totalUsers} users have passwords\n`;
 	}
 
 	passwordMessage += '\n';
@@ -513,7 +517,7 @@ export const displayOtherFieldsAnalysis = (
  * Runs the interactive CLI for user migration
  *
  * Guides the user through the migration process:
- * 1. Gathers migration parameters (transformer, file, offset)
+ * 1. Gathers migration parameters (transformer, file, resumeAfter)
  * 2. Analyzes the import file and displays field statistics
  * 3. Validates instance type and user count (dev instances limited to 500 users)
  * 4. Confirms Dashboard configuration for identifiers, password, user model, and other fields
@@ -521,7 +525,7 @@ export const displayOtherFieldsAnalysis = (
  *
  * Saves settings for future runs and returns all configuration options.
  *
- * @returns Configuration object with transformer key, file path, offset, instance type,
+ * @returns Configuration object with transformer key, file path, resumeAfter, instance type,
  *          and skipPasswordRequirement flag
  * @throws Exits the process if migration is cancelled or validation fails
  */
@@ -558,12 +562,12 @@ export const runCLI = async () => {
 						}
 					},
 				}),
-			offset: () =>
+			resumeAfter: () =>
 				p.text({
-					message: 'Specify an offset to begin importing from.',
-					initialValue: savedSettings.offset || '0',
-					defaultValue: savedSettings.offset || '0',
-					placeholder: savedSettings.offset || '0',
+					message: 'Resume after user ID (leave empty to start from beginning)',
+					initialValue: '',
+					defaultValue: '',
+					placeholder: 'user_xxx or leave empty',
 				}),
 		},
 		{
@@ -588,10 +592,31 @@ export const runCLI = async () => {
 		process.exit(1);
 	}
 
-	const userCount = users.length;
-	spinner.stop(`Found ${userCount} users in file`);
+	// Filter users if resuming after a specific user ID
+	let filteredUsers = users;
+	if (initialArgs.resumeAfter) {
+		const resumeIndex = users.findIndex(
+			(u) => u.userId === initialArgs.resumeAfter
+		);
+		if (resumeIndex === -1) {
+			spinner.stop('User ID not found');
+			p.cancel(
+				`Could not find user ID "${initialArgs.resumeAfter}" in the import file.`
+			);
+			process.exit(1);
+		}
+		// Start from the user AFTER the specified ID
+		filteredUsers = users.slice(resumeIndex + 1);
+		p.log.info(
+			`Resuming migration after user ID: ${initialArgs.resumeAfter}\n` +
+				`Skipping ${resumeIndex + 1} users, starting with user ${resumeIndex + 2} of ${users.length}`
+		);
+	}
 
-	const analysis = analyzeFields(users);
+	const userCount = filteredUsers.length;
+	spinner.stop(`Found ${userCount} users to migrate`);
+
+	const analysis = analyzeFields(filteredUsers);
 
 	// Step 3: Check instance type and validate
 	const instanceType = detectInstanceType();
@@ -660,16 +685,20 @@ export const runCLI = async () => {
 		process.exit(0);
 	}
 
-	const confirmPassword = await p.confirm({
-		message: 'Have you enabled Password in the Dashboard?',
-		initialValue: true,
-	});
+	// Only show password confirmation if users have passwords
+	const usersWithPasswords = analysis.fieldCounts.password || 0;
+	if (usersWithPasswords > 0) {
+		const confirmPassword = await p.confirm({
+			message: 'Have you enabled Password in the Dashboard?',
+			initialValue: true,
+		});
 
-	if (p.isCancel(confirmPassword) || !confirmPassword) {
-		p.cancel(
-			'Migration cancelled. Please enable Password in the Dashboard and try again.'
-		);
-		process.exit(0);
+		if (p.isCancel(confirmPassword) || !confirmPassword) {
+			p.cancel(
+				'Migration cancelled. Please enable Password in the Dashboard and try again.'
+			);
+			process.exit(0);
+		}
 	}
 
 	// Step 6: Display user model analysis
@@ -722,7 +751,6 @@ export const runCLI = async () => {
 	saveSettings({
 		key: initialArgs.key,
 		file: initialArgs.file,
-		offset: initialArgs.offset,
 	});
 
 	return {

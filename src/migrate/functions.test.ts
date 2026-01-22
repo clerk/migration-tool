@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { loadUsersFromFile, transformKeys } from './functions';
+import { loadUsersFromFile } from './functions';
+import { transformKeys } from '../utils';
 import { transformers } from './transformers';
 
 test('Clerk - loadUsersFromFile - JSON', async () => {

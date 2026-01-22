@@ -65,3 +65,101 @@ export const tryCatch = async <T>(
 		throw throwable;
 	}
 };
+
+/**
+ * Selectively flattens nested objects based on transformer configuration
+ *
+ * Only flattens paths that are explicitly referenced in the transformer config.
+ * This allows transformers to map nested fields (e.g., "_id.$oid" in Auth0) to
+ * flat fields in the target schema.
+ *
+ * @param obj - The object to flatten
+ * @param transformer - The transformer config mapping source paths to target fields
+ * @param prefix - Internal parameter for recursive flattening (current path prefix)
+ * @returns Flattened object with dot-notation keys for nested paths
+ *
+ * @example
+ * const obj = { _id: { $oid: "123" }, email: "test@example.com" }
+ * const transformer = { "_id.$oid": "userId", "email": "email" }
+ * flattenObjectSelectively(obj, transformer)
+ * // Returns: { "_id.$oid": "123", "email": "test@example.com" }
+ */
+export function flattenObjectSelectively(
+	obj: Record<string, unknown>,
+	transformer: Record<string, string>,
+	prefix = ''
+): Record<string, unknown> {
+	const result: Record<string, unknown> = {};
+
+	for (const [key, value] of Object.entries(obj)) {
+		const currentPath = prefix ? `${prefix}.${key}` : key;
+
+		// Check if this path (or any nested path) is in the transformer
+		const hasNestedMapping = Object.keys(transformer).some((k) =>
+			k.startsWith(currentPath + '.')
+		);
+
+		if (
+			hasNestedMapping &&
+			value &&
+			typeof value === 'object' &&
+			!Array.isArray(value)
+		) {
+			// This object has nested mappings, so recursively flatten it
+			Object.assign(
+				result,
+				flattenObjectSelectively(
+					value as Record<string, unknown>,
+					transformer,
+					currentPath
+				)
+			);
+		} else {
+			// Either it's not an object, or it's not mapped with nested paths - keep as-is
+			result[currentPath] = value;
+		}
+	}
+
+	return result;
+}
+
+/**
+ * Transforms data keys from source format to Clerk's import schema
+ *
+ * Maps field names from the source platform (Auth0, Supabase, etc.) to
+ * Clerk's expected field names using the transformer's configuration.
+ * Flattens nested objects as needed and filters out empty values.
+ *
+ * @template T - The transformer type being used for transformation
+ * @param data - The raw user data from the source platform
+ * @param transformerConfig - The transformer configuration with field mapping
+ * @returns Transformed user object with Clerk field names
+ *
+ * @example
+ * const auth0User = { "_id": { "$oid": "123" }, "email": "test@example.com" }
+ * const transformer = transformers.find(h => h.key === "auth0")
+ * transformKeys(auth0User, transformer)
+ * // Returns: { userId: "123", email: "test@example.com" }
+ */
+export function transformKeys<
+	T extends { transformer: Record<string, string> },
+>(
+	data: Record<string, unknown>,
+	transformerConfig: T
+): Record<string, unknown> {
+	const transformedData: Record<string, unknown> = {};
+	const transformer = transformerConfig.transformer as Record<string, string>;
+
+	// Selectively flatten the input data based on transformer config
+	const flatData = flattenObjectSelectively(data, transformer);
+
+	// Then apply transformations
+	for (const [key, value] of Object.entries(flatData)) {
+		if (value !== '' && value !== '"{}"' && value !== null) {
+			const transformedKey = transformer[key] || key;
+			transformedData[transformedKey] = value;
+		}
+	}
+
+	return transformedData;
+}

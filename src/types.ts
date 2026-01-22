@@ -1,6 +1,6 @@
 import { ClerkAPIError } from '@clerk/types';
 import { transformers } from './migrate/transformers';
-import { userSchema } from './migrate/validators';
+import { userSchema } from './migrate/validator';
 import * as z from 'zod';
 
 /**
@@ -129,3 +129,10 @@ export type DeleteLogEntry = {
 	status: 'success' | 'error';
 	error?: string;
 };
+
+/**
+ * Zod enum of supported password hashing algorithms
+ */
+export const passwordHasherEnum = z.enum(
+	PASSWORD_HASHERS as unknown as [string, ...string[]]
+);

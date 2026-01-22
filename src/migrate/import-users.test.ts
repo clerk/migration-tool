@@ -72,8 +72,8 @@ vi.mock('../logger', () => ({
 vi.mock('../envs-constants', () => ({
 	env: {
 		CLERK_SECRET_KEY: 'test_secret_key',
-		DELAY: 0,
-		RETRY_DELAY_MS: 0,
+		RATE_LIMIT: 10,
+		CONCURRENCY_LIMIT: 5,
 		OFFSET: 0,
 	},
 }));
@@ -264,7 +264,7 @@ describe('importUsers', () => {
 			expect(mockCreateUser).toHaveBeenCalledTimes(3);
 		});
 
-		test('retries on rate limit (429) error', async () => {
+		test('retries on rate limit (429) error', { timeout: 15000 }, async () => {
 			const rateLimitError = {
 				status: 429,
 				errors: [{ code: 'rate_limit', message: 'Too many requests' }],
@@ -315,7 +315,7 @@ describe('importUsers edge cases', () => {
 	});
 
 	test('handles user with all optional fields', async () => {
-		mockCreateUser.mockResolvedValue({ id: 'user_full_created' });
+		mockCreateUser.mockReset().mockResolvedValue({ id: 'user_full_created' });
 		mockCreateEmailAddress.mockResolvedValue({});
 
 		const users = [

@@ -16,27 +16,32 @@ export const detectInstanceType = (secretKey: string): 'dev' | 'prod' => {
 };
 
 /**
- * Gets the default delay between API requests based on instance type
+ * Gets the default rate limit based on instance type
  *
- * Rate limits:
- * - Production: 1000 requests per 10 seconds = 10ms delay
- * - Dev: 100 requests per 10 seconds = 100ms delay
+ * Rate limits (Clerk's documented limits):
+ * - Production: 1000 requests per 10 seconds = 100 requests/second
+ * - Dev: 100 requests per 10 seconds = 10 requests/second
  *
  * @param instanceType - The type of Clerk instance
- * @returns The delay in milliseconds
+ * @returns The rate limit in requests per second
  */
-export const getDefaultDelay = (instanceType: 'dev' | 'prod'): number => {
-	return instanceType === 'prod' ? 10 : 100;
+export const getDefaultRateLimit = (instanceType: 'dev' | 'prod'): number => {
+	return instanceType === 'prod' ? 100 : 10;
 };
 
 /**
- * Gets the default retry delay when rate limited based on instance type
+ * Calculates the concurrency limit based on rate limit
  *
- * @param instanceType - The type of Clerk instance
- * @returns The retry delay in milliseconds (100ms for prod, 1000ms for dev)
+ * Uses an aggressive approach with only 50ms leeway:
+ * - Allows concurrent requests up to 95% of rate limit
+ * - This maximizes throughput while leaving minimal buffer (50ms worth of requests)
+ * - Example: 100 req/s → 95 concurrent, 10 req/s → 9 concurrent
+ *
+ * @param rateLimit - The rate limit in requests per second
+ * @returns The concurrency limit (number of concurrent requests allowed)
  */
-export const getDefaultRetryDelay = (instanceType: 'dev' | 'prod'): number => {
-	return instanceType === 'prod' ? 100 : 1000;
+export const getConcurrencyLimit = (rateLimit: number): number => {
+	return Math.max(1, Math.floor(rateLimit * 0.95));
 };
 
 /**
@@ -49,20 +54,18 @@ export const createEnvSchema = () => {
 	return z
 		.object({
 			CLERK_SECRET_KEY: z.string(),
-			DELAY: z.coerce.number().optional(),
-			RETRY_DELAY_MS: z.coerce.number().optional(),
-			OFFSET: z.coerce.number().optional().default(0),
+			RATE_LIMIT: z.coerce.number().positive().optional(),
 		})
 		.transform((data) => {
 			// Dynamically determine instance type from the actual secret key
 			const instanceType = detectInstanceType(data.CLERK_SECRET_KEY);
 
+			const rateLimit = data.RATE_LIMIT ?? getDefaultRateLimit(instanceType);
+
 			return {
 				CLERK_SECRET_KEY: data.CLERK_SECRET_KEY,
-				DELAY: data.DELAY ?? getDefaultDelay(instanceType),
-				RETRY_DELAY_MS:
-					data.RETRY_DELAY_MS ?? getDefaultRetryDelay(instanceType),
-				OFFSET: data.OFFSET,
+				RATE_LIMIT: rateLimit,
+				CONCURRENCY_LIMIT: getConcurrencyLimit(rateLimit),
 			};
 		});
 };
@@ -86,8 +89,7 @@ if (!parsed.success) {
  * Validated environment configuration with defaults applied
  *
  * @property CLERK_SECRET_KEY - Your Clerk secret key
- * @property DELAY - Delay between API requests (auto-configured based on instance type)
- * @property RETRY_DELAY_MS - Delay before retrying failed requests
- * @property OFFSET - Starting offset for processing users (for resuming migrations)
+ * @property RATE_LIMIT - Rate limit in requests per second (auto-configured based on instance type)
+ * @property CONCURRENCY_LIMIT - Maximum number of concurrent requests (calculated from rate limit)
  */
 export const env = parsed.data;

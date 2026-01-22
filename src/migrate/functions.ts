@@ -3,112 +3,16 @@ import csvParser from 'csv-parser';
 import * as p from '@clack/prompts';
 import { validationLogger } from '../logger';
 import { transformers } from './transformers';
-import { userSchema } from './validators';
+import { userSchema } from './validator';
+import { User, PASSWORD_HASHERS, TransformerMapKeys } from '../types';
 import {
-	TransformerMapKeys,
-	TransformerMapUnion,
-	User,
-	PASSWORD_HASHERS,
-} from '../types';
-import { createImportFilePath, getDateTimeStamp, getFileType } from '../utils';
+	createImportFilePath,
+	getDateTimeStamp,
+	getFileType,
+	transformKeys,
+} from '../utils';
 
 const s = p.spinner();
-
-/**
- * Selectively flattens nested objects based on transformer configuration
- *
- * Only flattens paths that are explicitly referenced in the transformer config.
- * This allows transformers to map nested fields (e.g., "_id.$oid" in Auth0) to
- * flat fields in the target schema.
- *
- * @param obj - The object to flatten
- * @param transformer - The transformer config mapping source paths to target fields
- * @param prefix - Internal parameter for recursive flattening (current path prefix)
- * @returns Flattened object with dot-notation keys for nested paths
- *
- * @example
- * const obj = { _id: { $oid: "123" }, email: "test@example.com" }
- * const transformer = { "_id.$oid": "userId", "email": "email" }
- * flattenObjectSelectively(obj, transformer)
- * // Returns: { "_id.$oid": "123", "email": "test@example.com" }
- */
-function flattenObjectSelectively(
-	obj: Record<string, unknown>,
-	transformer: Record<string, string>,
-	prefix = ''
-): Record<string, unknown> {
-	const result: Record<string, unknown> = {};
-
-	for (const [key, value] of Object.entries(obj)) {
-		const currentPath = prefix ? `${prefix}.${key}` : key;
-
-		// Check if this path (or any nested path) is in the transformer
-		const hasNestedMapping = Object.keys(transformer).some((k) =>
-			k.startsWith(currentPath + '.')
-		);
-
-		if (
-			hasNestedMapping &&
-			value &&
-			typeof value === 'object' &&
-			!Array.isArray(value)
-		) {
-			// This object has nested mappings, so recursively flatten it
-			Object.assign(
-				result,
-				flattenObjectSelectively(
-					value as Record<string, unknown>,
-					transformer,
-					currentPath
-				)
-			);
-		} else {
-			// Either it's not an object, or it's not mapped with nested paths - keep as-is
-			result[currentPath] = value;
-		}
-	}
-
-	return result;
-}
-
-/**
- * Transforms data keys from source format to Clerk's import schema
- *
- * Maps field names from the source platform (Auth0, Supabase, etc.) to
- * Clerk's expected field names using the transformer's transformer configuration.
- * Flattens nested objects as needed and filters out empty values.
- *
- * @template T - The transformer type being used for transformation
- * @param data - The raw user data from the source platform
- * @param keys - The transformer configuration with transformer mapping
- * @returns Transformed user object with Clerk field names
- *
- * @example
- * const auth0User = { "_id": { "$oid": "123" }, "email": "test@example.com" }
- * const transformer = transformers.find(h => h.key === "auth0")
- * transformKeys(auth0User, transformer)
- * // Returns: { userId: "123", email: "test@example.com" }
- */
-export function transformKeys<T extends HandlerMapUnion>(
-	data: Record<string, unknown>,
-	keys: T
-): Record<string, unknown> {
-	const transformedData: Record<string, unknown> = {};
-	const transformer = keys.transformer as Record<string, string>;
-
-	// Selectively flatten the input data based on transformer config
-	const flatData = flattenObjectSelectively(data, transformer);
-
-	// Then apply transformations
-	for (const [key, value] of Object.entries(flatData)) {
-		if (value !== '' && value !== '"{}"' && value !== null) {
-			const transformedKey = transformer[key] || key;
-			transformedData[transformedKey] = value;
-		}
-	}
-
-	return transformedData;
-}
 
 /**
  * Transforms and validates an array of users for import
@@ -116,7 +20,7 @@ export function transformKeys<T extends HandlerMapUnion>(
  * Processes each user through:
  * 1. Field transformation using the transformer's transformer config
  * 2. Special handling for Clerk-to-Clerk migrations (email/phone array consolidation)
- * 3. Handler-specific postTransform logic (if defined)
+ * 3. Transformer-specific postTransform logic (if defined)
  * 4. Schema validation
  * 5. Validation error logging for failed users
  *
@@ -124,14 +28,14 @@ export function transformKeys<T extends HandlerMapUnion>(
  * Logs other validation errors and excludes invalid users from the result.
  *
  * @param users - Array of raw user data to transform
- * @param key - Handler key identifying the source platform
+ * @param key - Transformer key identifying the source platform
  * @param dateTime - Timestamp for log file naming
  * @returns Array of successfully transformed and validated users
  * @throws Error if an invalid password hasher is detected
  */
 const transformUsers = (
 	users: User[],
-	key: HandlerMapKeys,
+	key: TransformerMapKeys,
 	dateTime: string
 ) => {
 	// This applies to smaller numbers. Pass in 10, get 5 back.
@@ -261,7 +165,7 @@ const transformUsers = (
  * For example, the Supabase transformer defaults passwordHasher to "bcrypt".
  *
  * @param users - Array of user objects
- * @param key - Handler key identifying which defaults to apply
+ * @param key - Transformer key identifying which defaults to apply
  * @returns Array of users with default fields applied (if transformer has defaults)
  */
 const addDefaultFields = (users: User[], key: string) => {
@@ -300,17 +204,17 @@ const addDefaultFields = (users: User[], key: string) => {
  * Displays a spinner during the loading process.
  *
  * @param file - File path to load users from (relative or absolute)
- * @param key - Handler key identifying the source platform
+ * @param key - Transformer key identifying the source platform
  * @returns Array of validated users ready for import
  * @throws Error if file cannot be read or contains invalid data
  */
 export const loadUsersFromFile = async (
 	file: string,
-	key: HandlerMapKeys
+	key: TransformerMapKeys
 ): Promise<User[]> => {
 	const dateTime = getDateTimeStamp();
 	s.start();
-	s.message('Loading users and perparing to migrate');
+	s.message('Loading users and preparing to migrate');
 
 	const type = getFileType(createImportFilePath(file));
 

@@ -58,8 +58,9 @@ vi.mock('../utils', () => ({
 vi.mock('../envs-constants', () => ({
 	env: {
 		CLERK_SECRET_KEY: 'test_secret_key',
-		DELAY: 0,
-		RETRY_DELAY_MS: 0,
+		RATE_LIMIT: 10,
+		CONCURRENCY_LIMIT: 5,
+		OFFSET: 0,
 	},
 }));
 

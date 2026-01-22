@@ -13,7 +13,7 @@
     "lint": "eslint . --config .eslintrc.js",
     "lint:fix": "eslint . --fix --config .eslintrc.js",
     "format": "prettier . --write",
-    "format:test": "prettier .",
+    "format:test": "prettier . --check",
     "test": "vitest",
     "prepare": "husky"
   },
