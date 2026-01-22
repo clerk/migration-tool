@@ -1,15 +1,6 @@
-import path from "path";
-import mime from "mime-types";
-import fs from "fs";
-
-/**
- * Pauses execution for a specified duration
- * @param ms - The number of milliseconds to wait
- * @returns A promise that resolves after the specified duration
- */
-export async function cooldown(ms: number) {
-  await new Promise((r) => setTimeout(r, ms));
-}
+import path from 'path';
+import mime from 'mime-types';
+import fs from 'fs';
 
 /**
  * Gets the current date and time in ISO format without milliseconds
@@ -18,7 +9,7 @@ export async function cooldown(ms: number) {
  * getDateTimeStamp() // "2026-01-20T14:30:45"
  */
 export const getDateTimeStamp = () => {
-  return new Date().toISOString().split(".")[0]; // YYYY-MM-DDTHH:mm:ss
+	return new Date().toISOString().split('.')[0]; // YYYY-MM-DDTHH:mm:ss
 };
 
 /**
@@ -27,7 +18,7 @@ export const getDateTimeStamp = () => {
  * @returns The absolute file path
  */
 export const createImportFilePath = (file: string) => {
-  return path.join(__dirname, "..", file);
+	return path.join(__dirname, '..', file);
 };
 
 /**
@@ -36,11 +27,11 @@ export const createImportFilePath = (file: string) => {
  * @returns True if the file exists, false otherwise
  */
 export const checkIfFileExists = (file: string) => {
-  if (fs.existsSync(createImportFilePath(file))) {
-    return true;
-  } else {
-    return false;
-  }
+	if (fs.existsSync(createImportFilePath(file))) {
+		return true;
+	} else {
+		return false;
+	}
 };
 
 /**
@@ -49,7 +40,7 @@ export const checkIfFileExists = (file: string) => {
  * @returns The MIME type of the file (e.g., "application/json", "text/csv") or false if unknown
  */
 export const getFileType = (file: string) => {
-  return mime.lookup(createImportFilePath(file));
+	return mime.lookup(createImportFilePath(file));
 };
 
 /**
@@ -63,14 +54,14 @@ export const getFileType = (file: string) => {
  * if (error) console.error(error);
  */
 export const tryCatch = async <T>(
-  promise: Promise<T>,
+	promise: Promise<T>
 ): Promise<[T, null] | [null, Error]> => {
-  try {
-    const data = await promise;
-    return [data, null];
-  } catch (throwable) {
-    if (throwable instanceof Error) return [null, throwable];
+	try {
+		const data = await promise;
+		return [data, null];
+	} catch (throwable) {
+		if (throwable instanceof Error) return [null, throwable];
 
-    throw throwable;
-  }
+		throw throwable;
+	}
 };

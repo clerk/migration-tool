@@ -1,7 +1,7 @@
-import { ClerkAPIError } from "@clerk/types";
-import { handlers } from "./create/handlers";
-import { userSchema } from "./create/validators";
-import * as z from "zod";
+import { ClerkAPIError } from '@clerk/types';
+import { transformers } from './migrate/transformers';
+import { userSchema } from './migrate/validators';
+import * as z from 'zod';
 
 /**
  * List of supported password hashing algorithms in Clerk
@@ -10,25 +10,25 @@ import * as z from "zod";
  * was used to hash the passwords so Clerk can validate them correctly.
  */
 export const PASSWORD_HASHERS = [
-	"argon2i",
-	"argon2id",
-	"bcrypt",
-	"bcrypt_peppered",
-	"bcrypt_sha256_django",
-	"hmac_sha256_utf16_b64",
-	"md5",
-	"md5_salted",
-	"pbkdf2_sha1",
-	"pbkdf2_sha256",
-	"pbkdf2_sha256_django",
-	"pbkdf2_sha512",
-	"scrypt_firebase",
-	"scrypt_werkzeug",
-	"sha256",
-	"sha256_salted",
-	"md5_phpass",
-	"ldap_ssha",
-	"sha512_symfony",
+	'argon2i',
+	'argon2id',
+	'bcrypt',
+	'bcrypt_peppered',
+	'bcrypt_sha256_django',
+	'hmac_sha256_utf16_b64',
+	'md5',
+	'md5_salted',
+	'pbkdf2_sha1',
+	'pbkdf2_sha256',
+	'pbkdf2_sha256_django',
+	'pbkdf2_sha512',
+	'scrypt_firebase',
+	'scrypt_werkzeug',
+	'sha256',
+	'sha256_salted',
+	'md5_phpass',
+	'ldap_ssha',
+	'sha512_symfony',
 ] as const;
 
 /**
@@ -37,14 +37,14 @@ export const PASSWORD_HASHERS = [
 export type User = z.infer<typeof userSchema>;
 
 /**
- * Union type of all handler keys (e.g., "clerk" | "auth0" | "supabase" | "authjs")
+ * Union type of all transformer keys (e.g., "clerk" | "auth0" | "supabase" | "authjs")
  */
-export type HandlerMapKeys = (typeof handlers)[number]["key"];
+export type TransformerMapKeys = (typeof transformers)[number]['key'];
 
 /**
- * Union type of all handler configuration objects
+ * Union type of all transformer configuration objects
  */
-export type HandlerMapUnion = (typeof handlers)[number];
+export type TransformerMapUnion = (typeof transformers)[number];
 
 /**
  * Error information from a failed user creation attempt
@@ -98,7 +98,7 @@ export type ErrorLog = {
  */
 export type ImportLogEntry = {
 	userId: string;
-	status: "success" | "error";
+	status: 'success' | 'error';
 	error?: string;
 };
 
@@ -126,6 +126,6 @@ export type ImportSummary = {
  */
 export type DeleteLogEntry = {
 	userId: string;
-	status: "success" | "error";
+	status: 'success' | 'error';
 	error?: string;
 };

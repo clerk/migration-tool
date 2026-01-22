@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { config } from "dotenv";
+import { z } from 'zod';
+import { config } from 'dotenv';
 config();
 
 /**
@@ -11,14 +11,9 @@ config();
  * detectInstanceType("sk_live_xxx") // "prod"
  * detectInstanceType("sk_test_xxx") // "dev"
  */
-export const detectInstanceType = (secretKey: string): "dev" | "prod" => {
-  return secretKey.split("_")[1] === "live" ? "prod" : "dev";
+export const detectInstanceType = (secretKey: string): 'dev' | 'prod' => {
+	return secretKey.split('_')[1] === 'live' ? 'prod' : 'dev';
 };
-
-// Determine if this is a production or dev instance
-const isProduction = process.env.CLERK_SECRET_KEY
-  ? detectInstanceType(process.env.CLERK_SECRET_KEY) === "prod"
-  : false;
 
 /**
  * Gets the default delay between API requests based on instance type
@@ -30,8 +25,8 @@ const isProduction = process.env.CLERK_SECRET_KEY
  * @param instanceType - The type of Clerk instance
  * @returns The delay in milliseconds
  */
-export const getDefaultDelay = (instanceType: "dev" | "prod"): number => {
-  return instanceType === "prod" ? 100 : 10;
+export const getDefaultDelay = (instanceType: 'dev' | 'prod'): number => {
+	return instanceType === 'prod' ? 10 : 100;
 };
 
 /**
@@ -40,31 +35,39 @@ export const getDefaultDelay = (instanceType: "dev" | "prod"): number => {
  * @param instanceType - The type of Clerk instance
  * @returns The retry delay in milliseconds (100ms for prod, 1000ms for dev)
  */
-export const getDefaultRetryDelay = (instanceType: "dev" | "prod"): number => {
-  return instanceType === "prod" ? 100 : 1000;
+export const getDefaultRetryDelay = (instanceType: 'dev' | 'prod'): number => {
+	return instanceType === 'prod' ? 100 : 1000;
 };
-
-const instanceType = isProduction ? "prod" : "dev";
-const defaultDelay = getDefaultDelay(instanceType);
-const defaultRetryDelay = getDefaultRetryDelay(instanceType);
 
 /**
- * Creates a Zod schema for environment variable validation
+ * Creates a Zod schema for environment variable validation with dynamic defaults
+ * based on the actual CLERK_SECRET_KEY value
  *
- * @param defaultDelayValue - Default delay between requests in milliseconds
- * @param defaultRetryDelayValue - Default retry delay in milliseconds
  * @returns A Zod object schema for environment variables
  */
-export const createEnvSchema = (defaultDelayValue: number, defaultRetryDelayValue: number) => {
-  return z.object({
-    CLERK_SECRET_KEY: z.string(),
-    DELAY: z.coerce.number().optional().default(defaultDelayValue),
-    RETRY_DELAY_MS: z.coerce.number().optional().default(defaultRetryDelayValue),
-    OFFSET: z.coerce.number().optional().default(0),
-  });
+export const createEnvSchema = () => {
+	return z
+		.object({
+			CLERK_SECRET_KEY: z.string(),
+			DELAY: z.coerce.number().optional(),
+			RETRY_DELAY_MS: z.coerce.number().optional(),
+			OFFSET: z.coerce.number().optional().default(0),
+		})
+		.transform((data) => {
+			// Dynamically determine instance type from the actual secret key
+			const instanceType = detectInstanceType(data.CLERK_SECRET_KEY);
+
+			return {
+				CLERK_SECRET_KEY: data.CLERK_SECRET_KEY,
+				DELAY: data.DELAY ?? getDefaultDelay(instanceType),
+				RETRY_DELAY_MS:
+					data.RETRY_DELAY_MS ?? getDefaultRetryDelay(instanceType),
+				OFFSET: data.OFFSET,
+			};
+		});
 };
 
-const envSchema = createEnvSchema(defaultDelay, defaultRetryDelay);
+const envSchema = createEnvSchema();
 
 /**
  * Type representing the validated environment configuration
@@ -74,9 +77,9 @@ export type EnvSchema = z.infer<typeof envSchema>;
 const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
-  console.error("❌ Invalid environment variables:");
-  console.error(JSON.stringify(parsed.error.issues, null, 2));
-  process.exit(1);
+	console.error('❌ Invalid environment variables:');
+	console.error(JSON.stringify(parsed.error.issues, null, 2));
+	process.exit(1);
 }
 
 /**

@@ -7,7 +7,7 @@
   "keywords": [],
   "license": "ISC",
   "scripts": {
-    "migrate": "bun ./src/create/index.ts",
+    "migrate": "bun ./src/migrate/index.ts",
     "delete": "bun ./src/delete/index.ts",
     "clean-logs": "bun ./src/clean-logs/index.ts",
     "lint": "eslint . --config .eslintrc.js",

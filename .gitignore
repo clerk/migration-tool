@@ -1,7 +1,6 @@
 node_modules
 .env
 .settings
-users.*
 package-lock.json
 yarn.lock
 pnpm-lock.yaml

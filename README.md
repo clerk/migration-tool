@@ -18,11 +18,11 @@ bun install
 
 ### Users file
 
-The script is designed to import from multiple sources, including moving users from one Clerk instance to another. You may need to edit the handler for your source. Please see below for more information on that.
+The script is designed to import from multiple sources, including moving users from one Clerk instance to another. You may need to edit the transformer for your source. Please see below for more information on that.
 
 The script will import from a CSV or JSON. It accounts for empty fields in a CSV and will remove them when converting from CSV to a javascript object.
 
-The only required fields are `userId` and an identifier (one of `email`, `phone` or `username`). 
+The only required fields are `userId` and an identifier (one of `email`, `phone` or `username`).
 
 #### Samples
 
@@ -53,12 +53,11 @@ The script can be run on the same data multiple times, Clerk automatically uses 
 The script can be configured through the following environment variables:
 
 | Variable           | Description                                         |
-| ------------------ | --------------------------------------------------- | 
-| `CLERK_SECRET_KEY` | Your Clerk secret key                               |  
-| `DELAY_MS`         | Delay between requests to respect rate limits       | 
+| ------------------ | --------------------------------------------------- |
+| `CLERK_SECRET_KEY` | Your Clerk secret key                               |
+| `DELAY_MS`         | Delay between requests to respect rate limits       |
 | `RETRY_DELAY_MS`   | Delay when the rate limit is hit                    |
 | `OFFSET`           | Offset to start migration (number of users to skip) |
-
 
 ## Other commands
 
@@ -67,15 +66,16 @@ The script can be configured through the following environment variables:
 ```
 bun delete
 ```
-This will delete all migrated users from the instance. It should not delete pre-existing users, but it is not recommended to use this with a production instance that has pre-existing users. Please use caution with this command. 
+
+This will delete all migrated users from the instance. It should not delete pre-existing users, but it is not recommended to use this with a production instance that has pre-existing users. Please use caution with this command.
 
 ### Clean logs
 
 ```
 bun clean-logs
 ```
-All migrations and deletions will create logs in the `./logs` folder. This command will delete those logs.
 
+All migrations and deletions will create logs in the `./logs` folder. This command will delete those logs.
 
 ## Migrating OAuth connections
 

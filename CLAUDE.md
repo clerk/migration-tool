@@ -27,14 +27,14 @@ This is a CLI tool for migrating users from various authentication platforms (Cl
 
 ## Architecture
 
-### Handler System
+### Transformer System
 
-The migration tool uses a **handler pattern** to support different source platforms. Each handler defines:
+The migration tool uses a **transformer pattern** to support different source platforms. Each transformer defines:
 
 1. **Field Transformer**: Maps source platform fields to Clerk's schema
    - Example: Auth0's `_id.$oid` → Clerk's `userId`
    - Example: Supabase's `encrypted_password` → Clerk's `password`
-   - Handles nested field flattening (see `flattenObjectSelectively` in `src/create/functions.ts`)
+   - Handles nested field flattening (see `flattenObjectSelectively` in `src/migrate/functions.ts`)
 
 2. **Optional Default Fields**: Applied to all users from that platform
    - Example: Supabase defaults `passwordHasher` to `"bcrypt"`
@@ -42,18 +42,18 @@ The migration tool uses a **handler pattern** to support different source platfo
 3. **Optional Post-Transform**: Custom logic applied after field mapping
    - Example: Auth0 converts metadata from string to objects
 
-**Handler locations**: `src/create/handlers/`
+**Transformer locations**: `src/migrate/transformers/`
 
 - `clerk.ts` - Clerk-to-Clerk migrations
 - `auth0.ts` - Auth0 migrations
 - `supabase.ts` - Supabase migrations
 - `authjs.ts` - AuthJS migrations
-- `index.ts` - Exports all handlers as array
+- `index.ts` - Exports all transformers as array
 
-**Adding a new handler**:
+**Adding a new transformer**:
 
-1. Create a new file in `src/create/handlers/` with transformer config
-2. Export it in `src/create/handlers/index.ts`
+1. Create a new file in `src/migrate/transformers/` with transformer config
+2. Export it in `src/migrate/transformers/index.ts`
 3. The CLI will automatically include it in the platform selection
 
 ### Data Flow
@@ -63,11 +63,11 @@ User File (CSV/JSON)
   ↓
 loadUsersFromFile (functions.ts)
   ↓ Parse file
-  ↓ Apply handler defaults
+  ↓ Apply transformer defaults
   ↓
 transformUsers (functions.ts)
-  ↓ Transform field names via handler
-  ↓ Apply handler postTransform
+  ↓ Transform field names via transformer
+  ↓ Apply transformer postTransform
   ↓ Validate with Zod schema
   ↓ Log validation errors
   ↓
@@ -82,7 +82,7 @@ createUser (import-users.ts)
 
 ### Schema Validation
 
-User validation is centralized in `src/create/validators.ts`:
+User validation is centralized in `src/migrate/validators.ts`:
 
 - Uses Zod for schema validation
 - Enforces: at least one verified identifier (email or phone)
@@ -90,7 +90,7 @@ User validation is centralized in `src/create/validators.ts`:
 - Fields can be single values or arrays (e.g., `email: string | string[]`)
 - All fields except `userId` are optional
 
-**Adding a new field**: Edit `userSchema` in `src/create/validators.ts`
+**Adding a new field**: Edit `userSchema` in `src/migrate/validators.ts`
 
 ### Rate Limiting
 
@@ -124,7 +124,7 @@ Logger functions in `src/logger.ts`:
 
 ### CLI Analysis Features
 
-The CLI (in `src/create/cli.ts`) analyzes the import file before migration and provides:
+The CLI (in `src/migrate/cli.ts`) analyzes the import file before migration and provides:
 
 1. **Identifier Analysis**: Shows which users have emails, phones, usernames
 2. **Password Analysis**: Prompts whether to migrate users without passwords
@@ -153,12 +153,12 @@ The codebase uses a consistent error handling pattern:
 
 ### Clerk-to-Clerk Migrations
 
-When migrating from Clerk to Clerk (`key === "clerk"`), the handler consolidates email and phone arrays:
+When migrating from Clerk to Clerk (`key === "clerk"`), the transformer consolidates email and phone arrays:
 
 - Merges `email`, `emailAddresses`, `unverifiedEmailAddresses` into single array
 - Merges `phone`, `phoneNumbers`, `unverifiedPhoneNumbers` into single array
 - First item becomes primary, rest are added as additional identifiers
-- See `transformUsers()` in `src/create/functions.ts` around line 129
+- See `transformUsers()` in `src/migrate/functions.ts` around line 129
 
 ### Password Hasher Validation
 
