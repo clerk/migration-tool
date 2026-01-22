@@ -3,8 +3,6 @@
  *
  * Maps Auth.js user data to Clerk's import format.
  * This is a minimal transformer that only maps basic user fields.
- * Auth.js typically doesn't export passwords, so users will need to
- * reset passwords or use passwordless authentication after migration.
  *
  * The postTransform function:
  * - Handles email verification status (routes to email or unverifiedEmailAddresses)
@@ -29,6 +27,7 @@ const authjsTransformer = {
 		email_verified: 'emailVerified',
 		name: 'name',
 		created_at: 'createdAt',
+		updated_at: 'updatedAt',
 	},
 	postTransform: (user: Record<string, unknown>) => {
 		// Handle email verification

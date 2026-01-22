@@ -526,11 +526,12 @@ export const displayOtherFieldsAnalysis = (
  * Runs the interactive CLI for user migration
  *
  * Guides the user through the migration process:
- * 1. Gathers migration parameters (transformer, file, resumeAfter)
- * 2. Analyzes the import file and displays field statistics
- * 3. Validates instance type and user count (dev instances limited to 500 users)
- * 4. Confirms Dashboard configuration for identifiers, password, user model, and other fields
- * 5. Gets final confirmation before starting migration
+ * 1. Displays available transformers with descriptions
+ * 2. Gathers migration parameters (transformer, file, resumeAfter)
+ * 3. Analyzes the import file and displays field statistics
+ * 4. Validates instance type and user count (dev instances limited to 500 users)
+ * 5. Confirms Dashboard configuration for identifiers, password, user model, and other fields
+ * 6. Gets final confirmation before starting migration
  *
  * Saves settings for future runs and returns all configuration options.
  *
@@ -544,7 +545,15 @@ export async function runCLI() {
 	// Load previous settings to use as defaults
 	const savedSettings = loadSettings();
 
-	// Step 1: Gather initial inputs
+	// Step 1: Display available transformers with descriptions
+	let transformerMessage = color.bold('Available Transformers:\n\n');
+	for (const transformer of transformers) {
+		transformerMessage += color.cyan(`● ${transformer.label}\n`);
+		transformerMessage += `  ${color.dim(transformer.description)}\n\n`;
+	}
+	p.note(transformerMessage.trim(), 'Transformers');
+
+	// Step 2: Gather initial inputs
 	const initialArgs = await p.group(
 		{
 			key: () =>
@@ -587,7 +596,7 @@ export async function runCLI() {
 		}
 	);
 
-	// Step 2: Analyze the file and display field information
+	// Step 3: Analyze the file and display field information
 	const spinner = p.spinner();
 	spinner.start('Analyzing import file...');
 
@@ -627,7 +636,7 @@ export async function runCLI() {
 
 	const analysis = analyzeFields(filteredUsers);
 
-	// Step 3: Check instance type and validate
+	// Step 4: Check instance type and validate
 	const instanceType = detectInstanceType();
 
 	if (instanceType === 'dev') {
@@ -663,7 +672,7 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 4: Display and confirm identifier settings
+	// Step 5: Display and confirm identifier settings
 	displayIdentifierAnalysis(analysis);
 
 	// Exit if no users have valid identifiers
@@ -686,7 +695,7 @@ export async function runCLI() {
 		process.exit(0);
 	}
 
-	// Step 5: Display password analysis and get migration preference
+	// Step 6: Display password analysis and get migration preference
 	const skipPasswordRequirement = await displayPasswordAnalysis(analysis);
 
 	if (skipPasswordRequirement === null) {
@@ -710,7 +719,7 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 6: Display user model analysis
+	// Step 7: Display user model analysis
 	const needsUserModelConfirmation = displayUserModelAnalysis(analysis);
 
 	if (needsUserModelConfirmation) {
@@ -728,7 +737,7 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 7: Display and confirm other field settings (if any)
+	// Step 8: Display and confirm other field settings (if any)
 	const hasOtherFields = displayOtherFieldsAnalysis(analysis);
 
 	if (hasOtherFields) {
@@ -745,7 +754,7 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 8: Final confirmation
+	// Step 9: Final confirmation
 	const beginMigration = await p.confirm({
 		message: 'Begin Migration?',
 		initialValue: true,

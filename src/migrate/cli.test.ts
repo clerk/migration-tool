@@ -775,7 +775,9 @@ describe('loadRawUsers', () => {
 			{
 				id: '1',
 				email: 'john@example.com',
+				email_verified: '2024-01-15T10:30:00.000Z',
 				name: 'John Doe',
+				created_at: '2024-01-15T10:30:00.000Z',
 			},
 		];
 
@@ -783,11 +785,58 @@ describe('loadRawUsers', () => {
 
 		const result = await loadRawUsers('users.json', 'authjs');
 
+		// postTransform should:
+		// - Split name into firstName and lastName
+		// - Keep email (since email_verified is truthy)
+		// - Remove email_verified field
+		// - Remove name field
 		expect(result[0]).toEqual({
 			userId: '1',
 			email: 'john@example.com',
-			name: 'John Doe',
+			firstName: 'John',
+			lastName: 'Doe',
+			createdAt: '2024-01-15T10:30:00.000Z',
 		});
+	});
+
+	test('authjs transformer handles unverified emails and single-word names', async () => {
+		const mockJsonData = [
+			{
+				id: '1',
+				email: 'unverified@example.com',
+				email_verified: null, // Unverified email
+				name: 'Madonna', // Single word name
+				created_at: '2024-01-15T10:30:00.000Z',
+			},
+			{
+				id: '2',
+				email: 'verified@example.com',
+				email_verified: '2024-01-15T10:30:00.000Z',
+				name: null, // Null name
+			},
+		];
+
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockJsonData));
+
+		const result = await loadRawUsers('users.json', 'authjs');
+
+		// First user: unverified email + single-word name (discarded)
+		expect(result[0]).toEqual({
+			userId: '1',
+			unverifiedEmailAddresses: 'unverified@example.com',
+			createdAt: '2024-01-15T10:30:00.000Z',
+		});
+		expect(result[0]).not.toHaveProperty('email');
+		expect(result[0]).not.toHaveProperty('firstName');
+		expect(result[0]).not.toHaveProperty('lastName');
+
+		// Second user: verified email + null name
+		expect(result[1]).toEqual({
+			userId: '2',
+			email: 'verified@example.com',
+		});
+		expect(result[1]).not.toHaveProperty('firstName');
+		expect(result[1]).not.toHaveProperty('lastName');
 	});
 
 	test('keeps unmapped keys unchanged', async () => {
