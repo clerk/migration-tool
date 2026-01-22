@@ -62,6 +62,7 @@ const userSchema = z.object({
 	private_metadata: z.record(z.string(), z.unknown()).optional(),
 	/** Metadata saved on the user, that can be updated from both the Frontend and Backend APIs. Note: Since this data can be modified from the frontend, it is not guaranteed to be safe. */
 	unsafe_metadata: z.record(z.string(), z.unknown()).optional(),
+    createdAt: z.string().optional(),
 });
 
 type User = z.infer<typeof userSchema>;
@@ -78,6 +79,7 @@ const createUser = (userData: User) =>
 				privateMetadata: userData.private_metadata,
 				publicMetadata: userData.public_metadata,
 				unsafeMetadata: userData.unsafe_metadata,
+                createdAt: userData.createdAt,
 		  })
 		: clerkClient.users.createUser({
 				externalId: userData.userId,
@@ -88,6 +90,7 @@ const createUser = (userData: User) =>
 				privateMetadata: userData.private_metadata,
 				publicMetadata: userData.public_metadata,
 				unsafeMetadata: userData.unsafe_metadata,
+                createdAt: userData.createdAt,
 		  });
 
 const now = new Date().toISOString().split(".")[0]; // YYYY-MM-DDTHH:mm:ss

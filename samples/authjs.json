@@ -798,5 +798,14 @@
     "lastName": "One Hundred",
     "password": "$2a$12$9HhLqMJxqBKhlZasxjlhger67GFcC4aOAtpcU.THpcSLiQve4mq6.",
     "passwordHasher": "bcrypt"
+  },
+  {
+    "userId": "101",
+    "email": "user101@example.com",
+    "firstName": "User",
+    "lastName": "One Hundred and One",
+    "password": "$2a$12$9HhLqMJxqBKhlZasxjlhger67GFcC4aOAtpcU.THpcSLiQve4mq6.",
+    "passwordHasher": "bcrypt"
+    "createdAt": "2025-03-13T18:47:11.37331+00:00",
   }
 ]
