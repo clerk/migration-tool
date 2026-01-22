@@ -6,7 +6,7 @@ import color from 'picocolors';
 import { errorLogger, importLogger, closeAllStreams } from '../logger';
 import { getDateTimeStamp, tryCatch } from '../utils';
 import { userSchema } from './validator';
-import { ImportSummary, User } from '../types';
+import type { ImportSummary, User } from '../types';
 import pLimit from 'p-limit';
 
 const s = p.spinner();

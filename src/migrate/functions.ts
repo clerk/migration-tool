@@ -4,7 +4,7 @@ import * as p from '@clack/prompts';
 import { validationLogger } from '../logger';
 import { transformers } from './transformers';
 import { userSchema } from './validator';
-import { User, PASSWORD_HASHERS, TransformerMapKeys } from '../types';
+import type { User, PASSWORD_HASHERS, TransformerMapKeys } from '../types';
 import {
 	createImportFilePath,
 	getDateTimeStamp,

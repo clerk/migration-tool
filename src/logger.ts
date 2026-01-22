@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import {
+import type {
 	ErrorLog,
 	ErrorPayload,
 	ImportLogEntry,

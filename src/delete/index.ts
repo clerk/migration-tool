@@ -1,5 +1,6 @@
 import 'dotenv/config';
-import { createClerkClient, User } from '@clerk/backend';
+import { createClerkClient } from '@clerk/backend';
+import type { User } from '@clerk/backend';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 import {
