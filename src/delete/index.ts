@@ -1,15 +1,17 @@
 import 'dotenv/config';
 import { createClerkClient } from '@clerk/backend';
 import type { User } from '@clerk/backend';
+import type { ClerkAPIError } from '@clerk/types';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 import {
 	createImportFilePath,
 	getDateTimeStamp,
 	getFileType,
+	getRetryDelay,
 	tryCatch,
 } from '../utils';
-import { env } from '../envs-constants';
+import { env, MAX_RETRIES, RETRY_DELAY_MS } from '../envs-constants';
 import { closeAllStreams, deleteErrorLogger, deleteLogger } from '../logger';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -171,40 +173,127 @@ export const findIntersection = (
 const errorCounts = new Map<string, number>();
 
 /**
- * Deletes a single user from Clerk
+ * Deletes a single user from Clerk with retry logic for rate limits
  *
  * @param user - The Clerk user to delete
  * @param dateTime - Timestamp for error logging
+ * @param retryCount - Current retry attempt count (default 0)
  * @returns A promise that resolves when the user is deleted
  */
-const deleteUser = async (user: User, dateTime: string) => {
+const deleteUser = async (
+	user: User,
+	dateTime: string,
+	retryCount: number = 0
+) => {
 	const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
 	const [, error] = await tryCatch(clerk.users.deleteUser(user.id));
 
 	if (error) {
-		failed++;
-		const errorMessage = error.message || 'Unknown error';
-		errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
+		// Check for rate limit error (429)
+		const clerkError = error as {
+			status?: number;
+			errors?: ClerkAPIError[];
+			message?: string;
+		};
 
-		// Log to error log file
-		deleteErrorLogger(
-			{
-				userId: user.externalId || user.id,
-				status: 'error',
-				errors: [{ message: error.message, longMessage: error.message }],
-			},
-			dateTime
-		);
+		if (clerkError.status === 429) {
+			// Extract Retry-After value from response (in seconds)
+			const retryAfterSeconds = clerkError.errors?.[0]?.meta?.retryAfter as
+				| number
+				| undefined;
 
-		// Log to delete log file
-		deleteLogger(
-			{
-				userId: user.externalId || user.id,
-				status: 'error',
-				error: errorMessage,
-			},
-			dateTime
-		);
+			if (retryCount < MAX_RETRIES) {
+				// Calculate retry delay using shared utility function
+				const { delayMs, delaySeconds } = getRetryDelay(
+					retryCount,
+					retryAfterSeconds,
+					RETRY_DELAY_MS
+				);
+
+				// Log retry attempt
+				const retryMessage = `Rate limit hit (429), retrying in ${delaySeconds}s (attempt ${retryCount + 1}/${MAX_RETRIES})`;
+
+				deleteErrorLogger(
+					{
+						userId: user.externalId || user.id,
+						status: '429_retry',
+						errors: [
+							{
+								code: 'rate_limit_retry',
+								message: retryMessage,
+								longMessage: retryMessage,
+							},
+						],
+					},
+					dateTime
+				);
+
+				// Wait before retrying
+				await new Promise((resolve) => setTimeout(resolve, delayMs));
+				return deleteUser(user, dateTime, retryCount + 1);
+			}
+
+			// Max retries exceeded - log as permanent failure
+			const errorMessage = `Rate limit exceeded after ${MAX_RETRIES} retries`;
+			failed++;
+			errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
+
+			// Log to error log file
+			deleteErrorLogger(
+				{
+					userId: user.externalId || user.id,
+					status: '429',
+					errors: [
+						{
+							code: 'rate_limit_exceeded',
+							message: errorMessage,
+							longMessage: errorMessage,
+						},
+					],
+				},
+				dateTime
+			);
+
+			// Log to delete log file
+			deleteLogger(
+				{
+					userId: user.externalId || user.id,
+					status: 'error',
+					error: errorMessage,
+				},
+				dateTime
+			);
+		} else {
+			// Non-429 error
+			failed++;
+			const errorMessage = clerkError.message || 'Unknown error';
+			errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
+
+			// Log to error log file
+			deleteErrorLogger(
+				{
+					userId: user.externalId || user.id,
+					status: 'error',
+					errors: [
+						{
+							message: clerkError.message || 'Unknown error',
+							longMessage: clerkError.message || 'Unknown error',
+						},
+					],
+				},
+				dateTime
+			);
+
+			// Log to delete log file
+			deleteLogger(
+				{
+					userId: user.externalId || user.id,
+					status: 'error',
+					error: errorMessage,
+				},
+				dateTime
+			);
+		}
 	} else {
 		count++;
 

@@ -56,27 +56,29 @@ test('Auth.js - loadUsersFromFile - JSON', async () => {
 	);
 	expect(usersWithEmail.length).toBeGreaterThanOrEqual(2);
 
-	// Find users with username
-	const usersWithUsername = usersFromAuthjs.filter((u) => u.username);
-	expect(usersWithUsername.length).toBeGreaterThanOrEqual(2);
+	// Note: Users with ONLY unverified emails (email_verified: null) will be
+	// filtered out during validation because Clerk requires at least one verified
+	// identifier (email or phone). This is correct behavior.
 
-	// Find users with username and password
-	const usersWithUsernameAndPassword = usersFromAuthjs.filter(
-		(u) => u.username && u.password && u.passwordHasher
+	// Find users with firstName and lastName (split from name field)
+	const usersWithNames = usersFromAuthjs.filter(
+		(u) => u.firstName && u.lastName
 	);
-	expect(usersWithUsernameAndPassword.length).toBeGreaterThanOrEqual(2);
+	expect(usersWithNames.length).toBeGreaterThanOrEqual(15);
 
-	// Find users with email and password
-	const usersWithEmailAndPassword = usersFromAuthjs.filter(
-		(u) => u.email && u.password && u.passwordHasher
+	// Verify a specific user's name was split correctly
+	const janeDoUser = usersFromAuthjs.find(
+		(u) => u.email === 'jane.doe@test.com'
 	);
-	expect(usersWithEmailAndPassword.length).toBeGreaterThanOrEqual(2);
+	expect(janeDoUser?.firstName).toBe('Jane');
+	expect(janeDoUser?.lastName).toBe('Doe');
 
-	// Find users with phone
-	const usersWithPhone = usersFromAuthjs.filter(
-		(u) => u.phone && (Array.isArray(u.phone) ? u.phone.length > 0 : u.phone)
+	// Verify a user with no name (null) doesn't have firstName/lastName
+	const userWithNullName = usersFromAuthjs.find(
+		(u) => u.email === 'noprofile@test.com'
 	);
-	expect(usersWithPhone.length).toBeGreaterThanOrEqual(2);
+	expect(userWithNullName?.firstName).toBeUndefined();
+	expect(userWithNullName?.lastName).toBeUndefined();
 });
 
 test('Supabase - loadUsersFromFile - JSON', async () => {

@@ -102,14 +102,30 @@ Rate limits are auto-configured based on instance type (detected from `CLERK_SEC
 Configuration in `src/envs-constants.ts`:
 
 - `RATE_LIMIT` - Requests per second (auto-configured based on instance type)
-- `CONCURRENCY_LIMIT` - Calculated as `rate_limit * 0.95` for aggressive throughput with 50ms leeway
-  - Production: 95 concurrent requests
-  - Development: 9 concurrent requests
-- Override defaults via `.env` file with `RATE_LIMIT`
+- `CONCURRENCY_LIMIT` - Number of concurrent requests (defaults to ~95% of rate limit)
+  - Production: 9 concurrent (assumes 100ms API latency → ~90-95 req/s throughput)
+  - Development: 1 concurrent (assumes 100ms API latency → ~9-10 req/s throughput)
+- Override defaults via `.env` file with `RATE_LIMIT` or `CONCURRENCY_LIMIT`
 
-The script uses p-limit for concurrency control across **all API calls** (user creation, email creation, phone creation). This ensures maximum throughput while respecting rate limits. The script automatically retries 429 errors up to 5 times with 10-second delays.
+The script uses **p-limit for concurrency control** across all API calls:
 
-**Shared Concurrency Pool**: All API calls share the same concurrency limiter. When creating a user with additional emails/phones, each API call (createUser, createEmailAddress, createPhoneNumber) is individually rate-limited. This maximizes migration speed by processing requests as fast as possible while leaving only 50ms of leeway to avoid rate limits.
+- Limits the number of simultaneously executing API calls
+- Formula: `CONCURRENCY_LIMIT = RATE_LIMIT * 0.095` (assumes 100ms latency)
+- With X concurrent requests and 100ms latency: throughput ≈ X \* 10 req/s
+- Shared limiter across ALL operations (user creation, email creation, phone creation)
+
+**Performance**:
+
+- Production: ~3,500 users in ~35 seconds (assuming 1 email per user)
+- Development: ~3,500 users in ~350 seconds
+- Users can increase `CONCURRENCY_LIMIT` for faster processing (may hit some rate limits)
+
+**Retry logic**:
+
+- If a 429 occurs, uses Retry-After value from API response
+- Falls back to 10 second default if Retry-After not available
+- Centralized in `getRetryDelay()` function in `src/utils.ts`
+- The script automatically retries up to 5 times (configurable via MAX_RETRIES)
 
 ### Logging System
 

@@ -39,7 +39,7 @@ vi.mock('picocolors', () => ({
 	},
 }));
 
-// Mock getDateTimeStamp
+// Mock utils
 vi.mock('../utils', () => ({
 	getDateTimeStamp: vi.fn(() => '2024-01-01T12:00:00'),
 	createImportFilePath: vi.fn((file: string) => file),
@@ -52,6 +52,17 @@ vi.mock('../utils', () => ({
 			return [null, error];
 		}
 	},
+	getRetryDelay: (
+		retryCount: number,
+		retryAfterSeconds: number | undefined,
+		defaultDelayMs: number
+	) => {
+		const delayMs = retryAfterSeconds
+			? retryAfterSeconds * 1000
+			: defaultDelayMs;
+		const delaySeconds = retryAfterSeconds || defaultDelayMs / 1000;
+		return { delayMs, delaySeconds };
+	},
 }));
 
 // Mock env constants
@@ -59,9 +70,10 @@ vi.mock('../envs-constants', () => ({
 	env: {
 		CLERK_SECRET_KEY: 'test_secret_key',
 		RATE_LIMIT: 10,
-		CONCURRENCY_LIMIT: 5,
-		OFFSET: 0,
+		CONCURRENCY_LIMIT: 5, // Higher for faster tests
 	},
+	MAX_RETRIES: 5,
+	RETRY_DELAY_MS: 10000,
 }));
 
 // Mock fs module

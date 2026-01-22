@@ -58,17 +58,26 @@ bun migrate --resume-after="user_xxx"
 
 The script can be configured through the following environment variables:
 
-| Variable           | Description                                                               |
-| ------------------ | ------------------------------------------------------------------------- |
-| `CLERK_SECRET_KEY` | Your Clerk secret key                                                     |
-| `RATE_LIMIT`       | Rate limit in requests/second (auto-configured: 100 for prod, 10 for dev) |
+| Variable            | Description                                                               |
+| ------------------- | ------------------------------------------------------------------------- |
+| `CLERK_SECRET_KEY`  | Your Clerk secret key                                                     |
+| `RATE_LIMIT`        | Rate limit in requests/second (auto-configured: 100 for prod, 10 for dev) |
+| `CONCURRENCY_LIMIT` | Number of concurrent requests (auto-configured: ~9 for prod, ~1 for dev)  |
 
-The script automatically detects production vs development instances from your `CLERK_SECRET_KEY` and sets appropriate rate limits:
+The script automatically detects production vs development instances from your `CLERK_SECRET_KEY` and sets appropriate rate limits and concurrency:
 
-- **Production** (`sk_live_*`): 100 requests/second (Clerk's limit: 1000 requests per 10 seconds)
-- **Development** (`sk_test_*`): 10 requests/second (Clerk's limit: 100 requests per 10 seconds)
+- **Production** (`sk_live_*`):
+  - Rate limit: 100 requests/second (Clerk's limit: 1000 requests per 10 seconds)
+  - Concurrency: 9 concurrent requests (~95% of rate limit with 100ms API latency)
+  - Typical migration speed: ~3,500 users in ~35 seconds
+- **Development** (`sk_test_*`):
+  - Rate limit: 10 requests/second (Clerk's limit: 100 requests per 10 seconds)
+  - Concurrency: 1 concurrent request (~95% of rate limit with 100ms API latency)
+  - Typical migration speed: ~3,500 users in ~350 seconds
 
-You can override the rate limit by setting `RATE_LIMIT` in your `.env` file.
+You can override these values by setting `RATE_LIMIT` or `CONCURRENCY_LIMIT` in your `.env` file.
+
+**Tuning Concurrency**: If you want faster migrations, you can increase `CONCURRENCY_LIMIT` (e.g., `CONCURRENCY_LIMIT=15` for ~150 req/s). Note that higher concurrency may trigger rate limit errors (429), which are automatically retried.
 
 ## Other commands
 
@@ -226,6 +235,7 @@ A transformer is an object with the following properties:
   key: string,           // Unique identifier for CLI selection
   value: string,         // Internal value (usually same as key)
   label: string,         // Display name shown in CLI
+  description: string,   // Detailed description shown in CLI
   transformer: object,   // Field mapping configuration
   postTransform?: function,  // Optional: Custom transformation logic
   defaults?: object      // Optional: Default values for all users
@@ -242,6 +252,8 @@ const myPlatformTransformer = {
 	key: 'myplatform',
 	value: 'myplatform',
 	label: 'My Platform',
+	description:
+		'Use this transformer when migrating from My Platform. It handles standard user fields and bcrypt passwords.',
 	transformer: {
 		// Source field → Target Clerk field
 		user_id: 'userId',
@@ -268,6 +280,8 @@ const advancedTransformer = {
 	key: 'advanced',
 	value: 'advanced',
 	label: 'Advanced Platform',
+	description:
+		'Use this for platforms with nested user data structures. Supports dot notation for extracting nested fields.',
 	transformer: {
 		// Supports dot notation for nested fields
 		'user._id.$oid': 'userId', // Extracts user._id.$oid
@@ -294,6 +308,8 @@ const verificationTransformer = {
 	key: 'verification',
 	value: 'verification',
 	label: 'Platform with Verification',
+	description:
+		'Use this for platforms that track email verification status. Automatically routes emails to verified or unverified fields.',
 	transformer: {
 		id: 'userId',
 		email: 'email',

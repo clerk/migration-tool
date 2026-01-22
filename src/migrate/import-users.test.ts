@@ -64,6 +64,17 @@ vi.mock('../utils', () => ({
 			throw throwable;
 		}
 	},
+	getRetryDelay: (
+		retryCount: number,
+		retryAfterSeconds: number | undefined,
+		defaultDelayMs: number
+	) => {
+		const delayMs = retryAfterSeconds
+			? retryAfterSeconds * 1000
+			: defaultDelayMs;
+		const delaySeconds = retryAfterSeconds || defaultDelayMs / 1000;
+		return { delayMs, delaySeconds };
+	},
 }));
 
 // Mock logger module
@@ -78,9 +89,10 @@ vi.mock('../envs-constants', () => ({
 	env: {
 		CLERK_SECRET_KEY: 'test_secret_key',
 		RATE_LIMIT: 10,
-		CONCURRENCY_LIMIT: 5,
-		OFFSET: 0,
+		CONCURRENCY_LIMIT: 5, // Higher for faster tests
 	},
+	MAX_RETRIES: 5,
+	RETRY_DELAY_MS: 10000,
 }));
 
 // Import after mocks are set up

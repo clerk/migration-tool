@@ -1,10 +1,10 @@
 import { createClerkClient } from '@clerk/backend';
 import type { ClerkAPIError } from '@clerk/types';
-import { env } from '../envs-constants';
+import { env, MAX_RETRIES, RETRY_DELAY_MS } from '../envs-constants';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 import { closeAllStreams, errorLogger, importLogger } from '../logger';
-import { getDateTimeStamp, tryCatch } from '../utils';
+import { getDateTimeStamp, getRetryDelay, tryCatch } from '../utils';
 import { userSchema } from './validator';
 import type { ImportSummary, User } from '../types';
 import pLimit from 'p-limit';
@@ -25,16 +25,6 @@ export function getLastProcessedUserId(): string | null {
 }
 
 /**
- * Maximum number of retries for rate limit (429) errors
- */
-const MAX_RETRIES = 5;
-
-/**
- * Delay in milliseconds when retrying after a 429 error (10 seconds)
- */
-const RETRY_DELAY_MS = 10000;
-
-/**
  * Creates a single user in Clerk with all associated data
  *
  * Handles the full user creation process:
@@ -48,6 +38,7 @@ const RETRY_DELAY_MS = 10000;
  * @param userData - The validated user data
  * @param skipPasswordRequirement - Whether to skip password requirement for users without passwords
  * @param limit - Shared p-limit instance for rate limiting all API calls
+ * @param dateTime - Timestamp for log file naming
  * @returns The created Clerk user object
  * @throws Will throw if user creation fails
  */
@@ -260,12 +251,42 @@ async function processUserToClerk(
 		// Log successful import
 		importLogger({ userId: userData.userId, status: 'success' }, dateTime);
 	} catch (error: unknown) {
-		// Retry on rate limit error (429) with 10 second delay
+		// Retry on rate limit error (429)
 		const clerkError = error as { status?: number; errors?: ClerkAPIError[] };
 		if (clerkError.status === 429) {
+			// Extract Retry-After value from response (in seconds)
+			const retryAfterSeconds = clerkError.errors?.[0]?.meta?.retryAfter as
+				| number
+				| undefined;
+
 			if (retryCount < MAX_RETRIES) {
-				// Wait 10 seconds before retrying
-				await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+				// Calculate retry delay using shared utility function
+				const { delayMs, delaySeconds } = getRetryDelay(
+					retryCount,
+					retryAfterSeconds,
+					RETRY_DELAY_MS
+				);
+
+				// Log retry attempt
+				const retryMessage = `Rate limit hit (429), retrying in ${delaySeconds}s (attempt ${retryCount + 1}/${MAX_RETRIES})`;
+
+				errorLogger(
+					{
+						userId: userData.userId,
+						status: '429_retry',
+						errors: [
+							{
+								code: 'rate_limit_retry',
+								message: retryMessage,
+								longMessage: retryMessage,
+							},
+						],
+					},
+					dateTime
+				);
+
+				// Wait before retrying
+				await new Promise((resolve) => setTimeout(resolve, delayMs));
 				return processUserToClerk(
 					userData,
 					total,

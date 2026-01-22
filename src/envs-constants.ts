@@ -30,18 +30,26 @@ export const getDefaultRateLimit = (instanceType: 'dev' | 'prod'): number => {
 };
 
 /**
- * Calculates the concurrency limit based on rate limit
+ * Calculates the default concurrency limit based on rate limit
  *
- * Uses an aggressive approach with only 50ms leeway:
- * - Allows concurrent requests up to 95% of rate limit
- * - This maximizes throughput while leaving minimal buffer (50ms worth of requests)
- * - Example: 100 req/s → 95 concurrent, 10 req/s → 9 concurrent
+ * Uses 95% of the rate limit assuming ~100ms average API latency:
+ * - Production: 100 req/s → 10 concurrent = ~95-100 req/s throughput
+ * - Dev: 10 req/s → 1 concurrent = ~9-10 req/s throughput
+ *
+ * Formula: CONCURRENCY = RATE_LIMIT * 0.095
+ * - This assumes 100ms average API response time
+ * - With X concurrent requests at 100ms each: throughput = X * 10 req/s
+ * - To get 95 req/s: need 9.5 concurrent
+ *
+ * Users can override this via CONCURRENCY_LIMIT in .env to tune performance
+ * based on their actual API latency and desired throughput.
  *
  * @param rateLimit - The rate limit in requests per second
- * @returns The concurrency limit (number of concurrent requests allowed)
+ * @returns The concurrency limit (number of concurrent requests)
  */
-export const getConcurrencyLimit = (rateLimit: number): number => {
-	return Math.max(1, Math.floor(rateLimit * 0.95));
+export const getDefaultConcurrencyLimit = (rateLimit: number): number => {
+	// 95% of rate limit with 100ms latency assumption
+	return Math.max(1, Math.floor(rateLimit * 0.095));
 };
 
 /**
@@ -55,17 +63,20 @@ export const createEnvSchema = () => {
 		.object({
 			CLERK_SECRET_KEY: z.string(),
 			RATE_LIMIT: z.coerce.number().positive().optional(),
+			CONCURRENCY_LIMIT: z.coerce.number().positive().optional(),
 		})
 		.transform((data) => {
 			// Dynamically determine instance type from the actual secret key
 			const instanceType = detectInstanceType(data.CLERK_SECRET_KEY);
 
 			const rateLimit = data.RATE_LIMIT ?? getDefaultRateLimit(instanceType);
+			const concurrencyLimit =
+				data.CONCURRENCY_LIMIT ?? getDefaultConcurrencyLimit(rateLimit);
 
 			return {
 				CLERK_SECRET_KEY: data.CLERK_SECRET_KEY,
 				RATE_LIMIT: rateLimit,
-				CONCURRENCY_LIMIT: getConcurrencyLimit(rateLimit),
+				CONCURRENCY_LIMIT: concurrencyLimit,
 			};
 		});
 };
@@ -93,6 +104,17 @@ if (!parsed.success) {
  *
  * @property CLERK_SECRET_KEY - Your Clerk secret key
  * @property RATE_LIMIT - Rate limit in requests per second (auto-configured based on instance type)
- * @property CONCURRENCY_LIMIT - Maximum number of concurrent requests (calculated from rate limit)
+ * @property CONCURRENCY_LIMIT - Number of concurrent requests (defaults to ~95% of rate limit, can be overridden in .env)
  */
 export const env = parsed.data;
+
+/**
+ * Maximum number of retries for rate limit (429) errors
+ */
+export const MAX_RETRIES = 5;
+
+/**
+ * Default delay in milliseconds when retrying after a 429 error (10 seconds)
+ * Used as a fallback when the response doesn't include a Retry-After header
+ */
+export const RETRY_DELAY_MS = 10000;
