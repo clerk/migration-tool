@@ -1,157 +1,162 @@
 [
   {
-    "id": "user_2YDryYFVMM1W1plDDKz7Gzf4we6",
+    "id": "cljn3x7y00000356z8f4g2h1i",
+    "name": "Jane Doe",
     "email": "jane.doe@test.com",
-    "firstName": "Jane",
-    "lastName": "Doe"
+    "email_verified": "2024-01-15T10:30:00.000Z",
+    "created_at": "2024-01-15T10:30:00.000Z",
+    "updated_at": "2024-01-15T10:30:00.000Z"
   },
   {
-    "id": "user_2ZZCgLE7kJG2CRBxTZ6YUIvzS10",
+    "id": "cljn3x7y00001356z8f4g2h1j",
+    "name": "John Doe",
     "email": "johndoe@test.com",
-    "firstName": "John",
-    "lastName": "Doe"
+    "email_verified": "2024-01-15T10:31:00.000Z",
+    "created_at": "2024-01-15T10:31:00.000Z",
+    "updated_at": "2024-01-15T10:31:00.000Z"
   },
   {
-    "id": "user_2cWszPHuo6P2lCdnhhZbVMfbAIC",
+    "id": "cljn3x7y00002356z8f4g2h1k",
+    "name": "John Hancock",
     "email": "johnhancock@test.com",
-    "firstName": "John",
-    "lastName": "Hancock"
+    "email_verified": "2024-01-15T10:32:00.000Z",
+    "created_at": "2024-01-15T10:32:00.000Z",
+    "updated_at": "2024-01-15T10:32:00.000Z"
   },
   {
-    "id": "user_2cukOsyNsh0J3MCEvrgM6PkoB0I",
+    "id": "cljn3x7y00003356z8f4g2h1l",
+    "name": "Jane Hancock",
     "email": "janehancock@test.com",
-    "firstName": "Jane",
-    "lastName": "Hancock"
+    "email_verified": null,
+    "created_at": "2024-01-15T10:33:00.000Z",
+    "updated_at": "2024-01-15T10:33:00.000Z"
   },
   {
-    "id": "user_2dA1B2C3D4E5F6G7H8I9J0K1L2M",
+    "id": "cljn3x7y00004356z8f4g2h1m",
+    "name": "Alice Smith",
     "email": "alicesmith@test.com",
-    "firstName": "Alice",
-    "lastName": "Smith"
+    "email_verified": "2024-01-16T09:15:00.000Z",
+    "created_at": "2024-01-16T09:15:00.000Z",
+    "updated_at": "2024-01-16T09:15:00.000Z"
   },
   {
-    "id": "user_2dB2C3D4E5F6G7H8I9J0K1L2M3N",
+    "id": "cljn3x7y00005356z8f4g2h1n",
+    "name": "Bob Johnson",
     "email": "bobjohnson@test.com",
-    "firstName": "Bob",
-    "lastName": "Johnson"
+    "email_verified": "2024-01-16T09:20:00.000Z",
+    "created_at": "2024-01-16T09:20:00.000Z",
+    "updated_at": "2024-01-16T09:20:00.000Z"
   },
   {
-    "id": "user_2dC3D4E5F6G7H8I9J0K1L2M3N4O",
+    "id": "cljn3x7y00006356z8f4g2h1o",
+    "name": "Carol Williams",
     "email": "carolwilliams@test.com",
-    "firstName": "Carol",
-    "lastName": "Williams"
+    "email_verified": "2024-01-16T14:45:00.000Z",
+    "created_at": "2024-01-16T14:45:00.000Z",
+    "updated_at": "2024-01-16T14:45:00.000Z"
   },
   {
-    "id": "user_2dD4E5F6G7H8I9J0K1L2M3N4O5P",
+    "id": "cljn3x7y00007356z8f4g2h1p",
+    "name": "David Brown",
     "email": "davidbrown@test.com",
-    "firstName": "David",
-    "lastName": "Brown"
+    "email_verified": "2024-01-17T08:30:00.000Z",
+    "created_at": "2024-01-17T08:30:00.000Z",
+    "updated_at": "2024-01-17T08:30:00.000Z"
   },
   {
-    "id": "user_2dE5F6G7H8I9J0K1L2M3N4O5P6Q",
+    "id": "cljn3x7y00008356z8f4g2h1q",
+    "name": "Emma Jones",
     "email": "emmajones@test.com",
-    "firstName": "Emma",
-    "lastName": "Jones"
+    "email_verified": "2024-01-17T11:00:00.000Z",
+    "created_at": "2024-01-17T11:00:00.000Z",
+    "updated_at": "2024-01-17T11:00:00.000Z"
   },
   {
-    "id": "user_2dF6G7H8I9J0K1L2M3N4O5P6Q7R",
+    "id": "cljn3x7y00009356z8f4g2h1r",
+    "name": "Frank Garcia",
     "email": "frankgarcia@test.com",
-    "firstName": "Frank",
-    "lastName": "Garcia"
+    "email_verified": "2024-01-17T13:30:00.000Z",
+    "created_at": "2024-01-17T13:30:00.000Z",
+    "updated_at": "2024-01-17T13:30:00.000Z"
   },
   {
-    "id": "user_2eG7H8I9J0K1L2M3N4O5P6Q7R8S",
+    "id": "cljn3x7y00010356z8f4g2h1s",
+    "name": "Sarah Connor",
     "email": "sconnor@test.com",
-    "firstName": "Sarah",
-    "lastName": "Connor",
-    "username": "sconnor",
-    "password": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "passwordHasher": "bcrypt"
+    "email_verified": "2024-01-18T10:00:00.000Z",
+    "created_at": "2024-01-18T10:00:00.000Z",
+    "updated_at": "2024-01-18T10:00:00.000Z"
   },
   {
-    "id": "user_2eH8I9J0K1L2M3N4O5P6Q7R8S9T",
+    "id": "cljn3x7y00011356z8f4g2h1t",
+    "name": "Michael Scott",
     "email": "mscott@test.com",
-    "firstName": "Michael",
-    "lastName": "Scott",
-    "username": "mscott",
-    "password": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "passwordHasher": "bcrypt"
+    "email_verified": "2024-01-18T11:15:00.000Z",
+    "created_at": "2024-01-18T11:15:00.000Z",
+    "updated_at": "2024-01-18T11:15:00.000Z"
   },
   {
-    "id": "user_2eI9J0K1L2M3N4O5P6Q7R8S9T0U",
+    "id": "cljn3x7y00012356z8f4g2h1u",
+    "name": "Leslie Knope",
     "email": "lknope@test.com",
-    "firstName": "Leslie",
-    "lastName": "Knope",
-    "username": "lknope",
-    "password": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "passwordHasher": "bcrypt"
+    "email_verified": "2024-01-18T14:30:00.000Z",
+    "created_at": "2024-01-18T14:30:00.000Z",
+    "updated_at": "2024-01-18T14:30:00.000Z"
   },
   {
-    "id": "user_2eJ0K1L2M3N4O5P6Q7R8S9T0U1V",
+    "id": "cljn3x7y00013356z8f4g2h1v",
+    "name": "Ron Swanson",
     "email": "rswanson@test.com",
-    "firstName": "Ron",
-    "lastName": "Swanson",
-    "username": "rswanson",
-    "password": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "passwordHasher": "bcrypt"
+    "email_verified": "2024-01-19T09:00:00.000Z",
+    "created_at": "2024-01-19T09:00:00.000Z",
+    "updated_at": "2024-01-19T09:00:00.000Z"
   },
   {
-    "id": "user_2eK1L2M3N4O5P6Q7R8S9T0U1V2W",
+    "id": "cljn3x7y00014356z8f4g2h1w",
+    "name": "April Ludgate",
     "email": "aludgate@test.com",
-    "firstName": "April",
-    "lastName": "Ludgate",
-    "username": "aludgate",
-    "password": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "passwordHasher": "bcrypt"
+    "email_verified": "2024-01-19T10:30:00.000Z",
+    "created_at": "2024-01-19T10:30:00.000Z",
+    "updated_at": "2024-01-19T10:30:00.000Z"
   },
   {
-    "id": "user_3fL2M3N4O5P6Q7R8S9T0U1V2W3X",
-    "username": "phoneuser1",
-    "phone": "+12125550100"
+    "id": "cljn3x7y00015356z8f4g2h1x",
+    "name": null,
+    "email": "noprofile@test.com",
+    "email_verified": "2024-01-20T08:00:00.000Z",
+    "created_at": "2024-01-20T08:00:00.000Z",
+    "updated_at": "2024-01-20T08:00:00.000Z"
   },
   {
-    "id": "user_3fM3N4O5P6Q7R8S9T0U1V2W3X4Y",
-    "username": "phoneuser2",
-    "phone": "+12125550101"
+    "id": "cljn3x7y00016356z8f4g2h1y",
+    "name": "Grace Hopper",
+    "email": "ghopper@test.com",
+    "email_verified": null,
+    "created_at": "2024-01-20T12:00:00.000Z",
+    "updated_at": "2024-01-20T12:00:00.000Z"
   },
   {
-    "id": "user_3fN4O5P6Q7R8S9T0U1V2W3X4Y5Z",
-    "username": "phoneuser3",
-    "phone": "+12125550102"
+    "id": "cljn3x7y00017356z8f4g2h1z",
+    "name": "Ada Lovelace",
+    "email": "alovelace@test.com",
+    "email_verified": "2024-01-20T15:00:00.000Z",
+    "created_at": "2024-01-20T15:00:00.000Z",
+    "updated_at": "2024-01-20T15:00:00.000Z"
   },
   {
-    "id": "user_3fO5P6Q7R8S9T0U1V2W3X4Y5Z6A",
-    "username": "phoneuser4",
-    "phone": "+12125550103"
+    "id": "cljn3x7y00018356z8f4g2h20",
+    "name": "Alan Turing",
+    "email": "aturing@test.com",
+    "email_verified": "2024-01-21T09:30:00.000Z",
+    "created_at": "2024-01-21T09:30:00.000Z",
+    "updated_at": "2024-01-21T09:30:00.000Z"
   },
   {
-    "id": "user_3fP6Q7R8S9T0U1V2W3X4Y5Z6A7B",
-    "username": "phoneuser5",
-    "phone": "+12125550104"
-  },
-  {
-    "id": "user_3fQ7R8S9T0U1V2W3X4Y5Z6A7B8C",
-    "username": "phoneuser6",
-    "phone": "+12125550105"
-  },
-  {
-    "id": "user_3fR8S9T0U1V2W3X4Y5Z6A7B8C9D",
-    "username": "phoneuser7",
-    "phone": "+12125550106"
-  },
-  {
-    "id": "user_3fS9T0U1V2W3X4Y5Z6A7B8C9D0E",
-    "username": "phoneuser8",
-    "phone": "+12125550107"
-  },
-  {
-    "id": "user_3fT0U1V2W3X4Y5Z6A7B8C9D0E1F",
-    "username": "phoneuser9",
-    "phone": "+12125550108"
-  },
-  {
-    "id": "user_3fU1V2W3X4Y5Z6A7B8C9D0E1F2G",
-    "username": "phoneuser10",
-    "phone": "+12125550109"
+    "id": "cljn3x7y00019356z8f4g2h21",
+    "name": "Margaret Hamilton",
+    "email": "mhamilton@test.com",
+    "email_verified": "2024-01-21T11:00:00.000Z",
+    "created_at": "2024-01-21T11:00:00.000Z",
+    "updated_at": "2024-01-21T11:00:00.000Z"
   }
 ]
