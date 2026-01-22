@@ -31,16 +31,17 @@ const s = p.spinner();
  * @param users - Array of raw user data to transform
  * @param key - Transformer key identifying the source platform
  * @param dateTime - Timestamp for log file naming
- * @returns Array of successfully transformed and validated users
+ * @returns Object containing transformed users array and validation failure count
  * @throws Error if an invalid password hasher is detected
  */
 function transformUsers(
 	users: User[],
 	key: TransformerMapKeys,
 	dateTime: string
-) {
+): { transformedData: User[]; validationFailed: number } {
 	// This applies to smaller numbers. Pass in 10, get 5 back.
 	const transformedData: User[] = [];
+	let validationFailed = 0;
 	for (let i = 0; i < users.length; i++) {
 		const transformerKeys = transformers.find((obj) => obj.key === key);
 
@@ -127,6 +128,7 @@ function transformUsers(
 			transformedData.push(validatedData);
 		} else {
 			// The data is not valid, handle errors
+			validationFailed++;
 			const firstIssue = validationResult.error.issues[0];
 
 			// Check if this is a password hasher validation error with an invalid value
@@ -161,7 +163,7 @@ function transformUsers(
 			);
 		}
 	}
-	return transformedData;
+	return { transformedData, validationFailed };
 }
 
 /**
@@ -204,19 +206,19 @@ function addDefaultFields(users: User[], key: string) {
  * 3. Transforms field names to Clerk schema
  * 4. Validates each user against schema
  * 5. Logs validation errors
- * 6. Returns only successfully validated users
+ * 6. Returns only successfully validated users and validation failure count
  *
  * Displays a spinner during the loading process.
  *
  * @param file - File path to load users from (relative or absolute)
  * @param key - Transformer key identifying the source platform
- * @returns Array of validated users ready for import
+ * @returns Object containing validated users array and validation failure count
  * @throws Error if file cannot be read or contains invalid data
  */
 export async function loadUsersFromFile(
 	file: string,
 	key: TransformerMapKeys
-): Promise<User[]> {
+): Promise<{ users: User[]; validationFailed: number }> {
 	const dateTime = getDateTimeStamp();
 	s.start();
 	s.message('Loading users and preparing to migrate');
@@ -238,13 +240,13 @@ export async function loadUsersFromFile(
 				})
 				.on('end', () => {
 					const usersWithDefaultFields = addDefaultFields(users, key);
-					const transformedData: User[] = transformUsers(
+					const { transformedData, validationFailed } = transformUsers(
 						usersWithDefaultFields,
 						key,
 						dateTime
 					);
 					s.stop('Users Loaded');
-					resolve(transformedData);
+					resolve({ users: transformedData, validationFailed });
 				});
 		});
 
@@ -255,12 +257,12 @@ export async function loadUsersFromFile(
 	) as User[];
 	const usersWithDefaultFields = addDefaultFields(users, key);
 
-	const transformedData: User[] = transformUsers(
+	const { transformedData, validationFailed } = transformUsers(
 		usersWithDefaultFields,
 		key,
 		dateTime
 	);
 
 	s.stop('Users Loaded');
-	return transformedData;
+	return { users: transformedData, validationFailed };
 }

@@ -21,7 +21,10 @@ async function main() {
 	const args = await runCLI();
 
 	// Load all users from file
-	const users = await loadUsersFromFile(args.file, args.key);
+	const { users, validationFailed } = await loadUsersFromFile(
+		args.file,
+		args.key
+	);
 
 	// If resuming after a specific user ID, filter to start after that user
 	let usersToImport = users;
@@ -32,7 +35,11 @@ async function main() {
 		}
 	}
 
-	await importUsers(usersToImport, args.skipPasswordRequirement);
+	await importUsers(
+		usersToImport,
+		args.skipPasswordRequirement,
+		validationFailed
+	);
 }
 
 main().catch((error: unknown) => {

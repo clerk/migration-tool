@@ -114,6 +114,7 @@ export type ImportSummary = {
 	totalProcessed: number;
 	successful: number;
 	failed: number;
+	validationFailed: number;
 	errorBreakdown: Map<string, number>;
 };
 

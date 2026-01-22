@@ -368,6 +368,7 @@ async function processUserToClerk(
  * - Total users processed
  * - Successful imports
  * - Failed imports
+ * - Validation failures
  * - Breakdown of errors by type
  *
  * @param summary - The import summary statistics
@@ -376,6 +377,10 @@ function displaySummary(summary: ImportSummary) {
 	let message = `Total users processed: ${summary.totalProcessed}\n`;
 	message += `${color.green('Successfully imported:')} ${summary.successful}\n`;
 	message += `${color.red('Failed with errors:')} ${summary.failed}`;
+
+	if (summary.validationFailed > 0) {
+		message += `\n${color.yellow('Failed validation:')} ${summary.validationFailed}`;
+	}
 
 	if (summary.errorBreakdown.size > 0) {
 		message += `\n\n${color.bold('Error Breakdown:')}\n`;
@@ -397,11 +402,13 @@ function displaySummary(summary: ImportSummary) {
  *
  * @param users - Array of validated users to import
  * @param skipPasswordRequirement - Whether to allow users without passwords (default: false)
+ * @param validationFailed - Number of users that failed validation (default: 0)
  * @returns A promise that resolves when all users are processed
  */
 export async function importUsers(
 	users: User[],
-	skipPasswordRequirement: boolean = false
+	skipPasswordRequirement: boolean = false,
+	validationFailed: number = 0
 ) {
 	const dateTime = getDateTimeStamp();
 
@@ -458,6 +465,7 @@ export async function importUsers(
 		totalProcessed: total,
 		successful,
 		failed,
+		validationFailed,
 		errorBreakdown: errorCounts,
 	};
 	displaySummary(summary);
