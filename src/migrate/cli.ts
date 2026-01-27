@@ -348,21 +348,21 @@ export function displayIdentifierAnalysis(analysis: FieldAnalysis): void {
 	const importableUsers = identifiers.hasAnyIdentifier;
 
 	if (identifiers.verifiedEmails === importableUsers) {
-		requiredIdentifiers.push('email');
+		requiredIdentifiers.push('Email');
 	} else if (identifiers.verifiedEmails > 0) {
-		optionalIdentifiers.push('email');
+		optionalIdentifiers.push('Email');
 	}
 
 	if (identifiers.verifiedPhones === importableUsers) {
-		requiredIdentifiers.push('phone');
+		requiredIdentifiers.push('Phone');
 	} else if (identifiers.verifiedPhones > 0) {
-		optionalIdentifiers.push('phone');
+		optionalIdentifiers.push('Phone');
 	}
 
 	if (identifiers.username === importableUsers) {
-		requiredIdentifiers.push('username');
+		requiredIdentifiers.push('Username');
 	} else if (identifiers.username > 0) {
-		optionalIdentifiers.push('username');
+		optionalIdentifiers.push('Username');
 	}
 
 	if (requiredIdentifiers.length > 0) {
@@ -455,9 +455,9 @@ export const displayUserModelAnalysis = (analysis: FieldAnalysis): boolean => {
 	if (usersWithBothNames === totalUsers) {
 		nameMessage += `${color.green('●')} All users have first and last names\n`;
 	} else if (someUsersHaveNames && !noUsersHaveNames) {
-		nameMessage += `${color.yellow('○')} Some users have first and/or last names\n`;
+		nameMessage += `${color.yellow('○')} Some users have first and last names\n`;
 	} else {
-		nameMessage += `${color.dim('○')} No users have first or last names\n`;
+		nameMessage += `${color.dim('○')} No users have first and last names\n`;
 	}
 
 	nameMessage += '\n';
