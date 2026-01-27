@@ -1,8 +1,9 @@
 node_modules
 .env
-users.json
-migration-log.json
-bun.lockb
+.settings
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+logs
+testing/
+.claude

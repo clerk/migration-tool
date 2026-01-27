@@ -1,0 +1,10 @@
+logs/**
+samples/**
+testing/**
+**/*.json
+**/*.csv
+**/*.log
+node_modules
+bun.lock
+
+

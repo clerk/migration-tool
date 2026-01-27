@@ -1,0 +1,566 @@
+[
+  {
+    "_id": {
+      "$oid": "657376510000000000000001"
+    },
+    "email": "jane.doe@test.com",
+    "given_name": "Jane",
+    "family_name": "Doe",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "janedoe@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000002"
+    },
+    "email": "johndoe@test.com",
+    "given_name": "John",
+    "family_name": "Doe",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "johndoe@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000003"
+    },
+    "email": "johnhancock@test.com",
+    "given_name": "John",
+    "family_name": "Hancock",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "johnhancock@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000004"
+    },
+    "email": "janehancock@test.com",
+    "given_name": "Jane",
+    "family_name": "Hancock",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "janehancock@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000005"
+    },
+    "email": "alicesmith@test.com",
+    "given_name": "Alice",
+    "family_name": "Smith",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "alicesmith@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000006"
+    },
+    "email": "bobjohnson@test.com",
+    "given_name": "Bob",
+    "family_name": "Johnson",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "bobjohnson@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000007"
+    },
+    "email": "carolwilliams@test.com",
+    "given_name": "Carol",
+    "family_name": "Williams",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "carolwilliams@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000008"
+    },
+    "email": "davidbrown@test.com",
+    "given_name": "David",
+    "family_name": "Brown",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "davidbrown@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000009"
+    },
+    "email": "emmajones@test.com",
+    "given_name": "Emma",
+    "family_name": "Jones",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "emmajones@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000010"
+    },
+    "email": "frankgarcia@test.com",
+    "given_name": "Frank",
+    "family_name": "Garcia",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "frankgarcia@test.com",
+        "verified": true
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000011"
+    },
+    "email": "sconnor@test.com",
+    "username": "sconnor",
+    "given_name": "Sarah",
+    "family_name": "Connor",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "sconnor@test.com",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "sconnor"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000012"
+    },
+    "email": "mscott@test.com",
+    "username": "mscott",
+    "given_name": "Michael",
+    "family_name": "Scott",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "mscott@test.com",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "mscott"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000013"
+    },
+    "email": "lknope@test.com",
+    "username": "lknope",
+    "given_name": "Leslie",
+    "family_name": "Knope",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "lknope@test.com",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "lknope"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000014"
+    },
+    "email": "rswanson@test.com",
+    "username": "rswanson",
+    "given_name": "Ron",
+    "family_name": "Swanson",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "rswanson@test.com",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "rswanson"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000015"
+    },
+    "email": "aludgate@test.com",
+    "username": "aludgate",
+    "given_name": "April",
+    "family_name": "Ludgate",
+    "email_verified": true,
+    "tenant": "dev-test",
+    "connection": "Username-Password-Authentication",
+    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "email",
+        "value": "aludgate@test.com",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "aludgate"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000016"
+    },
+    "username": "phoneuser1",
+    "phone_number": "+12125550100",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550100",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser1"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000017"
+    },
+    "username": "phoneuser2",
+    "phone_number": "+12125550101",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550101",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser2"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000018"
+    },
+    "username": "phoneuser3",
+    "phone_number": "+12125550102",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550102",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser3"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000019"
+    },
+    "username": "phoneuser4",
+    "phone_number": "+12125550103",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550103",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser4"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000020"
+    },
+    "username": "phoneuser5",
+    "phone_number": "+12125550104",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550104",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser5"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000021"
+    },
+    "username": "phoneuser6",
+    "phone_number": "+12125550105",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550105",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser6"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000022"
+    },
+    "username": "phoneuser7",
+    "phone_number": "+12125550106",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550106",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser7"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000023"
+    },
+    "username": "phoneuser8",
+    "phone_number": "+12125550107",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550107",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser8"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000024"
+    },
+    "username": "phoneuser9",
+    "phone_number": "+12125550108",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550108",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser9"
+      }
+    ]
+  },
+  {
+    "_id": {
+      "$oid": "657376510000000000000025"
+    },
+    "username": "phoneuser10",
+    "phone_number": "+12125550109",
+    "phone_verified": true,
+    "tenant": "dev-test",
+    "connection": "sms",
+    "_tmp_is_unique": true,
+    "version": "1.1",
+    "identifiers": [
+      {
+        "type": "phone_number",
+        "value": "+12125550109",
+        "verified": true
+      },
+      {
+        "type": "username",
+        "value": "phoneuser10"
+      }
+    ]
+  }
+]
