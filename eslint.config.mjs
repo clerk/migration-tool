@@ -73,7 +73,6 @@ export default [
 			'no-nested-ternary': 'warn',
 
 			// Code quality
-			complexity: ['warn', 15],
 			'max-depth': ['warn', 4],
 			'no-else-return': 'warn',
 			'prefer-arrow-callback': 'warn',

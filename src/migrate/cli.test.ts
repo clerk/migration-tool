@@ -17,13 +17,13 @@ import {
 vi.mock('fs', async () => {
 	const actualFs = await import('fs');
 	return {
+		...actualFs,
 		default: {
 			...actualFs.default,
 			existsSync: vi.fn(actualFs.existsSync),
 			readFileSync: vi.fn(actualFs.readFileSync),
 			writeFileSync: vi.fn(actualFs.writeFileSync),
 		},
-		...actualFs,
 		existsSync: vi.fn(actualFs.existsSync),
 		readFileSync: vi.fn(actualFs.readFileSync),
 		writeFileSync: vi.fn(actualFs.writeFileSync),
@@ -71,7 +71,8 @@ vi.mock('../envs-constants', () => ({
 
 // Mock the utils module
 vi.mock('../utils', async (importOriginal) => {
-	const actual = await importOriginal();
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+	const actual = (await importOriginal()) as Record<string, unknown>;
 	return {
 		...actual,
 		createImportFilePath: vi.fn((file: string) => file),
@@ -887,6 +888,7 @@ describe('displayIdentifierAnalysis', () => {
 				hasAnyIdentifier: 10,
 			},
 			totalUsers: 10,
+			fieldCounts: {},
 		};
 
 		displayIdentifierAnalysis(analysis);
@@ -907,6 +909,7 @@ describe('displayIdentifierAnalysis', () => {
 				hasAnyIdentifier: 5,
 			},
 			totalUsers: 5,
+			fieldCounts: {},
 		};
 
 		// Should not throw
@@ -926,6 +929,7 @@ describe('displayIdentifierAnalysis', () => {
 				hasAnyIdentifier: 8,
 			},
 			totalUsers: 10,
+			fieldCounts: {},
 		};
 
 		// Should not throw
@@ -945,6 +949,7 @@ describe('displayIdentifierAnalysis', () => {
 				hasAnyIdentifier: 5,
 			},
 			totalUsers: 5,
+			fieldCounts: {},
 		};
 
 		// Should not throw
@@ -966,6 +971,7 @@ describe('displayIdentifierAnalysis', () => {
 				hasAnyIdentifier: 3309, // Only users with verified email can be imported
 			},
 			totalUsers: 3568, // Total includes users who will fail validation
+			fieldCounts: {},
 		};
 
 		displayIdentifierAnalysis(analysis);
@@ -995,13 +1001,14 @@ describe('displayIdentifierAnalysis', () => {
 				hasAnyIdentifier: 100, // 50 with email + 50 with phone = 100 importable
 			},
 			totalUsers: 100,
+			fieldCounts: {},
 		};
 
 		displayIdentifierAnalysis(analysis);
 
 		// Both should be optional since not all importable users have each identifier
 		expect(p.note).toHaveBeenCalledWith(
-			expect.stringContaining('Enable  in the Dashboard but do not require'),
+			expect.stringContaining('Enable in the Dashboard but do not require'),
 			'Identifiers'
 		);
 	});
@@ -1029,6 +1036,7 @@ describe('displayOtherFieldsAnalysis', () => {
 				hasAnyIdentifier: 0,
 			},
 			totalUsers: 0,
+			fieldCounts: {},
 		};
 
 		const result = displayOtherFieldsAnalysis(analysis);

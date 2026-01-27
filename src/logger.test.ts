@@ -18,13 +18,13 @@ const cleanupLogs = () => {
 };
 
 // Helper to read NDJSON (newline-delimited JSON) files
-const readNDJSON = (filePath: string): unknown[] => {
+const readNDJSON = (filePath: string): Record<string, unknown>[] => {
 	const content = readFileSync(filePath, 'utf8');
 	return content
 		.trim()
 		.split('\n')
 		.filter((line) => line.length > 0)
-		.map((line) => JSON.parse(line));
+		.map((line) => JSON.parse(line) as Record<string, unknown>);
 };
 
 describe('errorLogger', () => {

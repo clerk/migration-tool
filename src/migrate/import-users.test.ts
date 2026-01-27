@@ -66,10 +66,10 @@ vi.mock('../utils', () => ({
 	},
 	getRetryDelay: (
 		retryAfterSeconds: number | undefined,
-		defaultDelayMs: number
+		_defaultDelayMs: number
 	) => {
 		// Use a short delay for tests to avoid timeouts
-		const delayMs = retryAfterSeconds ? retryAfterSeconds * 1000 : 10; // 10ms instead of defaultDelayMs
+		const delayMs = retryAfterSeconds ? retryAfterSeconds * 1000 : 10; // 10ms instead of _defaultDelayMs
 		const delaySeconds = retryAfterSeconds || delayMs / 1000;
 		return { delayMs, delaySeconds };
 	},
@@ -94,7 +94,7 @@ vi.mock('../envs-constants', () => ({
 }));
 
 // Import after mocks are set up
-import { importUsers } from './import-users';
+import { importUsers, normalizeErrorMessage } from './import-users';
 import * as logger from '../logger';
 
 // Helper to clean up logs directory
@@ -333,6 +333,67 @@ describe('importUsers', () => {
 
 			// createUser should not be called for invalid user
 			expect(mockCreateUser).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('error message normalization', () => {
+		test('normalizes errors with fields in different orders to same message', () => {
+			const error1 =
+				'["first_name" "last_name"] data doesn\'t match user requirements set for this instance';
+			const error2 =
+				'["last_name" "first_name"] data doesn\'t match user requirements set for this instance';
+
+			const normalized1 = normalizeErrorMessage(error1);
+			const normalized2 = normalizeErrorMessage(error2);
+
+			// Both should normalize to the same message (fields sorted alphabetically)
+			expect(normalized1).toBe(
+				'["first_name" "last_name"] data doesn\'t match user requirements set for this instance'
+			);
+			expect(normalized2).toBe(
+				'["first_name" "last_name"] data doesn\'t match user requirements set for this instance'
+			);
+			expect(normalized1).toBe(normalized2);
+		});
+
+		test('normalizes errors with multiple field arrays', () => {
+			const error =
+				'["username" "email"] must have ["last_name" "first_name"] filled';
+
+			const normalized = normalizeErrorMessage(error);
+
+			// Both arrays should be sorted
+			expect(normalized).toBe(
+				'["email" "username"] must have ["first_name" "last_name"] filled'
+			);
+		});
+
+		test('handles errors without field arrays unchanged', () => {
+			const error = 'That email address is taken. Please try another.';
+
+			const normalized = normalizeErrorMessage(error);
+
+			expect(normalized).toBe(error);
+		});
+
+		test('handles errors with single field', () => {
+			const error = '["username"] is required';
+
+			const normalized = normalizeErrorMessage(error);
+
+			expect(normalized).toBe('["username"] is required');
+		});
+
+		test('handles complex field arrays with three or more fields', () => {
+			const error1 = '["username" "email" "phone"] are required';
+			const error2 = '["phone" "username" "email"] are required';
+
+			const normalized1 = normalizeErrorMessage(error1);
+			const normalized2 = normalizeErrorMessage(error2);
+
+			expect(normalized1).toBe('["email" "phone" "username"] are required');
+			expect(normalized2).toBe('["email" "phone" "username"] are required');
+			expect(normalized1).toBe(normalized2);
 		});
 	});
 });

@@ -369,7 +369,7 @@ export function displayIdentifierAnalysis(analysis: FieldAnalysis): void {
 		identifierMessage += `  ${color.green('●')} ${color.bold(color.whiteBright(requiredIdentifiers.join(', ')))}: ${color.dim('Enable and optionally require in the Dashboard')}\n`;
 	}
 	if (optionalIdentifiers.length > 0) {
-		identifierMessage += `  ${color.yellow('○')} ${color.bold(color.whiteBright(optionalIdentifiers.join(', ')))}: Enable  in the Dashboard but do not require\n`;
+		identifierMessage += `  ${color.yellow('○')} ${color.bold(color.whiteBright(optionalIdentifiers.join(', ')))}: Enable in the Dashboard but do not require\n`;
 	}
 
 	p.note(identifierMessage.trim(), 'Identifiers');
@@ -576,13 +576,14 @@ export async function runCLI() {
 					initialValue: savedSettings.file || 'users.json',
 					placeholder: savedSettings.file || 'users.json',
 					validate: (value) => {
+						if (!value) {
+							return 'Please provide a file path';
+						}
 						if (!checkIfFileExists(value)) {
 							return 'That file does not exist. Please try again';
 						}
-						if (
-							getFileType(value) !== 'text/csv' &&
-							getFileType(value) !== 'application/json'
-						) {
+						const fileType = getFileType(value);
+						if (fileType !== 'text/csv' && fileType !== 'application/json') {
 							return 'Please supply a valid JSON or CSV file';
 						}
 					},
