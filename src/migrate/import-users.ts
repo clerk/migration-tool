@@ -262,7 +262,6 @@ async function processUserToClerk(
 			if (retryCount < MAX_RETRIES) {
 				// Calculate retry delay using shared utility function
 				const { delayMs, delaySeconds } = getRetryDelay(
-					retryCount,
 					retryAfterSeconds,
 					RETRY_DELAY_MS
 				);

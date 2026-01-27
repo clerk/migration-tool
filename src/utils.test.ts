@@ -125,44 +125,26 @@ describe('getRetryDelay', () => {
 	const defaultDelayMs = 10000; // 10 seconds
 
 	test('returns default delay when no retryAfter provided', () => {
-		const result = getRetryDelay(0, undefined, defaultDelayMs);
+		const result = getRetryDelay(undefined, defaultDelayMs);
 		expect(result.delayMs).toBe(10000);
 		expect(result.delaySeconds).toBe(10);
 	});
 
 	test('uses retryAfter when provided', () => {
-		const result = getRetryDelay(0, 15, defaultDelayMs);
+		const result = getRetryDelay(15, defaultDelayMs);
 		expect(result.delayMs).toBe(15000);
 		expect(result.delaySeconds).toBe(15);
 	});
 
-	test('returns default delay for any retry count when no retryAfter', () => {
-		const result = getRetryDelay(1, undefined, defaultDelayMs);
-		expect(result.delayMs).toBe(10000);
-		expect(result.delaySeconds).toBe(10);
-	});
-
-	test('uses retryAfter for any retry count when provided', () => {
-		const result = getRetryDelay(1, 15, defaultDelayMs);
-		expect(result.delayMs).toBe(15000);
-		expect(result.delaySeconds).toBe(15);
-	});
-
-	test('returns default delay for subsequent retries when no retryAfter', () => {
-		const result = getRetryDelay(2, undefined, defaultDelayMs);
-		expect(result.delayMs).toBe(10000);
-		expect(result.delaySeconds).toBe(10);
-	});
-
-	test('uses retryAfter for subsequent retries when provided', () => {
-		const result = getRetryDelay(3, 20, defaultDelayMs);
+	test('uses retryAfter of 20 seconds', () => {
+		const result = getRetryDelay(20, defaultDelayMs);
 		expect(result.delayMs).toBe(20000);
 		expect(result.delaySeconds).toBe(20);
 	});
 
 	test('works with different default delays', () => {
 		const customDefault = 5000; // 5 seconds
-		const result = getRetryDelay(2, undefined, customDefault);
+		const result = getRetryDelay(undefined, customDefault);
 		expect(result.delayMs).toBe(5000);
 		expect(result.delaySeconds).toBe(5);
 	});

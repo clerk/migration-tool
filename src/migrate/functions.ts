@@ -39,17 +39,17 @@ function transformUsers(
 	key: TransformerMapKeys,
 	dateTime: string
 ): { transformedData: User[]; validationFailed: number } {
-	// This applies to smaller numbers. Pass in 10, get 5 back.
 	const transformedData: User[] = [];
 	let validationFailed = 0;
+
+	// Look up transformer once, outside the loop
+	const transformer = transformers.find((obj) => obj.key === key);
+	if (transformer === undefined) {
+		throw new Error('No transformer found for the specified key');
+	}
+
 	for (let i = 0; i < users.length; i++) {
-		const transformerKeys = transformers.find((obj) => obj.key === key);
-
-		if (transformerKeys === undefined) {
-			throw new Error('No transformer found for the specified key');
-		}
-
-		const transformedUser = transformKeys(users[i], transformerKeys);
+		const transformedUser = transformKeys(users[i], transformer);
 
 		// Transform email to array for clerk transformer (merges primary + verified + unverified emails)
 		if (key === 'clerk') {
@@ -117,8 +117,8 @@ function transformUsers(
 		}
 
 		// Apply transformer-specific post-transformation if defined
-		if ('postTransform' in transformerKeys) {
-			transformerKeys.postTransform(transformedUser);
+		if ('postTransform' in transformer) {
+			transformer.postTransform(transformedUser);
 		}
 		const validationResult = userSchema.safeParse(transformedUser);
 		// Check if validation was successful

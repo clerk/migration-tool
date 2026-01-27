@@ -72,7 +72,7 @@ const supabaseTransformer = {
 				// Phone is verified - keep it as is
 				user.phone = phone;
 			} else {
-				// Email is unverified - move to unverifiedEmailAddresses
+				// Phone is unverified - move to unverifiedPhoneNumbers
 				user.unverifiedPhoneNumbers = phone;
 				delete user.phone;
 			}
@@ -81,7 +81,7 @@ const supabaseTransformer = {
 		// Clean up the emailConfirmedAt and phoneConfirmedAt fields as they aren't
 		// part of our schema
 		delete user.emailConfirmedAt;
-		delete user.phoneCofnirmedAt;
+		delete user.phoneConfirmedAt;
 	},
 	defaults: {
 		passwordHasher: 'bcrypt' as const,

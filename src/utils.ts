@@ -169,21 +169,19 @@ export function transformKeys<
  * Uses the Retry-After value from the API response if provided,
  * otherwise falls back to the default delay.
  *
- * @param retryCount - The current retry attempt (0-indexed, unused but kept for API compatibility)
  * @param retryAfterSeconds - Optional Retry-After value from response header
  * @param defaultDelayMs - Default delay in milliseconds (typically 10000ms)
  * @returns Object containing delayMs (milliseconds) and delaySeconds (for logging)
  *
  * @example
- * const { delayMs, delaySeconds } = getRetryDelay(0, undefined, 10000);
+ * const { delayMs, delaySeconds } = getRetryDelay(undefined, 10000);
  * // Returns: { delayMs: 10000, delaySeconds: 10 }
  *
  * @example
- * const { delayMs, delaySeconds } = getRetryDelay(1, 15, 10000);
+ * const { delayMs, delaySeconds } = getRetryDelay(15, 10000);
  * // Returns: { delayMs: 15000, delaySeconds: 15 }
  */
 export function getRetryDelay(
-	retryCount: number,
 	retryAfterSeconds: number | undefined,
 	defaultDelayMs: number
 ): { delayMs: number; delaySeconds: number } {
