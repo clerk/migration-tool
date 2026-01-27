@@ -12,6 +12,7 @@ import * as z from 'zod';
 export const PASSWORD_HASHERS = [
 	'argon2i',
 	'argon2id',
+	'awscognito',
 	'bcrypt',
 	'bcrypt_peppered',
 	'bcrypt_sha256_django',
@@ -64,13 +65,13 @@ export type ErrorPayload = {
  *
  * @property error - Description of the validation error
  * @property path - Path to the field that failed validation
- * @property id - User ID of the invalid user
+ * @property userId - User ID of the invalid user
  * @property row - Row number in the source file (0-indexed)
  */
 export type ValidationErrorPayload = {
 	error: string;
 	path: (string | number)[];
-	id: string;
+	userId: string;
 	row: number;
 };
 
@@ -92,13 +93,15 @@ export type ErrorLog = {
 /**
  * Log entry for a user import attempt
  *
- * @property userId - The user ID
+ * @property userId - The user ID from the source file
  * @property status - Whether the import succeeded or failed
+ * @property clerkUserId - The Clerk user ID if import succeeded
  * @property error - Error message if import failed
  */
 export type ImportLogEntry = {
 	userId: string;
 	status: 'success' | 'error';
+	clerkUserId?: string;
 	error?: string;
 };
 

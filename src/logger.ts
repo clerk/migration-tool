@@ -109,7 +109,7 @@ export const errorLogger = (payload: ErrorPayload, dateTime: string) => {
 
 /**
  * Logs validation errors that occur during user data transformation
- * @param payload - The validation error payload containing row, ID, error message, and field path
+ * @param payload - The validation error payload containing row, userId, error message, and field path
  * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
  */
 export const validationLogger = (
@@ -117,11 +117,11 @@ export const validationLogger = (
 	dateTime: string
 ) => {
 	const error = {
-		type: 'Validation Error',
-		row: payload.row,
-		id: payload.id,
+		userId: payload.userId,
+		status: 'fail' as const,
 		error: payload.error,
 		path: payload.path,
+		row: payload.row,
 	};
 	appendToLogFile(`migration-${dateTime}.log`, error);
 };

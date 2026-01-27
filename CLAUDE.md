@@ -13,6 +13,7 @@ This is a CLI tool for migrating users from various authentication platforms (Cl
 - `bun migrate` - Start the migration process (interactive CLI)
 - `bun delete` - Delete all migrated users (uses externalId to identify users)
 - `bun clean-logs` - Remove all log files from the `./logs` folder
+- `bun convert-logs` - Convert NDJSON log files to JSON array format for easier analysis
 - `bun run test` - Run all tests with Vitest
 - `bun lint` - Run ESLint
 - `bun lint:fix` - Auto-fix ESLint issues
@@ -129,20 +130,38 @@ The script uses **p-limit for concurrency control** across all API calls:
 
 ### Logging System
 
-All operations create timestamped logs in `./logs/`:
+All operations create timestamped logs in `./logs/` using NDJSON (Newline-Delimited JSON) format:
 
-- `{timestamp}-import.log` - Success/failure for each user
-- `{timestamp}-import-errors.log` - Detailed error information
-- `{timestamp}-delete.log` - User deletion results
-- `{timestamp}-delete-errors.log` - Deletion errors
+- `{timestamp}-migration.log` - Combined log with all import entries (success, error, validation failures)
+- `{timestamp}-user-deletion.log` - Combined log with all deletion entries
 
-Logger functions in `src/logger.ts`:
+**Log Format**: NDJSON (Newline-Delimited JSON)
 
-- `importLogger()` - Log import attempt
-- `errorLogger()` - Log creation errors
-- `validationLogger()` - Log validation errors
-- `deleteLogger()` - Log deletion attempt
-- `deleteErrorLogger()` - Log deletion errors
+- Each line is a valid JSON object
+- Optimized for streaming and crash-safety
+- Can append entries without rewriting entire file
+- Memory-efficient for large datasets
+
+**Log Entry Types**:
+
+1. **Success Entry**: `{ userId: "user_123", status: "success", clerkUserId: "clerk_abc" }`
+2. **Error Entry**: `{ userId: "user_456", status: "error", error: "Email already exists" }`
+3. **Validation Failure**: `{ userId: "user_789", status: "fail", error: "invalid_type for required field.", path: ["email"], row: 5 }`
+4. **Detailed Error**: `{ type: "User Creation Error", userId: "user_abc", status: "422", error: "..." }`
+
+**Converting Logs**:
+
+- Use `bun convert-logs` to convert NDJSON logs to JSON arrays for easier analysis
+- Converted files are saved as `{timestamp}-migration.json` or `{timestamp}-user-deletion.json`
+- Useful for importing into spreadsheets or analysis tools
+
+**Logger functions** in `src/logger.ts`:
+
+- `importLogger()` - Log import attempt (success/error)
+- `errorLogger()` - Log detailed creation errors
+- `validationLogger()` - Log validation failures
+- `deleteLogger()` - Log deletion attempt (success/error)
+- `deleteErrorLogger()` - Log detailed deletion errors
 
 ### CLI Analysis Features
 

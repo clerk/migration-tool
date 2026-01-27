@@ -83,7 +83,7 @@ You can override these values by setting `RATE_LIMIT` or `CONCURRENCY_LIMIT` in 
 
 ### Delete users
 
-```
+```bash
 bun delete
 ```
 
@@ -91,11 +91,17 @@ This will delete all migrated users from the instance. It should not delete pre-
 
 ### Clean logs
 
-```
+```bash
 bun clean-logs
 ```
 
 All migrations and deletions will create logs in the `./logs` folder. This command will delete those logs.
+
+### Convert logs from NDJSON to JSON
+
+```bash
+bun convert-logs
+```
 
 ## Migrating OAuth connections
 
@@ -377,3 +383,116 @@ The CLI will automatically detect and display your transformer in the platform s
 5. **Metadata**: Map platform-specific data to `publicMetadata` or `privateMetadata`
 6. **Required Identifier**: Ensure at least one verified email or phone is mapped
 7. **Cleanup**: Remove temporary fields in `postTransform` that aren't part of the schema
+
+## Convert Logs Utility
+
+Converts NDJSON (Newline-Delimited JSON) log files to standard JSON array format for easier analysis in spreadsheets, databases, or other tools.
+
+### Usage
+
+```bash
+bun convert-logs
+```
+
+The utility will:
+
+1. List all `.log` files in the `./logs` directory
+2. Let you select which files to convert
+3. Create corresponding `.json` files with the converted data
+
+### Example
+
+**Input** (`migration-2026-01-27T12:00:00.log`):
+
+```
+{"userId":"user_1","status":"success","clerkUserId":"clerk_abc123"}
+{"userId":"user_2","status":"error","error":"Email already exists"}
+{"userId":"user_3","status":"fail","error":"invalid_type for required field.","path":["email"],"row":5}
+```
+
+**Output** (`migration-2026-01-27T12:00:00.json`):
+
+```json
+[
+	{
+		"userId": "user_1",
+		"status": "success",
+		"clerkUserId": "clerk_abc123"
+	},
+	{
+		"userId": "user_2",
+		"status": "error",
+		"error": "Email already exists"
+	},
+	{
+		"userId": "user_3",
+		"status": "fail",
+		"error": "invalid_type for required field.",
+		"path": ["email"],
+		"row": 5
+	}
+]
+```
+
+### Why NDJSON for Logs?
+
+The tool uses NDJSON for log files because:
+
+- **Streaming**: Can append entries as they happen without rewriting the file
+- **Crash-safe**: If the process crashes, all entries written so far are valid
+- **Memory efficient**: Can process line-by-line without loading entire log
+- **Scalable**: Works efficiently with thousands or millions of entries
+- **Real-time**: Can monitor with `tail -f` and see entries as they're written
+
+### When to Convert
+
+Convert logs to JSON arrays when you need to:
+
+- Import into Excel, Google Sheets, or other spreadsheet tools
+- Load into a database for analysis
+- Process with tools that expect JSON arrays
+- Share logs with team members less familiar with NDJSON
+
+### Analyzing Logs
+
+#### With NDJSON (original format)
+
+```bash
+# Count successful imports
+grep '"status":"success"' logs/migration-2026-01-27T12:00:00.log | wc -l
+
+# Find all errors
+grep '"status":"error"' logs/migration-2026-01-27T12:00:00.log
+
+# Get specific user
+grep '"userId":"user_123"' logs/migration-2026-01-27T12:00:00.log
+```
+
+#### With JSON Arrays (converted format)
+
+```javascript
+// Load in Node.js/JavaScript
+const logs = require('./logs/migration-2026-01-27T12:00:00.json');
+
+// Filter successful imports
+const successful = logs.filter((entry) => entry.status === 'success');
+
+// Count errors by type
+const errorCounts = logs
+	.filter((entry) => entry.status === 'error')
+	.reduce((acc, entry) => {
+		acc[entry.error] = (acc[entry.error] || 0) + 1;
+		return acc;
+	}, {});
+```
+
+```python
+# Load in Python
+import json
+with open('logs/migration-2026-01-27T12:00:00.json') as f:
+    logs = json.load(f)
+
+# Count by status
+from collections import Counter
+status_counts = Counter(entry['status'] for entry in logs)
+```

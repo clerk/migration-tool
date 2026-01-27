@@ -156,7 +156,7 @@ function transformUsers(
 				{
 					error: `${firstIssue.code} for required field.`,
 					path: firstIssue.path as (string | number)[],
-					id: transformedUser.userId as string,
+					userId: transformedUser.userId as string,
 					row: i,
 				},
 				dateTime
