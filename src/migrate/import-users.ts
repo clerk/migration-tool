@@ -236,7 +236,7 @@ async function processUserToClerk(
 		}
 
 		// Create user (may throw for main user creation, but additional emails/phones use tryCatch internally)
-		await createUser(
+		const createdUser = await createUser(
 			parsedUserData.data,
 			skipPasswordRequirement,
 			limit,
@@ -248,8 +248,15 @@ async function processUserToClerk(
 		processed++;
 		lastProcessedUserId = userData.userId;
 
-		// Log successful import
-		importLogger({ userId: userData.userId, status: 'success' }, dateTime);
+		// Log successful import with Clerk user ID
+		importLogger(
+			{
+				userId: userData.userId,
+				status: 'success',
+				clerkUserId: createdUser.id,
+			},
+			dateTime
+		);
 	} catch (error: unknown) {
 		// Retry on rate limit error (429)
 		const clerkError = error as { status?: number; errors?: ClerkAPIError[] };

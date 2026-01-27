@@ -179,7 +179,7 @@ describe('validationLogger', () => {
 			{
 				error: 'invalid_type for required field.',
 				path: ['email'],
-				id: 'user_123',
+				userId: 'user_123',
 				row: 5,
 			},
 			dateTime
@@ -188,11 +188,11 @@ describe('validationLogger', () => {
 		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
-			type: 'Validation Error',
-			row: 5,
-			id: 'user_123',
+			userId: 'user_123',
+			status: 'fail',
 			error: 'invalid_type for required field.',
 			path: ['email'],
+			row: 5,
 		});
 	});
 
@@ -203,7 +203,7 @@ describe('validationLogger', () => {
 			{
 				error: 'invalid_type for required field.',
 				path: ['unsafeMetadata', 'customField'],
-				id: 'user_456',
+				userId: 'user_456',
 				row: 10,
 			},
 			dateTime
@@ -211,6 +211,8 @@ describe('validationLogger', () => {
 
 		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log[0].path).toEqual(['unsafeMetadata', 'customField']);
+		expect(log[0].userId).toBe('user_456');
+		expect(log[0].status).toBe('fail');
 	});
 
 	test('logs validation error with numeric path (array index)', () => {
@@ -220,7 +222,7 @@ describe('validationLogger', () => {
 			{
 				error: 'invalid_email for required field.',
 				path: ['email', 1],
-				id: 'user_789',
+				userId: 'user_789',
 				row: 3,
 			},
 			dateTime
@@ -228,6 +230,8 @@ describe('validationLogger', () => {
 
 		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log[0].path).toEqual(['email', 1]);
+		expect(log[0].userId).toBe('user_789');
+		expect(log[0].status).toBe('fail');
 	});
 
 	test('appends multiple validation errors', () => {
@@ -237,7 +241,7 @@ describe('validationLogger', () => {
 			{
 				error: 'missing userId',
 				path: ['userId'],
-				id: 'unknown',
+				userId: 'unknown',
 				row: 1,
 			},
 			dateTime
@@ -247,7 +251,7 @@ describe('validationLogger', () => {
 			{
 				error: 'invalid email format',
 				path: ['email'],
-				id: 'user_2',
+				userId: 'user_2',
 				row: 2,
 			},
 			dateTime
@@ -257,7 +261,7 @@ describe('validationLogger', () => {
 			{
 				error: 'invalid passwordHasher',
 				path: ['passwordHasher'],
-				id: 'user_3',
+				userId: 'user_3',
 				row: 3,
 			},
 			dateTime
@@ -266,8 +270,11 @@ describe('validationLogger', () => {
 		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(3);
 		expect(log[0].row).toBe(1);
+		expect(log[0].status).toBe('fail');
 		expect(log[1].row).toBe(2);
+		expect(log[1].status).toBe('fail');
 		expect(log[2].row).toBe(3);
+		expect(log[2].status).toBe('fail');
 	});
 });
 
@@ -278,13 +285,21 @@ describe('importLogger', () => {
 	test('logs a successful import', () => {
 		const dateTime = 'import-success-test';
 
-		importLogger({ userId: 'user_123', status: 'success' }, dateTime);
+		importLogger(
+			{
+				userId: 'user_123',
+				status: 'success',
+				clerkUserId: 'clerk_user_abc123',
+			},
+			dateTime
+		);
 
 		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(1);
 		expect(log[0]).toEqual({
 			userId: 'user_123',
 			status: 'success',
+			clerkUserId: 'clerk_user_abc123',
 		});
 	});
 
@@ -308,22 +323,30 @@ describe('importLogger', () => {
 	test('logs multiple imports in sequence', () => {
 		const dateTime = 'import-multiple-test';
 
-		importLogger({ userId: 'user_1', status: 'success' }, dateTime);
+		importLogger(
+			{ userId: 'user_1', status: 'success', clerkUserId: 'clerk_1' },
+			dateTime
+		);
 		importLogger(
 			{ userId: 'user_2', status: 'error', error: 'Invalid email' },
 			dateTime
 		);
-		importLogger({ userId: 'user_3', status: 'success' }, dateTime);
+		importLogger(
+			{ userId: 'user_3', status: 'success', clerkUserId: 'clerk_3' },
+			dateTime
+		);
 
 		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(3);
 		expect(log[0].userId).toBe('user_1');
 		expect(log[0].status).toBe('success');
+		expect(log[0].clerkUserId).toBe('clerk_1');
 		expect(log[1].userId).toBe('user_2');
 		expect(log[1].status).toBe('error');
 		expect(log[1].error).toBe('Invalid email');
 		expect(log[2].userId).toBe('user_3');
 		expect(log[2].status).toBe('success');
+		expect(log[2].clerkUserId).toBe('clerk_3');
 	});
 });
 
@@ -520,7 +543,7 @@ describe('mixed logging', () => {
 			{
 				error: 'validation failed',
 				path: ['email'],
-				id: 'user_2',
+				userId: 'user_2',
 				row: 5,
 			},
 			dateTime
@@ -529,7 +552,8 @@ describe('mixed logging', () => {
 		const log = readNDJSON(`logs/migration-${dateTime}.log`);
 		expect(log).toHaveLength(2);
 		expect(log[0].type).toBe('User Creation Error');
-		expect(log[1].type).toBe('Validation Error');
+		expect(log[1].status).toBe('fail');
+		expect(log[1].userId).toBe('user_2');
 	});
 
 	test('error logs and import logs go to same migration log file', () => {
@@ -555,7 +579,10 @@ describe('mixed logging', () => {
 			dateTime
 		);
 
-		importLogger({ userId: 'user_2', status: 'success' }, dateTime);
+		importLogger(
+			{ userId: 'user_2', status: 'success', clerkUserId: 'clerk_2' },
+			dateTime
+		);
 
 		const migrationLog = readNDJSON(`logs/migration-${dateTime}.log`);
 
@@ -563,5 +590,6 @@ describe('mixed logging', () => {
 		expect(migrationLog[0].type).toBe('User Creation Error');
 		expect(migrationLog[1].status).toBe('error');
 		expect(migrationLog[2].status).toBe('success');
+		expect(migrationLog[2].clerkUserId).toBe('clerk_2');
 	});
 });

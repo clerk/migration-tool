@@ -10,6 +10,7 @@
     "migrate": "bun ./src/migrate/index.ts",
     "delete": "bun ./src/delete/index.ts",
     "clean-logs": "bun ./src/clean-logs/index.ts",
+    "convert-logs": "bun ./src/convert-logs/index.ts",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier . --write",

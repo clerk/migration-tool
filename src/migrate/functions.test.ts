@@ -4,7 +4,7 @@ import { transformKeys } from '../utils';
 import { transformers } from './transformers';
 
 test('Clerk - loadUsersFromFile - JSON', async () => {
-	const usersFromClerk = await loadUsersFromFile(
+	const { users: usersFromClerk } = await loadUsersFromFile(
 		'./samples/clerk.json',
 		'clerk'
 	);
@@ -45,7 +45,7 @@ test('Clerk - loadUsersFromFile - JSON', async () => {
 });
 
 test('Auth.js - loadUsersFromFile - JSON', async () => {
-	const usersFromAuthjs = await loadUsersFromFile(
+	const { users: usersFromAuthjs } = await loadUsersFromFile(
 		'./samples/authjs.json',
 		'authjs'
 	);
@@ -82,7 +82,7 @@ test('Auth.js - loadUsersFromFile - JSON', async () => {
 });
 
 test('Supabase - loadUsersFromFile - JSON', async () => {
-	const usersFromSupabase = await loadUsersFromFile(
+	const { users: usersFromSupabase } = await loadUsersFromFile(
 		'./samples/supabase.json',
 		'supabase'
 	);
@@ -117,7 +117,7 @@ test('Supabase - loadUsersFromFile - JSON', async () => {
 });
 
 test('Auth0 - loadUsersFromFile - JSON', async () => {
-	const usersFromAuth0 = await loadUsersFromFile(
+	const { users: usersFromAuth0 } = await loadUsersFromFile(
 		'./samples/auth0.json',
 		'auth0'
 	);
@@ -431,7 +431,7 @@ describe('Clerk transformer - email and phone parsing with pipe separators', () 
 	test('parses pipe-separated emails in CSV format', async () => {
 		// This test verifies the fix for rows with pipe-separated emails
 		// like: verified_email_addresses: "email1@test.com|email2@test.com"
-		const users = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
+		const { users } = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
 
 		const userWithPipeSeparatedEmails = users.find(
 			(u) => u.userId === 'user_pipe_email_test'
@@ -446,7 +446,7 @@ describe('Clerk transformer - email and phone parsing with pipe separators', () 
 	});
 
 	test('parses pipe-separated phones in CSV format', async () => {
-		const users = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
+		const { users } = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
 
 		const userWithPipeSeparatedPhones = users.find(
 			(u) => u.userId === 'user_pipe_phone_test'
@@ -461,7 +461,7 @@ describe('Clerk transformer - email and phone parsing with pipe separators', () 
 	});
 
 	test('parses mixed comma and pipe separators for emails', async () => {
-		const users = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
+		const { users } = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
 
 		const userWithMixedSeparators = users.find(
 			(u) => u.userId === 'user_mixed_separator_test'
@@ -477,7 +477,7 @@ describe('Clerk transformer - email and phone parsing with pipe separators', () 
 	});
 
 	test('parses mixed comma and pipe separators for phones', async () => {
-		const users = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
+		const { users } = await loadUsersFromFile('./samples/clerk.csv', 'clerk');
 
 		const userWithMixedPhoneSeparators = users.find(
 			(u) => u.userId === 'user_mixed_phone_separator_test'
