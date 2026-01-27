@@ -17,7 +17,7 @@ import { passwordHasherEnum } from '../types';
  * All fields are optional except:
  * - userId is required (for tracking and logging)
  * - passwordHasher is required when password is provided
- * - user must have at least one verified identifier (email or phone)
+ * - user must have at least one identifier (email, phone, or username)
  *
  * @remarks
  * Fields can accept single values or arrays (e.g., email: string | string[])
@@ -76,16 +76,17 @@ export const userSchema = z
 				if (Array.isArray(field)) return field.length > 0;
 				return false;
 			};
-			// Must have either verified email or verified phone
+			// Must have at least one identifier: email, phone, or username
 			const hasVerifiedEmail =
 				hasValue(data.email) || hasValue(data.emailAddresses);
 			const hasVerifiedPhone =
 				hasValue(data.phone) || hasValue(data.phoneNumbers);
-			return hasVerifiedEmail || hasVerifiedPhone;
+			const hasUsername = hasValue(data.username);
+			return hasVerifiedEmail || hasVerifiedPhone || hasUsername;
 		},
 		{
 			message:
-				'User must have either a verified email or verified phone number',
+				'User must have at least one identifier (email, phone, or username)',
 			path: ['email'],
 		}
 	);

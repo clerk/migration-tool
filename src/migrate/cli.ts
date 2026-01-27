@@ -678,7 +678,7 @@ export async function runCLI() {
 	// Exit if no users have valid identifiers
 	if (analysis.identifiers.hasAnyIdentifier === 0) {
 		p.cancel(
-			'No users can be imported. All users are missing a valid identifier (verified email, verified phone, or username).'
+			'No users can be imported. All users are missing an identifier (verified email, verified phone, or username).'
 		);
 		process.exit(1);
 	}
