@@ -22,6 +22,10 @@ type Settings = {
 
 const DEV_USER_LIMIT = 500;
 
+const DASHBOARD_CONFIGURATION = color.bold(
+	color.whiteBright('Dashboard Configuration:\n')
+);
+
 /**
  * Detects whether the Clerk instance is development or production based on the secret key
  *
@@ -298,25 +302,25 @@ export function displayIdentifierAnalysis(analysis: FieldAnalysis): void {
 	let identifierMessage = '';
 
 	// Show counts for each identifier type
-	identifierMessage += color.bold('Identifier Analysis:\n');
+	identifierMessage += color.bold(color.whiteBright('Identifier Analysis:\n'));
 
 	// Helper to get the correct icon based on coverage
 	const getIcon = (count: number, total: number): string => {
-		if (count === total) return color.green('●');
-		if (count > 0) return color.yellow('○');
+		if (count === total) return color.bold(color.greenBright('●'));
+		if (count > 0) return color.bold(color.yellowBright('○'));
 		return color.red('○');
 	};
 
-	identifierMessage += `  ${getIcon(identifiers.verifiedEmails, totalUsers)} ${formatCount(identifiers.verifiedEmails, totalUsers, 'verified emails')}\n`;
-	identifierMessage += `  ${getIcon(identifiers.verifiedPhones, totalUsers)} ${formatCount(identifiers.verifiedPhones, totalUsers, 'verified phone numbers')}\n`;
-	identifierMessage += `  ${getIcon(identifiers.username, totalUsers)} ${formatCount(identifiers.username, totalUsers, 'a username')}\n`;
+	identifierMessage += `  ${getIcon(identifiers.verifiedEmails, totalUsers)} ${color.dim(formatCount(identifiers.verifiedEmails, totalUsers, 'verified emails'))}\n`;
+	identifierMessage += `  ${getIcon(identifiers.verifiedPhones, totalUsers)} ${color.dim(formatCount(identifiers.verifiedPhones, totalUsers, 'verified phone numbers'))}\n`;
+	identifierMessage += `  ${getIcon(identifiers.username, totalUsers)} ${color.dim(formatCount(identifiers.username, totalUsers, 'a username'))}\n`;
 
 	// Show unverified counts if present
 	if (identifiers.unverifiedEmails > 0) {
-		identifierMessage += `  ${color.dim('○')} ${formatCount(identifiers.unverifiedEmails, totalUsers, 'unverified emails')}\n`;
+		identifierMessage += `  ${getIcon(identifiers.unverifiedEmails, totalUsers)} ${color.dim(formatCount(identifiers.unverifiedEmails, totalUsers, 'unverified emails'))}\n`;
 	}
 	if (identifiers.unverifiedPhones > 0) {
-		identifierMessage += `  ${color.dim('○')} ${formatCount(identifiers.unverifiedPhones, totalUsers, 'unverified phone numbers')}\n`;
+		identifierMessage += `  ${getIcon(identifiers.unverifiedPhones, totalUsers)} ${color.dim(formatCount(identifiers.unverifiedPhones, totalUsers, 'unverified phone numbers'))}\n`;
 	}
 
 	// Check if all users have at least one identifier
@@ -335,34 +339,37 @@ export function displayIdentifierAnalysis(analysis: FieldAnalysis): void {
 
 	// Dashboard configuration advice
 	identifierMessage += '\n';
-	identifierMessage += color.bold('Dashboard Configuration:\n');
+	identifierMessage += DASHBOARD_CONFIGURATION;
 
 	const requiredIdentifiers: string[] = [];
 	const optionalIdentifiers: string[] = [];
 
-	if (identifiers.verifiedEmails === totalUsers) {
+	// Only consider users that will actually be imported (have at least one identifier)
+	const importableUsers = identifiers.hasAnyIdentifier;
+
+	if (identifiers.verifiedEmails === importableUsers) {
 		requiredIdentifiers.push('email');
 	} else if (identifiers.verifiedEmails > 0) {
 		optionalIdentifiers.push('email');
 	}
 
-	if (identifiers.verifiedPhones === totalUsers) {
+	if (identifiers.verifiedPhones === importableUsers) {
 		requiredIdentifiers.push('phone');
 	} else if (identifiers.verifiedPhones > 0) {
 		optionalIdentifiers.push('phone');
 	}
 
-	if (identifiers.username === totalUsers) {
+	if (identifiers.username === importableUsers) {
 		requiredIdentifiers.push('username');
 	} else if (identifiers.username > 0) {
 		optionalIdentifiers.push('username');
 	}
 
 	if (requiredIdentifiers.length > 0) {
-		identifierMessage += `  ${color.green('●')} Enable and ${color.bold('require')} ${requiredIdentifiers.join(', ')} in the Dashboard\n`;
+		identifierMessage += `  ${color.green('●')} ${color.bold(color.whiteBright(requiredIdentifiers.join(', ')))}: ${color.dim('Enable and optionally require in the Dashboard')}\n`;
 	}
 	if (optionalIdentifiers.length > 0) {
-		identifierMessage += `  ${color.yellow('○')} Enable ${optionalIdentifiers.join(', ')} in the Dashboard (do not require)\n`;
+		identifierMessage += `  ${color.yellow('○')} ${color.bold(color.whiteBright(optionalIdentifiers.join(', ')))}: Enable  in the Dashboard but do not require\n`;
 	}
 
 	p.note(identifierMessage.trim(), 'Identifiers');
@@ -401,8 +408,8 @@ export async function displayPasswordAnalysis(
 	}
 
 	passwordMessage += '\n';
-	passwordMessage += color.bold('Dashboard Configuration:\n');
-	passwordMessage += `  ${color.green('●')} Enable Password in the Dashboard\n`;
+	passwordMessage += DASHBOARD_CONFIGURATION;
+	passwordMessage += `  ${color.green('●')} ${color.bold(color.whiteBright('Password'))}: Enable in Dashboard\n`;
 
 	p.note(passwordMessage.trim(), 'Password');
 
@@ -454,14 +461,14 @@ export const displayUserModelAnalysis = (analysis: FieldAnalysis): boolean => {
 	}
 
 	nameMessage += '\n';
-	nameMessage += color.bold('Dashboard Configuration:\n');
+	nameMessage += DASHBOARD_CONFIGURATION;
 
 	if (usersWithBothNames === totalUsers) {
-		nameMessage += `  ${color.green('●')} First and last name must be enabled in the Dashboard and could be required\n`;
+		nameMessage += `  ${color.green('●')} ${color.bold(color.whiteBright('First and last name'))}: Must be enabled in the Dashboard and could be required\n`;
 	} else if (someUsersHaveNames) {
-		nameMessage += `  ${color.yellow('○')} First and last name must be enabled in the Dashboard but not required\n`;
+		nameMessage += `  ${color.yellow('○')} ${color.bold(color.whiteBright('First and last name'))}: Must be enabled in the Dashboard but not required\n`;
 	} else {
-		nameMessage += `  ${color.dim('○')} First and last name could be enabled or disabled in the Dashboard but cannot be required\n`;
+		nameMessage += `  ${color.dim('○')} ${color.bold(color.whiteBright('First and last name'))}: Could be enabled or disabled in the Dashboard but cannot be required\n`;
 	}
 
 	p.note(nameMessage.trim(), 'User Model');
@@ -548,7 +555,7 @@ export async function runCLI() {
 	// Step 1: Display available transformers with descriptions
 	let transformerMessage = color.bold('Available Transformers:\n\n');
 	for (const transformer of transformers) {
-		transformerMessage += color.cyan(`● ${transformer.label}\n`);
+		transformerMessage += color.bold(color.cyan(`● ${transformer.label}\n`));
 		transformerMessage += `  ${color.dim(transformer.description)}\n\n`;
 	}
 	p.note(transformerMessage.trim(), 'Transformers');

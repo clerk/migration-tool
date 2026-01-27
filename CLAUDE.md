@@ -145,9 +145,9 @@ All operations create timestamped logs in `./logs/` using NDJSON (Newline-Delimi
 **Log Entry Types**:
 
 1. **Success Entry**: `{ userId: "user_123", status: "success", clerkUserId: "clerk_abc" }`
-2. **Error Entry**: `{ userId: "user_456", status: "error", error: "Email already exists" }`
-3. **Validation Failure**: `{ userId: "user_789", status: "fail", error: "invalid_type for required field.", path: ["email"], row: 5 }`
-4. **Detailed Error**: `{ type: "User Creation Error", userId: "user_abc", status: "422", error: "..." }`
+2. **Error Entry**: `{ userId: "user_456", status: "error", error: "Email already exists", code: "422" }`
+3. **Validation Failure**: `{ userId: "user_789", status: "fail", error: "User must have at least one identifier (email, phone, or username)", path: ["email"], row: 5 }`
+4. **Additional Identifier Error**: `{ type: "User Creation Error", userId: "user_abc", status: "additional_email_error", error: "..." }` (logged when adding extra emails/phones fails, but user creation succeeded)
 
 **Converting Logs**:
 
@@ -157,11 +157,11 @@ All operations create timestamped logs in `./logs/` using NDJSON (Newline-Delimi
 
 **Logger functions** in `src/logger.ts`:
 
-- `importLogger()` - Log import attempt (success/error)
-- `errorLogger()` - Log detailed creation errors
-- `validationLogger()` - Log validation failures
-- `deleteLogger()` - Log deletion attempt (success/error)
-- `deleteErrorLogger()` - Log detailed deletion errors
+- `importLogger()` - Log import attempt (success/error with optional error code)
+- `errorLogger()` - Log additional identifier errors (emails/phones) and retry attempts
+- `validationLogger()` - Log validation failures during data transformation
+- `deleteLogger()` - Log deletion attempt (success/error with optional error code)
+- `deleteErrorLogger()` - Log retry attempts during deletion
 
 ### CLI Analysis Features
 

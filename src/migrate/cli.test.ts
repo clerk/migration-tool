@@ -47,6 +47,11 @@ vi.mock('picocolors', () => ({
 		blue: vi.fn((s) => s),
 		cyan: vi.fn((s) => s),
 		reset: vi.fn((s) => s),
+		whiteBright: vi.fn((s) => s),
+		greenBright: vi.fn((s) => s),
+		yellowBright: vi.fn((s) => s),
+		bgCyan: vi.fn((s) => s),
+		black: vi.fn((s) => s),
 	},
 }));
 
@@ -944,6 +949,61 @@ describe('displayIdentifierAnalysis', () => {
 
 		// Should not throw
 		expect(() => displayIdentifierAnalysis(analysis)).not.toThrow();
+	});
+
+	test('recommends email as required when all importable users have email (even if some users lack identifiers)', () => {
+		// Scenario: 3309 users have email, 259 users have no identifier (will fail validation)
+		// All importable users (3309) have email, so email should be required
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 3309,
+				unverifiedEmails: 259,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 3309, // Only users with verified email can be imported
+			},
+			totalUsers: 3568, // Total includes users who will fail validation
+		};
+
+		displayIdentifierAnalysis(analysis);
+
+		// Verify p.note was called with a message that includes email as required
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Enable and optionally require'),
+			'Identifiers'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('email'),
+			'Identifiers'
+		);
+	});
+
+	test('recommends identifiers as optional when not all importable users have them', () => {
+		// Scenario: 50 users have email, 50 users have phone, 100 total importable
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 50,
+				unverifiedEmails: 0,
+				verifiedPhones: 50,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 100, // 50 with email + 50 with phone = 100 importable
+			},
+			totalUsers: 100,
+		};
+
+		displayIdentifierAnalysis(analysis);
+
+		// Both should be optional since not all importable users have each identifier
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Enable  in the Dashboard but do not require'),
+			'Identifiers'
+		);
 	});
 });
 

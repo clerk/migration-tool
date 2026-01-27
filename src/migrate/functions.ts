@@ -154,7 +154,7 @@ function transformUsers(
 
 			validationLogger(
 				{
-					error: `${firstIssue.code} for required field.`,
+					error: firstIssue.message,
 					path: firstIssue.path as (string | number)[],
 					userId: transformedUser.userId as string,
 					row: i,

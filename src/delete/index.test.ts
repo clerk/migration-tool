@@ -345,21 +345,15 @@ describe('delete-users', () => {
 			// Should attempt all three deletions
 			expect(mockDeleteUser).toHaveBeenCalledTimes(3);
 
-			// Should log to both error log and delete log for user_2
-			expect(mockDeleteErrorLogger).toHaveBeenCalledTimes(1);
-			expect(mockDeleteErrorLogger).toHaveBeenCalledWith(
+			// Should log to delete log file for all users (2 success + 1 error)
+			expect(mockDeleteLogger).toHaveBeenCalledTimes(3);
+			expect(mockDeleteLogger).toHaveBeenCalledWith(
 				{
 					userId: 'ext_2',
 					status: 'error',
-					errors: [{ message: 'Delete failed', longMessage: 'Delete failed' }],
+					error: 'Delete failed',
+					code: 'unknown',
 				},
-				dateTime
-			);
-
-			// Should also log to delete log file
-			expect(mockDeleteLogger).toHaveBeenCalledTimes(3); // 2 success + 1 error
-			expect(mockDeleteLogger).toHaveBeenCalledWith(
-				{ userId: 'ext_2', status: 'error', error: 'Delete failed' },
 				dateTime
 			);
 		});
@@ -373,17 +367,13 @@ describe('delete-users', () => {
 
 			await deleteUsers(users, dateTime);
 
-			expect(mockDeleteErrorLogger).toHaveBeenCalledWith(
+			expect(mockDeleteLogger).toHaveBeenCalledWith(
 				{
 					userId: 'user_1',
 					status: 'error',
-					errors: [{ message: 'API error', longMessage: 'API error' }],
+					error: 'API error',
+					code: 'unknown',
 				},
-				dateTime
-			);
-
-			expect(mockDeleteLogger).toHaveBeenCalledWith(
-				{ userId: 'user_1', status: 'error', error: 'API error' },
 				dateTime
 			);
 		});
@@ -405,7 +395,6 @@ describe('delete-users', () => {
 			await deleteUsers(users, dateTime);
 
 			expect(mockDeleteUser).toHaveBeenCalledTimes(4);
-			expect(mockDeleteErrorLogger).toHaveBeenCalledTimes(2);
 			expect(mockDeleteLogger).toHaveBeenCalledTimes(4); // All 4 users logged (2 success + 2 error)
 		});
 	});

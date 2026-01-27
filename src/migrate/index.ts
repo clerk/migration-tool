@@ -26,6 +26,15 @@ async function main() {
 		args.key
 	);
 
+	// Display validation failures if any
+	if (validationFailed > 0) {
+		p.log.warn(
+			color.yellow(
+				`${validationFailed} user${validationFailed === 1 ? '' : 's'} failed validation and will be skipped. See the migration log in logs/ for more details.`
+			)
+		);
+	}
+
 	// If resuming after a specific user ID, filter to start after that user
 	let usersToImport = users;
 	if (args.resumeAfter) {

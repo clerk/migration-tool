@@ -65,14 +65,12 @@ vi.mock('../utils', () => ({
 		}
 	},
 	getRetryDelay: (
-		retryCount: number,
 		retryAfterSeconds: number | undefined,
 		defaultDelayMs: number
 	) => {
-		const delayMs = retryAfterSeconds
-			? retryAfterSeconds * 1000
-			: defaultDelayMs;
-		const delaySeconds = retryAfterSeconds || defaultDelayMs / 1000;
+		// Use a short delay for tests to avoid timeouts
+		const delayMs = retryAfterSeconds ? retryAfterSeconds * 1000 : 10; // 10ms instead of defaultDelayMs
+		const delaySeconds = retryAfterSeconds || delayMs / 1000;
 		return { delayMs, delaySeconds };
 	},
 }));
@@ -232,7 +230,7 @@ describe('importUsers', () => {
 
 	describe('error handling', () => {
 		test('logs error when Clerk API fails', async () => {
-			const errorLoggerSpy = vi.spyOn(logger, 'errorLogger');
+			const importLoggerSpy = vi.spyOn(logger, 'importLogger');
 
 			const clerkError = {
 				status: 422,
@@ -250,11 +248,13 @@ describe('importUsers', () => {
 
 			await importUsers(users);
 
-			expect(errorLoggerSpy).toHaveBeenCalled();
-			expect(errorLoggerSpy).toHaveBeenCalledWith(
+			expect(importLoggerSpy).toHaveBeenCalled();
+			expect(importLoggerSpy).toHaveBeenCalledWith(
 				expect.objectContaining({
 					userId: 'user_fail',
-					status: '422',
+					status: 'error',
+					error: 'That email address is taken.',
+					code: '422',
 				}),
 				expect.any(String)
 			);
@@ -282,6 +282,10 @@ describe('importUsers', () => {
 		});
 
 		test('retries on rate limit (429) error', { timeout: 15000 }, async () => {
+			// Spy on errorLogger to track retry attempts (informational logs)
+			const errorLoggerSpy = vi.spyOn(logger, 'errorLogger');
+			const importLoggerSpy = vi.spyOn(logger, 'importLogger');
+
 			const rateLimitError = {
 				status: 429,
 				errors: [{ code: 'rate_limit', message: 'Too many requests' }],
@@ -297,6 +301,24 @@ describe('importUsers', () => {
 
 			// Should be called twice: first fails with 429, retry succeeds
 			expect(mockCreateUser).toHaveBeenCalledTimes(2);
+
+			// Should log retry attempt with errorLogger (informational)
+			expect(errorLoggerSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					userId: 'user_rate',
+					status: '429_retry',
+				}),
+				expect.any(String)
+			);
+
+			// Should log success with importLogger
+			expect(importLoggerSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					userId: 'user_rate',
+					status: 'success',
+				}),
+				expect.any(String)
+			);
 		});
 	});
 

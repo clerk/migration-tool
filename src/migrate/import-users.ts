@@ -310,25 +310,14 @@ async function processUserToClerk(
 			s.message(`Migrating users: [${processed}/${total}]`);
 			errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
 
-			// Log to error log file
-			errorLogger(
-				{
-					userId: userData.userId,
-					status: '429',
-					errors: [
-						{
-							code: 'rate_limit_exceeded',
-							message: errorMessage,
-							longMessage: errorMessage,
-						},
-					],
-				},
-				dateTime
-			);
-
 			// Log to import log file
 			importLogger(
-				{ userId: userData.userId, status: 'error', error: errorMessage },
+				{
+					userId: userData.userId,
+					status: 'error',
+					error: errorMessage,
+					code: '429',
+				},
 				dateTime
 			);
 			return;
@@ -346,19 +335,14 @@ async function processUserToClerk(
 			'Unknown error';
 		errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
 
-		// Log to error log file
-		errorLogger(
-			{
-				userId: userData.userId,
-				status: String(clerkError.status ?? 'unknown'),
-				errors: clerkError.errors ?? [],
-			},
-			dateTime
-		);
-
 		// Log to import log file
 		importLogger(
-			{ userId: userData.userId, status: 'error', error: errorMessage },
+			{
+				userId: userData.userId,
+				status: 'error',
+				error: errorMessage,
+				code: String(clerkError.status ?? 'unknown'),
+			},
 			dateTime
 		);
 	}
@@ -380,12 +364,18 @@ async function processUserToClerk(
  * @param summary - The import summary statistics
  */
 function displaySummary(summary: ImportSummary) {
-	let message = `Total users processed: ${summary.totalProcessed}\n`;
-	message += `${color.green('Successfully imported:')} ${summary.successful}\n`;
-	message += `${color.red('Failed with errors:')} ${summary.failed}`;
+	let message = `${color.green('Successfully imported:')} ${summary.successful}\n`;
+	message += `${color.red('Failed with errors:')} ${summary.failed}\n`;
 
 	if (summary.validationFailed > 0) {
-		message += `\n${color.yellow('Failed validation:')} ${summary.validationFailed}`;
+		message += `${color.yellow('Failed validation:')} ${summary.validationFailed}\n`;
+	}
+
+	const totalAttempted = summary.totalProcessed + summary.validationFailed;
+	message += `${color.bold('Total users in file:')} ${totalAttempted}`;
+
+	if (summary.validationFailed > 0) {
+		message += `\n${color.dim(`(${summary.totalProcessed} attempted, ${summary.validationFailed} skipped due to validation errors)`)}`;
 	}
 
 	if (summary.errorBreakdown.size > 0) {
@@ -461,7 +451,7 @@ export async function importUsers(
 	// Remove interruption handler now that we're done
 	process.off('SIGINT', handleInterrupt);
 
-	s.stop(`Migrated ${total} users`);
+	s.stop(`Processed ${total} user${total === 1 ? '' : 's'}`);
 
 	// Close all log streams
 	closeAllStreams();

@@ -237,28 +237,13 @@ const deleteUser = async (
 			failed++;
 			errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
 
-			// Log to error log file
-			deleteErrorLogger(
-				{
-					userId: user.externalId || user.id,
-					status: '429',
-					errors: [
-						{
-							code: 'rate_limit_exceeded',
-							message: errorMessage,
-							longMessage: errorMessage,
-						},
-					],
-				},
-				dateTime
-			);
-
 			// Log to delete log file
 			deleteLogger(
 				{
 					userId: user.externalId || user.id,
 					status: 'error',
 					error: errorMessage,
+					code: '429',
 				},
 				dateTime
 			);
@@ -268,27 +253,13 @@ const deleteUser = async (
 			const errorMessage = clerkError.message || 'Unknown error';
 			errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
 
-			// Log to error log file
-			deleteErrorLogger(
-				{
-					userId: user.externalId || user.id,
-					status: 'error',
-					errors: [
-						{
-							message: clerkError.message || 'Unknown error',
-							longMessage: clerkError.message || 'Unknown error',
-						},
-					],
-				},
-				dateTime
-			);
-
 			// Log to delete log file
 			deleteLogger(
 				{
 					userId: user.externalId || user.id,
 					status: 'error',
 					error: errorMessage,
+					code: String(clerkError.status ?? 'unknown'),
 				},
 				dateTime
 			);

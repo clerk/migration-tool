@@ -97,12 +97,14 @@ export type ErrorLog = {
  * @property status - Whether the import succeeded or failed
  * @property clerkUserId - The Clerk user ID if import succeeded
  * @property error - Error message if import failed
+ * @property code - HTTP status code or error code if import failed
  */
 export type ImportLogEntry = {
 	userId: string;
 	status: 'success' | 'error';
 	clerkUserId?: string;
 	error?: string;
+	code?: string;
 };
 
 /**
@@ -127,11 +129,13 @@ export type ImportSummary = {
  * @property userId - The user ID
  * @property status - Whether the deletion succeeded or failed
  * @property error - Error message if deletion failed
+ * @property code - HTTP status code or error code if deletion failed
  */
 export type DeleteLogEntry = {
 	userId: string;
 	status: 'success' | 'error';
 	error?: string;
+	code?: string;
 };
 
 /**
