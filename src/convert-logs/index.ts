@@ -16,7 +16,7 @@ function readNDJSON(filePath: string): unknown[] {
 		.trim()
 		.split('\n')
 		.filter((line) => line.length > 0)
-		.map((line) => JSON.parse(line));
+		.map((line) => JSON.parse(line) as unknown);
 }
 
 /**
@@ -65,10 +65,7 @@ const convertLogs = async () => {
 	}
 
 	// Let user select which files to convert
-	const selectedFiles = await p.multiselect<
-		{ value: string; label: string }[],
-		string
-	>({
+	const selectedLogFiles = await p.multiselect<string>({
 		message: 'Select log files to convert to JSON arrays:',
 		options: files.map((file) => ({
 			value: file,
@@ -77,24 +74,24 @@ const convertLogs = async () => {
 		required: true,
 	});
 
-	if (p.isCancel(selectedFiles)) {
+	if (p.isCancel(selectedLogFiles)) {
 		p.cancel('Operation cancelled.');
 		return;
 	}
 
-	if (selectedFiles.length === 0) {
+	if (selectedLogFiles.length === 0) {
 		p.outro('No files selected.');
 		return;
 	}
 
 	const s = p.spinner();
-	s.start(`Converting ${selectedFiles.length} file(s)`);
+	s.start(`Converting ${selectedLogFiles.length} file(s)`);
 
 	let convertedCount = 0;
 	let errorCount = 0;
 	const conversions: Array<{ file: string; entries: number }> = [];
 
-	for (const file of selectedFiles) {
+	for (const file of selectedLogFiles) {
 		try {
 			// Generate output filename: replace .log with .json
 			const outputFile = file.replace('.log', '.json');
@@ -102,10 +99,10 @@ const convertLogs = async () => {
 			const entryCount = convertLogFile(file, outputFile);
 			convertedCount++;
 			conversions.push({ file: outputFile, entries: entryCount });
-		} catch (error) {
+		} catch (error: unknown) {
 			errorCount++;
 			const errorMessage =
-				error instanceof Error ? error.message : String(error);
+				error instanceof Error ? error.message : 'Unknown error';
 			p.log.error(`Failed to convert ${file}: ${errorMessage}`);
 		}
 	}

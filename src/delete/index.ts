@@ -173,6 +173,35 @@ export const findIntersection = (
 const errorCounts = new Map<string, number>();
 
 /**
+ * Normalizes error messages by sorting field arrays to group similar errors
+ *
+ * Example: Converts both:
+ * - ["first_name" "last_name"] data doesn't match...
+ * - ["last_name" "first_name"] data doesn't match...
+ * into: ["first_name" "last_name"] data doesn't match...
+ *
+ * @param errorMessage - The original error message
+ * @returns The normalized error message with sorted field arrays
+ */
+export function normalizeErrorMessage(errorMessage: string): string {
+	// Match array-like patterns in error messages: ["field1" "field2"]
+	const arrayPattern = /\[([^\]]+)\]/g;
+
+	return errorMessage.replace(arrayPattern, (_match, fields: string) => {
+		// Split by spaces and quotes, filter out empty strings
+		const fieldNames = fields
+			.split(/["'\s]+/)
+			.filter((f: string) => f.trim().length > 0);
+
+		// Sort field names alphabetically
+		fieldNames.sort();
+
+		// Reconstruct the array notation
+		return `[${fieldNames.map((f: string) => `"${f}"`).join(' ')}]`;
+	});
+}
+
+/**
  * Deletes a single user from Clerk with retry logic for rate limits
  *
  * @param user - The Clerk user to delete
@@ -184,7 +213,7 @@ const deleteUser = async (
 	user: User,
 	dateTime: string,
 	retryCount: number = 0
-) => {
+): Promise<void> => {
 	const clerk = createClerkClient({ secretKey: env.CLERK_SECRET_KEY });
 	const [, error] = await tryCatch(clerk.users.deleteUser(user.id));
 
@@ -198,6 +227,7 @@ const deleteUser = async (
 
 		if (clerkError.status === 429) {
 			// Extract Retry-After value from response (in seconds)
+			// @ts-expect-error - this does exist despite the type error
 			const retryAfterSeconds = clerkError.errors?.[0]?.meta?.retryAfter as
 				| number
 				| undefined;
@@ -235,22 +265,10 @@ const deleteUser = async (
 			// Max retries exceeded - log as permanent failure
 			const errorMessage = `Rate limit exceeded after ${MAX_RETRIES} retries`;
 			failed++;
-			errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
-
-			// Log to error log file
-			deleteErrorLogger(
-				{
-					userId: user.externalId || user.id,
-					status: '429',
-					errors: [
-						{
-							code: 'rate_limit_exceeded',
-							message: errorMessage,
-							longMessage: errorMessage,
-						},
-					],
-				},
-				dateTime
+			const normalizedError = normalizeErrorMessage(errorMessage);
+			errorCounts.set(
+				normalizedError,
+				(errorCounts.get(normalizedError) ?? 0) + 1
 			);
 
 			// Log to delete log file
@@ -259,6 +277,7 @@ const deleteUser = async (
 					userId: user.externalId || user.id,
 					status: 'error',
 					error: errorMessage,
+					code: '429',
 				},
 				dateTime
 			);
@@ -266,21 +285,10 @@ const deleteUser = async (
 			// Non-429 error
 			failed++;
 			const errorMessage = clerkError.message || 'Unknown error';
-			errorCounts.set(errorMessage, (errorCounts.get(errorMessage) ?? 0) + 1);
-
-			// Log to error log file
-			deleteErrorLogger(
-				{
-					userId: user.externalId || user.id,
-					status: 'error',
-					errors: [
-						{
-							message: clerkError.message || 'Unknown error',
-							longMessage: clerkError.message || 'Unknown error',
-						},
-					],
-				},
-				dateTime
+			const normalizedError = normalizeErrorMessage(errorMessage);
+			errorCounts.set(
+				normalizedError,
+				(errorCounts.get(normalizedError) ?? 0) + 1
 			);
 
 			// Log to delete log file
@@ -289,6 +297,7 @@ const deleteUser = async (
 					userId: user.externalId || user.id,
 					status: 'error',
 					error: errorMessage,
+					code: String(clerkError.status ?? 'unknown'),
 				},
 				dateTime
 			);
@@ -432,11 +441,14 @@ export const processUsers = async () => {
 	p.outro('User deletion complete');
 };
 
-processUsers().catch((error: Error) => {
-	p.log.error(color.red('\nError during user deletion:'));
-	p.log.error(color.red(error.message));
-	if (error.stack) {
-		p.log.error(error.stack);
-	}
-	process.exit(1);
-});
+// Only run if not in test environment
+if (process.env.VITEST !== 'true') {
+	processUsers().catch((error: Error) => {
+		p.log.error(color.red('\nError during user deletion:'));
+		p.log.error(color.red(error.message));
+		if (error.stack) {
+			p.log.error(error.stack);
+		}
+		process.exit(1);
+	});
+}

@@ -94,9 +94,10 @@ vi.mock('../logger', () => ({
 // Import after mocks are set up
 import { deleteErrorLogger, deleteLogger } from '../logger';
 import * as fs from 'fs';
+import { normalizeErrorMessage } from './index';
 
 // Get reference to mocked functions - cast to mock type since vi.mocked is not available
-const mockDeleteErrorLogger = deleteErrorLogger as ReturnType<typeof vi.fn>;
+const _mockDeleteErrorLogger = deleteErrorLogger as ReturnType<typeof vi.fn>;
 const mockDeleteLogger = deleteLogger as ReturnType<typeof vi.fn>;
 
 describe('delete-users', () => {
@@ -345,21 +346,15 @@ describe('delete-users', () => {
 			// Should attempt all three deletions
 			expect(mockDeleteUser).toHaveBeenCalledTimes(3);
 
-			// Should log to both error log and delete log for user_2
-			expect(mockDeleteErrorLogger).toHaveBeenCalledTimes(1);
-			expect(mockDeleteErrorLogger).toHaveBeenCalledWith(
+			// Should log to delete log file for all users (2 success + 1 error)
+			expect(mockDeleteLogger).toHaveBeenCalledTimes(3);
+			expect(mockDeleteLogger).toHaveBeenCalledWith(
 				{
 					userId: 'ext_2',
 					status: 'error',
-					errors: [{ message: 'Delete failed', longMessage: 'Delete failed' }],
+					error: 'Delete failed',
+					code: 'unknown',
 				},
-				dateTime
-			);
-
-			// Should also log to delete log file
-			expect(mockDeleteLogger).toHaveBeenCalledTimes(3); // 2 success + 1 error
-			expect(mockDeleteLogger).toHaveBeenCalledWith(
-				{ userId: 'ext_2', status: 'error', error: 'Delete failed' },
 				dateTime
 			);
 		});
@@ -373,17 +368,13 @@ describe('delete-users', () => {
 
 			await deleteUsers(users, dateTime);
 
-			expect(mockDeleteErrorLogger).toHaveBeenCalledWith(
+			expect(mockDeleteLogger).toHaveBeenCalledWith(
 				{
 					userId: 'user_1',
 					status: 'error',
-					errors: [{ message: 'API error', longMessage: 'API error' }],
+					error: 'API error',
+					code: 'unknown',
 				},
-				dateTime
-			);
-
-			expect(mockDeleteLogger).toHaveBeenCalledWith(
-				{ userId: 'user_1', status: 'error', error: 'API error' },
 				dateTime
 			);
 		});
@@ -405,7 +396,6 @@ describe('delete-users', () => {
 			await deleteUsers(users, dateTime);
 
 			expect(mockDeleteUser).toHaveBeenCalledTimes(4);
-			expect(mockDeleteErrorLogger).toHaveBeenCalledTimes(2);
 			expect(mockDeleteLogger).toHaveBeenCalledTimes(4); // All 4 users logged (2 success + 2 error)
 		});
 	});
@@ -631,6 +621,67 @@ describe('delete-users', () => {
 			// Delete users
 			await deleteUsers(users, dateTime);
 			expect(mockDeleteUser).toHaveBeenCalledTimes(750);
+		});
+	});
+
+	describe('error message normalization', () => {
+		test('normalizes errors with fields in different orders to same message', () => {
+			const error1 =
+				'["first_name" "last_name"] data doesn\'t match user requirements set for this instance';
+			const error2 =
+				'["last_name" "first_name"] data doesn\'t match user requirements set for this instance';
+
+			const normalized1 = normalizeErrorMessage(error1);
+			const normalized2 = normalizeErrorMessage(error2);
+
+			// Both should normalize to the same message (fields sorted alphabetically)
+			expect(normalized1).toBe(
+				'["first_name" "last_name"] data doesn\'t match user requirements set for this instance'
+			);
+			expect(normalized2).toBe(
+				'["first_name" "last_name"] data doesn\'t match user requirements set for this instance'
+			);
+			expect(normalized1).toBe(normalized2);
+		});
+
+		test('normalizes errors with multiple field arrays', () => {
+			const error =
+				'["username" "email"] must have ["last_name" "first_name"] filled';
+
+			const normalized = normalizeErrorMessage(error);
+
+			// Both arrays should be sorted
+			expect(normalized).toBe(
+				'["email" "username"] must have ["first_name" "last_name"] filled'
+			);
+		});
+
+		test('handles errors without field arrays unchanged', () => {
+			const error = 'That email address is taken. Please try another.';
+
+			const normalized = normalizeErrorMessage(error);
+
+			expect(normalized).toBe(error);
+		});
+
+		test('handles errors with single field', () => {
+			const error = '["username"] is required';
+
+			const normalized = normalizeErrorMessage(error);
+
+			expect(normalized).toBe('["username"] is required');
+		});
+
+		test('handles complex field arrays with three or more fields', () => {
+			const error1 = '["username" "email" "phone"] are required';
+			const error2 = '["phone" "username" "email"] are required';
+
+			const normalized1 = normalizeErrorMessage(error1);
+			const normalized2 = normalizeErrorMessage(error2);
+
+			expect(normalized1).toBe('["email" "phone" "username"] are required');
+			expect(normalized2).toBe('["email" "phone" "username"] are required');
+			expect(normalized1).toBe(normalized2);
 		});
 	});
 });
