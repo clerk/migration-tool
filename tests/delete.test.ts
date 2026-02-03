@@ -401,15 +401,15 @@ describe('delete-users', () => {
 	});
 
 	describe('readSettings', () => {
-		test('reads settings file and returns file path', () => {
+		test('reads settings file and returns file path and key', () => {
 			mockExistsSync.mockReturnValue(true);
 			mockReadFileSync.mockReturnValue(
-				JSON.stringify({ file: 'samples/users.json' })
+				JSON.stringify({ file: 'samples/users.json', key: 'firebase' })
 			);
 
 			const result = readSettings();
 
-			expect(result).toBe('samples/users.json');
+			expect(result).toEqual({ file: 'samples/users.json', key: 'firebase' });
 			expect(mockExistsSync).toHaveBeenCalledWith(
 				expect.stringContaining('.settings')
 			);

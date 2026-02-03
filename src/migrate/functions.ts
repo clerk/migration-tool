@@ -13,6 +13,17 @@ import {
 	transformKeys,
 } from '../utils';
 
+/**
+ * Result of a preTransform operation
+ *
+ * @property filePath - The file path to use (may be modified, e.g., temp file with headers)
+ * @property data - Pre-extracted user data (e.g., extracted from JSON wrapper)
+ */
+export type PreTransformResult = {
+	filePath: string;
+	data?: User[];
+};
+
 const s = p.spinner();
 
 /**
@@ -223,13 +234,31 @@ export async function loadUsersFromFile(
 	s.start();
 	s.message('Loading users and preparing to migrate');
 
-	const type = getFileType(createImportFilePath(file));
+	// Look up transformer to check for preTransform
+	const transformer = transformers.find((obj) => obj.key === key);
+	if (transformer === undefined) {
+		s.stop('Error loading users');
+		throw new Error('No transformer found for the specified key');
+	}
+
+	let filePath = createImportFilePath(file);
+	let preExtractedData: User[] | undefined;
+	const type = getFileType(filePath);
+
+	// Run preTransform if defined (e.g., Firebase needs to add CSV headers or extract JSON users array)
+	if ('preTransform' in transformer) {
+		const preTransformResult = await Promise.resolve(
+			transformer.preTransform(filePath, type || '')
+		);
+		filePath = preTransformResult.filePath;
+		preExtractedData = preTransformResult.data;
+	}
 
 	// convert a CSV to JSON and return array
 	if (type === 'text/csv') {
 		const users: User[] = [];
 		return new Promise((resolve, reject) => {
-			fs.createReadStream(createImportFilePath(file))
+			fs.createReadStream(filePath)
 				.pipe(csvParser({ skipComments: true }))
 				.on('data', (data: User) => {
 					users.push(data);
@@ -252,9 +281,11 @@ export async function loadUsersFromFile(
 
 		// if the file is already JSON, just read and parse and return the result
 	}
-	const users = JSON.parse(
-		fs.readFileSync(createImportFilePath(file), 'utf-8')
-	) as User[];
+
+	// Use pre-extracted data if available (from preTransform), otherwise parse the file
+	const users = preExtractedData
+		? preExtractedData
+		: (JSON.parse(fs.readFileSync(filePath, 'utf-8')) as User[]);
 	const usersWithDefaultFields = addDefaultFields(users, key);
 
 	const { transformedData, validationFailed } = transformUsers(
