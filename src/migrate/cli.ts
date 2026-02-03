@@ -749,14 +749,17 @@ export async function runCLI() {
 	p.note(transformerMessage.trim(), 'Transformers');
 
 	// Step 2: Gather initial inputs
+	// Map transformers to include 'value' property for p.select (uses key as value)
+	const selectOptions = transformers.map((t) => ({ ...t, value: t.key }));
+
 	const initialArgs = await p.group(
 		{
 			key: () =>
 				p.select({
 					message: 'What platform are you migrating your users from?',
-					initialValue: savedSettings.key || transformers[0].value,
+					initialValue: savedSettings.key || transformers[0].key,
 					maxItems: 1,
-					options: transformers,
+					options: selectOptions,
 				}),
 			file: () =>
 				p.text({

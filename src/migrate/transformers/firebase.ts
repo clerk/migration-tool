@@ -100,7 +100,6 @@ const FIREBASE_CSV_HEADERS =
 
 /**
  * @property {string} key - Transformer identifier used in CLI
- * @property {string} value - Internal value for the transformer
  * @property {string} label - Display name shown in CLI prompts
  * @property {string} description - Detailed description shown in CLI
  * @property {Function} preTransform - Handles CSV headers and JSON extraction
@@ -109,7 +108,6 @@ const FIREBASE_CSV_HEADERS =
  */
 const firebaseTransformer = {
 	key: 'firebase',
-	value: 'firebase',
 	label: 'Firebase',
 	description:
 		'This transformer works with the `firebase auth:export` command and the instructions in https://clerk.com/docs/guides/development/migrating/firebase',
