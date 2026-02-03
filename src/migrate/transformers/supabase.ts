@@ -9,7 +9,6 @@
  * - Phone numbers
  *
  * @property {string} key - Transformer identifier used in CLI
- * @property {string} value - Internal value for the transformer
  * @property {string} label - Display name shown in CLI prompts
  * @property {string} description - Detailed description shown in CLI
  * @property {Object} transformer - Field mapping configuration
@@ -18,7 +17,6 @@
  */
 const supabaseTransformer = {
 	key: 'supabase',
-	value: 'supabase',
 	label: 'Supabase',
 	description:
 		'This should be used when you have exported your users via https://supabase.com/docs/guides/auth/managing-user-data#exporting-users. If you have performed your own exported via SQL you will likely need to edit this transformer to match or create a new one.',

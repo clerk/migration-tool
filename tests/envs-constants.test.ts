@@ -4,7 +4,7 @@ import {
 	detectInstanceType,
 	getDefaultConcurrencyLimit,
 	getDefaultRateLimit,
-} from './envs-constants';
+} from '../src/envs-constants';
 
 describe('envs-constants', () => {
 	describe('detectInstanceType', () => {
@@ -141,12 +141,12 @@ describe('createEnvSchema', () => {
 
 describe('exported env object', () => {
 	test('env object exists', async () => {
-		const envModule = await import('./envs-constants');
+		const envModule = await import('../src/envs-constants');
 		expect(envModule.env).toBeDefined();
 	});
 
 	test('env object has required fields with correct types', async () => {
-		const envModule = await import('./envs-constants');
+		const envModule = await import('../src/envs-constants');
 
 		expect(typeof envModule.env.CLERK_SECRET_KEY).toBe('string');
 		expect(typeof envModule.env.RATE_LIMIT).toBe('number');

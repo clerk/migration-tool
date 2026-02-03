@@ -6,7 +6,7 @@ import {
 	errorLogger,
 	importLogger,
 	validationLogger,
-} from './logger';
+} from '../src/logger';
 import { existsSync, readFileSync, rmSync } from 'node:fs';
 
 // Helper to clean up logs directory

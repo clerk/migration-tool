@@ -9,7 +9,6 @@
  * - Splits 'name' field into firstName (first word) and lastName (remaining words)
  *
  * @property {string} key - Transformer identifier used in CLI
- * @property {string} value - Internal value for the transformer
  * @property {string} label - Display name shown in CLI prompts
  * @property {string} description - Detailed description shown in CLI
  * @property {Object} transformer - Field mapping configuration
@@ -17,7 +16,6 @@
  */
 const authjsTransformer = {
 	key: 'authjs',
-	value: 'authjs',
 	label: 'Authjs (Next-Auth)',
 	description:
 		'Authjs does not have a pre-built export tool, so you will need to edit this transformer to match the exported data. This transformer assumes the export was done via `SELECT id, name, email, email_verified, created_at FROM users`. The name field will be automatically split into firstName and lastName.',

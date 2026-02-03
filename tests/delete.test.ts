@@ -40,7 +40,7 @@ vi.mock('picocolors', () => ({
 }));
 
 // Mock utils
-vi.mock('../utils', () => ({
+vi.mock('../../src/utils', () => ({
 	getDateTimeStamp: vi.fn(() => '2024-01-01T12:00:00'),
 	createImportFilePath: vi.fn((file: string) => file),
 	getFileType: vi.fn(() => 'application/json'),
@@ -66,7 +66,7 @@ vi.mock('../utils', () => ({
 }));
 
 // Mock env constants
-vi.mock('../envs-constants', () => ({
+vi.mock('../../src/envs-constants', () => ({
 	env: {
 		CLERK_SECRET_KEY: 'test_secret_key',
 		RATE_LIMIT: 10,
@@ -83,7 +83,7 @@ vi.mock('fs', () => ({
 }));
 
 // Mock logger module
-vi.mock('../logger', () => ({
+vi.mock('../../src/logger', () => ({
 	errorLogger: vi.fn(),
 	importLogger: vi.fn(),
 	deleteErrorLogger: vi.fn(),
@@ -92,9 +92,9 @@ vi.mock('../logger', () => ({
 }));
 
 // Import after mocks are set up
-import { deleteErrorLogger, deleteLogger } from '../logger';
+import { deleteErrorLogger, deleteLogger } from '../../src/logger';
 import * as fs from 'fs';
-import { normalizeErrorMessage } from './index';
+import { normalizeErrorMessage } from '../../src/delete/index';
 
 // Get reference to mocked functions - cast to mock type since vi.mocked is not available
 const _mockDeleteErrorLogger = deleteErrorLogger as ReturnType<typeof vi.fn>;
@@ -128,7 +128,7 @@ describe('delete-users', () => {
 		});
 
 		// Import the module to get functions - note: vi.resetModules() is not available in Bun's Vitest
-		const deleteUsersModule = await import('./index');
+		const deleteUsersModule = await import('../../src/delete/index');
 		fetchUsers = deleteUsersModule.fetchUsers;
 		deleteUsers = deleteUsersModule.deleteUsers;
 		readSettings = deleteUsersModule.readSettings;
@@ -401,15 +401,15 @@ describe('delete-users', () => {
 	});
 
 	describe('readSettings', () => {
-		test('reads settings file and returns file path', () => {
+		test('reads settings file and returns file path and key', () => {
 			mockExistsSync.mockReturnValue(true);
 			mockReadFileSync.mockReturnValue(
-				JSON.stringify({ file: 'samples/users.json' })
+				JSON.stringify({ file: 'samples/users.json', key: 'firebase' })
 			);
 
 			const result = readSettings();
 
-			expect(result).toBe('samples/users.json');
+			expect(result).toEqual({ file: 'samples/users.json', key: 'firebase' });
 			expect(mockExistsSync).toHaveBeenCalledWith(
 				expect.stringContaining('.settings')
 			);

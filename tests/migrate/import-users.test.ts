@@ -53,7 +53,7 @@ vi.mock('picocolors', () => ({
 }));
 
 // Mock utils for testing
-vi.mock('../utils', () => ({
+vi.mock('../../src/utils', () => ({
 	getDateTimeStamp: vi.fn(() => '2024-01-01T12:00:00'),
 	tryCatch: async (promise: Promise<any>) => {
 		try {
@@ -76,14 +76,14 @@ vi.mock('../utils', () => ({
 }));
 
 // Mock logger module
-vi.mock('../logger', () => ({
+vi.mock('../../src/logger', () => ({
 	errorLogger: vi.fn(),
 	importLogger: vi.fn(),
 	closeAllStreams: vi.fn(),
 }));
 
 // Mock env constants
-vi.mock('../envs-constants', () => ({
+vi.mock('../../src/envs-constants', () => ({
 	env: {
 		CLERK_SECRET_KEY: 'test_secret_key',
 		RATE_LIMIT: 10,
@@ -94,8 +94,11 @@ vi.mock('../envs-constants', () => ({
 }));
 
 // Import after mocks are set up
-import { importUsers, normalizeErrorMessage } from './import-users';
-import * as logger from '../logger';
+import {
+	importUsers,
+	normalizeErrorMessage,
+} from '../../src/migrate/import-users';
+import * as logger from '../../src/logger';
 
 // Helper to clean up logs directory
 const cleanupLogs = () => {

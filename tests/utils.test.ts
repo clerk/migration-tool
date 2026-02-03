@@ -6,7 +6,7 @@ import {
 	getFileType,
 	getRetryDelay,
 	tryCatch,
-} from './utils';
+} from '../src/utils';
 import path from 'path';
 
 describe('getDateTimeStamp', () => {

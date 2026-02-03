@@ -5,6 +5,12 @@ import path from 'path';
 import csvParser from 'csv-parser';
 import { transformers } from './transformers';
 import {
+	type FirebaseHashConfig,
+	firebaseHashConfig,
+	isFirebaseHashConfigComplete,
+	setFirebaseHashConfig,
+} from './transformers/firebase';
+import {
 	checkIfFileExists,
 	createImportFilePath,
 	getFileType,
@@ -18,6 +24,7 @@ const SETTINGS_FILE = '.settings';
 type Settings = {
 	key?: string;
 	file?: string;
+	firebaseHashConfig?: FirebaseHashConfig;
 };
 
 const DEV_USER_LIMIT = 500;
@@ -118,12 +125,24 @@ export const loadRawUsers = async (
 	file: string,
 	transformerKey: string
 ): Promise<Record<string, unknown>[]> => {
-	const filePath = createImportFilePath(file);
+	let filePath = createImportFilePath(file);
 	const type = getFileType(filePath);
 	const transformer = transformers.find((h) => h.key === transformerKey);
 
 	if (!transformer) {
 		throw new Error(`Transformer not found for key: ${transformerKey}`);
+	}
+
+	// Run preTransform if defined (e.g., Firebase needs to add CSV headers or extract JSON users array)
+	let preExtractedData: Record<string, unknown>[] | undefined;
+	if ('preTransform' in transformer) {
+		const preTransformResult = await Promise.resolve(
+			transformer.preTransform(filePath, type || '')
+		);
+		filePath = preTransformResult.filePath;
+		preExtractedData = preTransformResult.data as
+			| Record<string, unknown>[]
+			| undefined;
 	}
 
 	const transformUser = (
@@ -152,10 +171,14 @@ export const loadRawUsers = async (
 				.on('end', () => resolve(users));
 		});
 	}
-	const rawUsers = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<
-		string,
-		unknown
-	>[];
+
+	// Use pre-extracted data if available (from preTransform), otherwise parse the file
+	const rawUsers = preExtractedData
+		? preExtractedData
+		: (JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<
+				string,
+				unknown
+			>[]);
 	return rawUsers.map((data) => transformUser(data));
 };
 
@@ -530,6 +553,171 @@ export const displayOtherFieldsAnalysis = (
 };
 
 /**
+ * Handles Firebase hash configuration collection and validation
+ *
+ * Firebase uses scrypt for password hashing, and Clerk needs the hash parameters
+ * to verify passwords. These values can be found in Firebase Console:
+ * Authentication → Users → (⋮ menu) → Password hash parameters
+ *
+ * This function:
+ * 1. Checks if config is already set in the transformer
+ * 2. If not, checks if saved in .settings file
+ * 3. If found in settings, displays current values and allows update
+ * 4. If not found anywhere, prompts user to enter all values
+ * 5. Saves values to .settings for future runs
+ *
+ * @param savedSettings - Previously saved settings from .settings file
+ * @returns The Firebase hash config, or null if cancelled
+ */
+export async function handleFirebaseHashConfig(
+	savedSettings: Settings
+): Promise<FirebaseHashConfig | null> {
+	// Check if config is already set in transformer (takes precedence)
+	if (isFirebaseHashConfigComplete()) {
+		p.log.info('Firebase hash configuration found in transformer.');
+		return firebaseHashConfig;
+	}
+
+	// Check if config exists in settings
+	const savedConfig = savedSettings.firebaseHashConfig;
+	const hasSettingsConfig =
+		savedConfig &&
+		savedConfig.base64_signer_key &&
+		savedConfig.base64_salt_separator &&
+		savedConfig.rounds &&
+		savedConfig.mem_cost;
+
+	if (hasSettingsConfig) {
+		// Display current saved values
+		let configMessage = color.bold(
+			'Firebase Hash Configuration (from saved settings):\n\n'
+		);
+		configMessage += `  ${color.cyan('Signer Key:')} ${color.dim(savedConfig.base64_signer_key)}\n`;
+		configMessage += `  ${color.cyan('Salt Separator:')} ${color.dim(savedConfig.base64_salt_separator)}\n`;
+		configMessage += `  ${color.cyan('Rounds:')} ${color.dim(savedConfig.rounds)}\n`;
+		configMessage += `  ${color.cyan('Memory Cost:')} ${color.dim(savedConfig.mem_cost)}\n`;
+		configMessage += `\n${color.dim('These values are from your Firebase Console → Authentication → Users → (⋮) → Password hash parameters')}`;
+
+		p.note(configMessage.trim(), 'Firebase Configuration');
+
+		const useExisting = await p.confirm({
+			message: 'Use these saved Firebase hash parameters?',
+			initialValue: true,
+		});
+
+		if (p.isCancel(useExisting)) {
+			return null;
+		}
+
+		if (useExisting) {
+			// Apply saved config to the transformer
+			setFirebaseHashConfig(savedConfig);
+			return firebaseHashConfig;
+		}
+		// User wants to update, fall through to collection flow
+	} else {
+		// No config found anywhere, show explanation
+		let infoMessage = color.bold('Firebase Hash Configuration Required\n\n');
+		infoMessage += `Firebase uses scrypt for password hashing. To migrate passwords,\n`;
+		infoMessage += `Clerk needs the hash parameters from your Firebase project.\n\n`;
+		infoMessage += color.bold('How to find these values:\n');
+		infoMessage += `  1. Go to Firebase Console\n`;
+		infoMessage += `  2. Navigate to ${color.cyan('Authentication → Users')}\n`;
+		infoMessage += `  3. Click the ${color.cyan('⋮')} menu (three dots)\n`;
+		infoMessage += `  4. Select ${color.cyan('Password hash parameters')}\n`;
+
+		p.note(infoMessage.trim(), 'Firebase Configuration');
+	}
+
+	// Collect Firebase hash configuration from user
+	const hashConfig = await p.group(
+		{
+			base64_signer_key: () =>
+				p.text({
+					message: 'Enter the Signer Key (base64 encoded)',
+					placeholder: 'e.g., jxspr8Ki0RYycVU8zykbdLGjFQ3McFUH...',
+					validate: (value) => {
+						if (!value || value.trim() === '') {
+							return 'Signer Key is required';
+						}
+					},
+				}),
+			base64_salt_separator: () =>
+				p.text({
+					message: 'Enter the Salt Separator (base64 encoded)',
+					placeholder: 'e.g., Bw==',
+					validate: (value) => {
+						if (!value || value.trim() === '') {
+							return 'Salt Separator is required';
+						}
+					},
+				}),
+			rounds: () =>
+				p.text({
+					message: 'Enter the Rounds value',
+					placeholder: 'e.g., 8',
+					validate: (value) => {
+						if (!value || value.trim() === '') {
+							return 'Rounds is required';
+						}
+						if (!/^\d+$/.test(value.trim())) {
+							return 'Rounds must be a number';
+						}
+					},
+				}),
+			mem_cost: () =>
+				p.text({
+					message: 'Enter the Memory Cost value',
+					placeholder: 'e.g., 14',
+					validate: (value) => {
+						if (!value || value.trim() === '') {
+							return 'Memory Cost is required';
+						}
+						if (!/^\d+$/.test(value.trim())) {
+							return 'Memory Cost must be a number';
+						}
+					},
+				}),
+		},
+		{
+			onCancel: () => {
+				return null;
+			},
+		}
+	);
+
+	// Check if user cancelled during group input
+	if (
+		!hashConfig.base64_signer_key ||
+		!hashConfig.base64_salt_separator ||
+		!hashConfig.rounds ||
+		!hashConfig.mem_cost
+	) {
+		return null;
+	}
+
+	// Apply the config to the transformer
+	const newConfig: FirebaseHashConfig = {
+		base64_signer_key: hashConfig.base64_signer_key.trim(),
+		base64_salt_separator: hashConfig.base64_salt_separator.trim(),
+		rounds: parseInt(hashConfig.rounds),
+		mem_cost: parseInt(hashConfig.mem_cost),
+	};
+	setFirebaseHashConfig(newConfig);
+
+	// Save to settings
+	const updatedSettings: Settings = {
+		...savedSettings,
+		firebaseHashConfig: newConfig,
+	};
+	saveSettings(updatedSettings);
+
+	p.log.success('Firebase hash configuration saved to .settings file.');
+
+	return newConfig;
+}
+
+/**
  * Runs the interactive CLI for user migration
  *
  * Guides the user through the migration process:
@@ -561,14 +749,17 @@ export async function runCLI() {
 	p.note(transformerMessage.trim(), 'Transformers');
 
 	// Step 2: Gather initial inputs
+	// Map transformers to include 'value' property for p.select (uses key as value)
+	const selectOptions = transformers.map((t) => ({ ...t, value: t.key }));
+
 	const initialArgs = await p.group(
 		{
 			key: () =>
 				p.select({
 					message: 'What platform are you migrating your users from?',
-					initialValue: savedSettings.key || transformers[0].value,
+					initialValue: savedSettings.key || transformers[0].key,
 					maxItems: 1,
-					options: transformers,
+					options: selectOptions,
 				}),
 			file: () =>
 				p.text({
@@ -604,7 +795,16 @@ export async function runCLI() {
 		}
 	);
 
-	// Step 3: Analyze the file and display field information
+	// Step 3: Handle Firebase-specific configuration (hash parameters)
+	if (initialArgs.key === 'firebase') {
+		const firebaseConfig = await handleFirebaseHashConfig(savedSettings);
+		if (firebaseConfig === null) {
+			p.cancel('Migration cancelled.');
+			process.exit(0);
+		}
+	}
+
+	// Step 4: Analyze the file and display field information
 	const spinner = p.spinner();
 	spinner.start('Analyzing import file...');
 

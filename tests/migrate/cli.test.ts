@@ -11,7 +11,7 @@ import {
 	loadRawUsers,
 	loadSettings,
 	saveSettings,
-} from './cli';
+} from '../../src/migrate/cli';
 
 // Mock modules
 vi.mock('fs', async () => {
@@ -61,7 +61,7 @@ import * as p from '@clack/prompts';
 // Create a module mock for envs-constants
 let mockSecretKey = 'sk_test_mockkey';
 
-vi.mock('../envs-constants', () => ({
+vi.mock('../../src/envs-constants', () => ({
 	env: {
 		get CLERK_SECRET_KEY() {
 			return mockSecretKey;
@@ -70,7 +70,7 @@ vi.mock('../envs-constants', () => ({
 }));
 
 // Mock the utils module
-vi.mock('../utils', async (importOriginal) => {
+vi.mock('../../src/utils', async (importOriginal) => {
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 	const actual = (await importOriginal()) as Record<string, unknown>;
 	return {

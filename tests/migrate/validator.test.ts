@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'vitest';
-import { userSchema } from './validator';
-import { PASSWORD_HASHERS } from '../types';
+import { userSchema } from '../../src/migrate/validator';
+import { PASSWORD_HASHERS } from '../../src/types';
 
 describe('userSchema', () => {
 	describe('userId (required)', () => {

@@ -26,11 +26,19 @@ let count = 0;
 let failed = 0;
 
 /**
- * Reads the .settings file to get the migration source file path
- * @returns The file path of the migration source
+ * Settings returned from readSettings
+ */
+type SettingsResult = {
+	file: string;
+	key?: string;
+};
+
+/**
+ * Reads the .settings file to get the migration source file path and transformer key
+ * @returns The file path and transformer key from the migration settings
  * @throws Exits the process if .settings file is not found or missing the file property
  */
-export const readSettings = (): string => {
+export const readSettings = (): SettingsResult => {
 	const settingsPath = path.join(process.cwd(), '.settings');
 
 	if (!fs.existsSync(settingsPath)) {
@@ -44,6 +52,7 @@ export const readSettings = (): string => {
 
 	const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8')) as {
 		file?: string;
+		key?: string;
 	};
 
 	if (!settings.file) {
@@ -55,18 +64,56 @@ export const readSettings = (): string => {
 		process.exit(1);
 	}
 
-	return settings.file;
+	return { file: settings.file, key: settings.key };
 };
+
+/**
+ * Firebase CSV headers (29 columns)
+ * Must match the headers defined in firebase.ts transformer
+ */
+const FIREBASE_CSV_HEADERS = [
+	'localId',
+	'email',
+	'emailVerified',
+	'passwordHash',
+	'passwordSalt',
+	'displayName',
+	'photoUrl',
+	'googleId',
+	'googleEmail',
+	'googleDisplayName',
+	'googlePhotoUrl',
+	'facebookId',
+	'facebookEmail',
+	'facebookDisplayName',
+	'facebookPhotoUrl',
+	'twitterId',
+	'twitterEmail',
+	'twitterDisplayName',
+	'twitterPhotoUrl',
+	'githubId',
+	'githubEmail',
+	'githubDisplayName',
+	'githubPhotoUrl',
+	'createdAt',
+	'lastSignedInAt',
+	'phoneNumber',
+	'disabled',
+	'customAttributes',
+	'providerUserInfo',
+];
 
 /**
  * Reads a migration file and extracts user IDs
  * Supports both JSON and CSV files
  * @param filePath - The relative path to the migration file
+ * @param transformerKey - The transformer key used for migration (e.g., 'firebase')
  * @returns A Promise that resolves to a Set of user IDs from the migration file
  * @throws Exits the process if the migration file is not found
  */
 export const readMigrationFile = async (
-	filePath: string
+	filePath: string,
+	transformerKey?: string
 ): Promise<Set<string>> => {
 	const fullPath = createImportFilePath(filePath);
 
@@ -80,12 +127,24 @@ export const readMigrationFile = async (
 
 	// Handle CSV files
 	if (type === 'text/csv') {
+		// Firebase CSV files don't have headers, so we need to provide them
+		const isFirebase = transformerKey === 'firebase';
+		const parserOptions: csvParser.Options = { skipComments: true };
+
+		if (isFirebase) {
+			parserOptions.headers = FIREBASE_CSV_HEADERS;
+		}
+
 		return new Promise((resolve, reject) => {
 			fs.createReadStream(fullPath)
-				.pipe(csvParser({ skipComments: true }))
-				.on('data', (data: { id?: string }) => {
-					// CSV files have 'id' column for user IDs
-					if (data.id) {
+				.pipe(csvParser(parserOptions))
+				.on('data', (data: { id?: string; localId?: string }) => {
+					// Firebase uses 'localId' for user IDs
+					if (data.localId) {
+						userIds.add(data.localId);
+					}
+					// Other CSV files have 'id' column for user IDs
+					else if (data.id) {
 						userIds.add(data.id);
 					}
 				})
@@ -101,16 +160,31 @@ export const readMigrationFile = async (
 
 	// Handle JSON files
 	const fileContent = fs.readFileSync(fullPath, 'utf-8');
-	const users = JSON.parse(fileContent) as Array<{
-		userId?: string;
-		id?: string;
-	}>;
+	const parsed = JSON.parse(fileContent) as
+		| Array<{ userId?: string; id?: string; localId?: string }>
+		| { users?: Array<{ userId?: string; id?: string; localId?: string }> };
+
+	// Handle both direct array and { users: [...] } wrapper (Firebase format)
+	const users = Array.isArray(parsed) ? parsed : parsed.users;
+
+	if (!users || !Array.isArray(users)) {
+		p.log.error(
+			color.red(
+				'Invalid JSON format: expected an array of users or { users: [...] }'
+			)
+		);
+		process.exit(1);
+	}
 
 	// Extract user IDs from the migration file
 	for (const user of users) {
 		// JSON files have 'userId' property
 		if (user.userId) {
 			userIds.add(user.userId);
+		}
+		// Firebase uses 'localId' for user IDs
+		else if (user.localId) {
+			userIds.add(user.localId);
 		}
 		// Also check for 'id' property as fallback
 		else if (user.id) {
@@ -401,10 +475,13 @@ export const processUsers = async () => {
 	);
 
 	// Read settings and migration file
-	const migrationFilePath = readSettings();
+	const { file: migrationFilePath, key: transformerKey } = readSettings();
 	s.start();
 	s.message('Reading migration file');
-	const migrationUserIds = await readMigrationFile(migrationFilePath);
+	const migrationUserIds = await readMigrationFile(
+		migrationFilePath,
+		transformerKey
+	);
 	s.stop(`Found ${migrationUserIds.size} users in migration file`);
 
 	// Fetch Clerk users
