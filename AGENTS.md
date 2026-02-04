@@ -4,7 +4,33 @@ This file provides guidance to AI coding assistants when working with code in th
 
 ## Overview
 
-This is a CLI tool for migrating users from various authentication platforms (Clerk, Auth0, Supabase, AuthJS) to a Clerk instance. It handles rate limiting, validates user data with Zod schemas, and provides comprehensive logging of successes and failures.
+This is a CLI tool for migrating users from various authentication platforms (Clerk, Auth0, Supabase, AuthJS, Firebase) to a Clerk instance. It handles rate limiting, validates user data with Zod schemas, and provides comprehensive logging of successes and failures.
+
+## Project Structure
+
+```
+src/
+├── clean-logs/          # Log cleanup utility
+├── convert-logs/        # NDJSON to JSON converter
+├── delete/              # User deletion functionality
+├── migrate/             # Main migration logic
+│   ├── cli.ts           # Interactive CLI
+│   ├── functions.ts     # Data loading and transformation
+│   ├── import-users.ts  # User creation with Clerk API
+│   ├── index.ts         # Entry point
+│   └── validator.ts     # Zod schema validation
+├── transformers/        # Platform-specific transformers
+│   ├── auth0.ts
+│   ├── authjs.ts
+│   ├── clerk.ts
+│   ├── firebase.ts
+│   ├── supabase.ts
+│   └── index.ts
+├── envs-constants.ts    # Environment configuration
+├── logger.ts            # NDJSON logging
+├── types.ts             # TypeScript types
+└── utils.ts             # Shared utilities
+```
 
 ## Common Commands
 
@@ -26,6 +52,16 @@ This is a CLI tool for migrating users from various authentication platforms (Cl
 - `bun run test <filename>` - Run a specific test file (e.g., `bun run test validator.test.ts`)
 - `bun run test --watch` - Run tests in watch mode
 
+## After Making Changes
+
+Always run after code changes:
+
+- `bun run test` - Run all tests
+- `bun lint:fix` - Fix linting issues
+- `bun format` - Format code
+
+When adding/modifying features, add or update tests in the corresponding test files.
+
 ## Architecture
 
 ### Transformer System
@@ -40,21 +76,18 @@ The migration tool uses a **transformer pattern** to support different source pl
 2. **Optional Default Fields**: Applied to all users from that platform
    - Example: Supabase defaults `passwordHasher` to `"bcrypt"`
 
-3. **Optional Post-Transform**: Custom logic applied after field mapping
+3. **Optional Pre-Transform**: Pre-processing before field transformation
+   - Example: Firebase adds CSV headers or extracts users from JSON wrapper
+
+4. **Optional Post-Transform**: Custom logic applied after field mapping
    - Example: Auth0 converts metadata from string to objects
 
-**Transformer locations**: `src/migrate/transformers/`
-
-- `clerk.ts` - Clerk-to-Clerk migrations
-- `auth0.ts` - Auth0 migrations
-- `supabase.ts` - Supabase migrations
-- `authjs.ts` - AuthJS migrations
-- `index.ts` - Exports all transformers as array
+**Transformer locations**: `src/transformers/`
 
 **Adding a new transformer**:
 
-1. Create a new file in `src/migrate/transformers/` with transformer config
-2. Export it in `src/migrate/transformers/index.ts`
+1. Create a new file in `src/transformers/` with transformer config
+2. Export it in `src/transformers/index.ts`
 3. The CLI will automatically include it in the platform selection
 
 ### Data Flow
@@ -63,6 +96,7 @@ The migration tool uses a **transformer pattern** to support different source pl
 User File (CSV/JSON)
   ↓
 loadUsersFromFile (functions.ts)
+  ↓ Run preTransform (if defined)
   ↓ Parse file
   ↓ Apply transformer defaults
   ↓
@@ -86,7 +120,7 @@ createUser (import-users.ts)
 User validation is centralized in `src/migrate/validator.ts`:
 
 - Uses Zod for schema validation
-- Enforces: at least one verified identifier (email or phone)
+- Enforces: at least one identifier (email, phone, or username)
 - Enforces: passwordHasher required when password is present
 - Fields can be single values or arrays (e.g., `email: string | string[]`)
 - All fields except `userId` are optional
@@ -104,82 +138,30 @@ Configuration in `src/envs-constants.ts`:
 
 - `RATE_LIMIT` - Requests per second (auto-configured based on instance type)
 - `CONCURRENCY_LIMIT` - Number of concurrent requests (defaults to ~95% of rate limit)
-  - Production: 9 concurrent (assumes 100ms API latency → ~90-95 req/s throughput)
-  - Development: 1 concurrent (assumes 100ms API latency → ~9-10 req/s throughput)
 - Override defaults via `.env` file with `RATE_LIMIT` or `CONCURRENCY_LIMIT`
 
-The script uses **p-limit for concurrency control** across all API calls:
-
-- Limits the number of simultaneously executing API calls
-- Formula: `CONCURRENCY_LIMIT = RATE_LIMIT * 0.095` (assumes 100ms latency)
-- With X concurrent requests and 100ms latency: throughput ≈ X \* 10 req/s
-- Shared limiter across ALL operations (user creation, email creation, phone creation)
-
-**Performance**:
-
-- Production: ~3,500 users in ~35 seconds (assuming 1 email per user)
-- Development: ~3,500 users in ~350 seconds
-- Users can increase `CONCURRENCY_LIMIT` for faster processing (may hit some rate limits)
+The script uses **p-limit for concurrency control** across all API calls.
 
 **Retry logic**:
 
 - If a 429 occurs, uses Retry-After value from API response
 - Falls back to 10 second default if Retry-After not available
 - Centralized in `getRetryDelay()` function in `src/utils.ts`
-- The script automatically retries up to 5 times (configurable via MAX_RETRIES)
+- Automatically retries up to 5 times (configurable via MAX_RETRIES)
 
 ### Logging System
 
 All operations create timestamped logs in `./logs/` using NDJSON (Newline-Delimited JSON) format:
 
-- `{timestamp}-migration.log` - Combined log with all import entries (success, error, validation failures)
+- `{timestamp}-migration.log` - Combined log with all import entries
 - `{timestamp}-user-deletion.log` - Combined log with all deletion entries
 
-**Log Format**: NDJSON (Newline-Delimited JSON)
+**Log Entry Types** (defined in `src/types.ts`):
 
-- Each line is a valid JSON object
-- Optimized for streaming and crash-safety
-- Can append entries without rewriting entire file
-- Memory-efficient for large datasets
-
-**Log Entry Types**:
-
-1. **Success Entry**: `{ userId: "user_123", status: "success", clerkUserId: "clerk_abc" }`
-2. **Error Entry**: `{ userId: "user_456", status: "error", error: "Email already exists", code: "422" }`
-3. **Validation Failure**: `{ userId: "user_789", status: "fail", error: "User must have at least one identifier (email, phone, or username)", path: ["email"], row: 5 }`
-4. **Additional Identifier Error**: `{ type: "User Creation Error", userId: "user_abc", status: "additional_email_error", error: "..." }` (logged when adding extra emails/phones fails, but user creation succeeded)
-
-**Converting Logs**:
-
-- Use `bun convert-logs` to convert NDJSON logs to JSON arrays for easier analysis
-- Converted files are saved as `{timestamp}-migration.json` or `{timestamp}-user-deletion.json`
-- Useful for importing into spreadsheets or analysis tools
-
-**Logger functions** in `src/logger.ts`:
-
-- `importLogger()` - Log import attempt (success/error with optional error code)
-- `errorLogger()` - Log additional identifier errors (emails/phones) and retry attempts
-- `validationLogger()` - Log validation failures during data transformation
-- `deleteLogger()` - Log deletion attempt (success/error with optional error code)
-- `deleteErrorLogger()` - Log retry attempts during deletion
-
-### CLI Analysis Features
-
-The CLI (in `src/migrate/cli.ts`) analyzes the import file before migration and provides:
-
-1. **Identifier Analysis**: Shows which users have emails, phones, usernames
-2. **Password Analysis**: Prompts whether to migrate users without passwords
-3. **User Model Analysis**: Shows first/last name coverage
-4. **Dashboard Configuration Guidance**: Tells user which fields to enable/require in Clerk Dashboard
-5. **Instance Type Detection**: Prevents importing >500 users to dev instances
-
-**Key CLI functions**:
-
-- `runCLI()` - Main CLI orchestrator
-- `analyzeFields()` - Analyzes user data for field coverage
-- `displayIdentifierAnalysis()` - Shows identifier stats + Dashboard guidance
-- `displayPasswordAnalysis()` - Shows password stats + prompts for skipPasswordRequirement
-- `loadSettings()` / `saveSettings()` - Persists CLI choices in `.settings` file
+- `ImportLogEntry` - Success/error for user imports
+- `DeleteLogEntry` - Success/error for user deletions
+- `ValidationErrorPayload` - Validation failures with path and row
+- `ErrorLog` - Additional identifier errors
 
 ### Error Handling
 
@@ -199,7 +181,7 @@ When migrating from Clerk to Clerk (`key === "clerk"`), the transformer consolid
 - Merges `email`, `emailAddresses`, `unverifiedEmailAddresses` into single array
 - Merges `phone`, `phoneNumbers`, `unverifiedPhoneNumbers` into single array
 - First item becomes primary, rest are added as additional identifiers
-- See `transformUsers()` in `src/migrate/functions.ts` around line 129
+- See `transformUsers()` in `src/migrate/functions.ts`
 
 ### Password Hasher Validation
 
@@ -217,7 +199,7 @@ Creating a user involves multiple API calls, all managed by the shared concurren
 2. Add additional emails (each rate-limited individually, non-fatal)
 3. Add additional phones (each rate-limited individually, non-fatal)
 
-This is necessary because Clerk's API only accepts one primary identifier per creation call. All API calls share the same concurrency pool, maximizing throughput across all operations.
+This is necessary because Clerk's API only accepts one primary identifier per creation call.
 
 ### Environment Variable Detection
 
@@ -227,3 +209,9 @@ The script auto-detects instance type from `CLERK_SECRET_KEY`:
 - Otherwise → development
 - Used to set default delays and enforce user limits
 - See `detectInstanceType()` and `createEnvSchema()` in `src/envs-constants.ts`
+
+## Additional Documentation
+
+- [docs/schema-fields.md](docs/schema-fields.md) - Complete field reference
+- [docs/creating-transformers.md](docs/creating-transformers.md) - Transformer development guide
+- [docs/transformer-prompt.md](docs/transformer-prompt.md) - AI prompt for generating transformers
