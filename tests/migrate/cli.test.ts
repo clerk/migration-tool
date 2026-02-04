@@ -752,12 +752,15 @@ describe('loadRawUsers', () => {
 	test('loads and transforms with auth0 transformer', async () => {
 		const mockJsonData = [
 			{
-				_id: { $oid: 'auth0123' },
+				user_id: 'auth0|abc123',
 				email: 'john@example.com',
 				email_verified: true,
 				username: 'johndoe',
 				given_name: 'John',
 				family_name: 'Doe',
+				phone_number: '+1234567890',
+				phone_verified: true,
+				created_at: '2025-01-15T10:30:00.000Z',
 			},
 		];
 
@@ -765,14 +768,15 @@ describe('loadRawUsers', () => {
 
 		const result = await loadRawUsers('users.json', 'auth0');
 
-		// transformKeys now supports nested path extraction via dot notation
-		// postTransform removes emailVerified after processing
+		// postTransform removes emailVerified/phoneVerified after processing
 		expect(result[0]).toEqual({
-			userId: 'auth0123',
+			userId: 'auth0|abc123',
 			email: 'john@example.com',
 			username: 'johndoe',
 			firstName: 'John',
 			lastName: 'Doe',
+			phone: '+1234567890',
+			createdAt: '2025-01-15T10:30:00.000Z',
 		});
 	});
 
