@@ -3,13 +3,12 @@ import color from 'picocolors';
 import fs from 'fs';
 import path from 'path';
 import csvParser from 'csv-parser';
-import { transformers } from './transformers';
+import { transformers } from '../transformers';
 import {
-	type FirebaseHashConfig,
 	firebaseHashConfig,
 	isFirebaseHashConfigComplete,
 	setFirebaseHashConfig,
-} from './transformers/firebase';
+} from '../transformers/firebase';
 import {
 	checkIfFileExists,
 	createImportFilePath,
@@ -18,14 +17,14 @@ import {
 	tryCatch,
 } from '../utils';
 import { env } from '../envs-constants';
+import type {
+	FieldAnalysis,
+	FirebaseHashConfig,
+	IdentifierCounts,
+	Settings,
+} from '../types';
 
 const SETTINGS_FILE = '.settings';
-
-type Settings = {
-	key?: string;
-	file?: string;
-	firebaseHashConfig?: FirebaseHashConfig;
-};
 
 const DEV_USER_LIMIT = 500;
 
@@ -53,23 +52,6 @@ const ANALYZED_FIELDS = [
 	{ key: 'password', label: 'Password' },
 	{ key: 'totpSecret', label: 'TOTP Secret' },
 ];
-
-type IdentifierCounts = {
-	verifiedEmails: number;
-	unverifiedEmails: number;
-	verifiedPhones: number;
-	unverifiedPhones: number;
-	username: number;
-	hasAnyIdentifier: number;
-};
-
-type FieldAnalysis = {
-	presentOnAll: string[];
-	presentOnSome: string[];
-	identifiers: IdentifierCounts;
-	totalUsers: number;
-	fieldCounts: Record<string, number>;
-};
 
 /**
  * Loads saved settings from the .settings file in the current directory

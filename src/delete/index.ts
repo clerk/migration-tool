@@ -17,6 +17,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import csvParser from 'csv-parser';
 import pLimit from 'p-limit';
+import type { SettingsResult } from '../types';
 
 const LIMIT = 500;
 const users: User[] = [];
@@ -24,14 +25,6 @@ const s = p.spinner();
 let total: number;
 let count = 0;
 let failed = 0;
-
-/**
- * Settings returned from readSettings
- */
-type SettingsResult = {
-	file: string;
-	key?: string;
-};
 
 /**
  * Reads the .settings file to get the migration source file path and transformer key

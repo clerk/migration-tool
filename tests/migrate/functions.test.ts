@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { loadUsersFromFile } from '../../src/migrate/functions';
 import { transformKeys } from '../../src/utils';
-import { transformers } from '../../src/migrate/transformers';
+import { transformers } from '../../src/transformers';
 
 test('Clerk - loadUsersFromFile - JSON', async () => {
 	const { users: usersFromClerk } = await loadUsersFromFile(
