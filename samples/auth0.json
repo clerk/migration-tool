@@ -1,566 +1,1202 @@
 [
   {
-    "_id": {
-      "$oid": "657376510000000000000001"
-    },
-    "email": "jane.doe@test.com",
-    "given_name": "Jane",
-    "family_name": "Doe",
+    "user_id": "auth0|o7p6ycr4a2slqavaxaxrjm",
+    "email": "james.smith@gmail.com",
     "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
-      {
-        "type": "email",
-        "value": "janedoe@test.com",
-        "verified": true
-      }
-    ]
-  },
-  {
-    "_id": {
-      "$oid": "657376510000000000000002"
-    },
-    "email": "johndoe@test.com",
-    "given_name": "John",
-    "family_name": "Doe",
-    "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
-      {
-        "type": "email",
-        "value": "johndoe@test.com",
-        "verified": true
-      }
-    ]
-  },
-  {
-    "_id": {
-      "$oid": "657376510000000000000003"
-    },
-    "email": "johnhancock@test.com",
-    "given_name": "John",
-    "family_name": "Hancock",
-    "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
-      {
-        "type": "email",
-        "value": "johnhancock@test.com",
-        "verified": true
-      }
-    ]
-  },
-  {
-    "_id": {
-      "$oid": "657376510000000000000004"
-    },
-    "email": "janehancock@test.com",
-    "given_name": "Jane",
-    "family_name": "Hancock",
-    "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
-      {
-        "type": "email",
-        "value": "janehancock@test.com",
-        "verified": true
-      }
-    ]
-  },
-  {
-    "_id": {
-      "$oid": "657376510000000000000005"
-    },
-    "email": "alicesmith@test.com",
-    "given_name": "Alice",
+    "username": null,
+    "phone_number": "+14574311731",
+    "phone_verified": false,
+    "name": "James Smith",
+    "given_name": "James",
     "family_name": "Smith",
-    "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "nickname": "james",
+    "picture": "https://s.gravatar.com/avatar/5gokhl98r1754syx4v7h1q?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fjs.png",
+    "identities": [
       {
-        "type": "email",
-        "value": "alicesmith@test.com",
-        "verified": true
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "o7p6ycr4a2slqavaxaxrjm",
+        "isSocial": false
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-02-09T16:34:22.611Z",
+    "updated_at": "2025-09-14T20:29:42.043Z",
+    "last_login": "2025-04-23T07:28:53.270Z",
+    "last_ip": "245.146.60.173",
+    "logins_count": 135,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000006"
-    },
-    "email": "bobjohnson@test.com",
-    "given_name": "Bob",
-    "family_name": "Johnson",
+    "user_id": "auth0|6z62ak3jqdjpd3fvnu6ew",
+    "email": "emma.johnson@yahoo.com",
     "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
-      {
-        "type": "email",
-        "value": "bobjohnson@test.com",
-        "verified": true
-      }
-    ]
-  },
-  {
-    "_id": {
-      "$oid": "657376510000000000000007"
-    },
-    "email": "carolwilliams@test.com",
-    "given_name": "Carol",
-    "family_name": "Williams",
-    "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
-      {
-        "type": "email",
-        "value": "carolwilliams@test.com",
-        "verified": true
-      }
-    ]
-  },
-  {
-    "_id": {
-      "$oid": "657376510000000000000008"
-    },
-    "email": "davidbrown@test.com",
-    "given_name": "David",
-    "family_name": "Brown",
-    "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
-      {
-        "type": "email",
-        "value": "davidbrown@test.com",
-        "verified": true
-      }
-    ]
-  },
-  {
-    "_id": {
-      "$oid": "657376510000000000000009"
-    },
-    "email": "emmajones@test.com",
+    "username": null,
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Emma Johnson",
     "given_name": "Emma",
+    "family_name": "Johnson",
+    "nickname": "emma",
+    "picture": "https://s.gravatar.com/avatar/hktf2gvla7gx1jk69tvnz8?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fej.png",
+    "identities": [
+      {
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "6z62ak3jqdjpd3fvnu6ew",
+        "isSocial": false
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-12-13T04:22:38.831Z",
+    "updated_at": "2026-01-26T20:00:49.103Z",
+    "last_login": "2026-01-21T20:40:01.471Z",
+    "last_ip": "52.97.51.220",
+    "logins_count": 109,
+    "blocked": false
+  },
+  {
+    "user_id": "github|22182844",
+    "email": "liam.williams@outlook.com",
+    "email_verified": false,
+    "username": "liamwilliams46",
+    "phone_number": "+18818443735",
+    "phone_verified": false,
+    "name": "Liam Williams",
+    "given_name": "Liam",
+    "family_name": "Williams",
+    "nickname": "liam",
+    "picture": "https://s.gravatar.com/avatar/1u161prlzv9yeu99suarrr?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Flw.png",
+    "identities": [
+      {
+        "connection": "github",
+        "provider": "github",
+        "user_id": "22182844",
+        "isSocial": true
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-09-25T21:22:55.401Z",
+    "updated_at": "2025-10-13T00:07:47.153Z",
+    "last_login": "2025-12-09T01:48:48.696Z",
+    "last_ip": "250.186.129.182",
+    "logins_count": 68,
+    "blocked": false
+  },
+  {
+    "user_id": "auth0|bqj8uvj5lfu21luxommlom",
+    "email": "olivia.brown@hotmail.com",
+    "email_verified": true,
+    "username": null,
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Olivia Brown",
+    "given_name": "Olivia",
+    "family_name": "Brown",
+    "nickname": "olivia",
+    "picture": "https://s.gravatar.com/avatar/3xsvh3x0z1b8tujcnny4ua?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fob.png",
+    "identities": [
+      {
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "bqj8uvj5lfu21luxommlom",
+        "isSocial": false
+      },
+      {
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "998725698151649400000",
+        "isSocial": true
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-03-14T01:30:14.070Z",
+    "updated_at": "2025-08-31T12:56:44.123Z",
+    "last_login": "2025-08-02T03:51:06.378Z",
+    "last_ip": "235.153.149.211",
+    "logins_count": 10,
+    "blocked": false
+  },
+  {
+    "user_id": "auth0|g0cjeqvf1i918sj815dqjsi",
+    "email": "noah.jones@proton.me",
+    "email_verified": false,
+    "username": "noahjones16",
+    "phone_number": "+13784711532",
+    "phone_verified": false,
+    "name": "Noah Jones",
+    "given_name": "Noah",
     "family_name": "Jones",
-    "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "nickname": "noah",
+    "picture": "https://s.gravatar.com/avatar/lkgl645649rmmvf2kcpim?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fnj.png",
+    "identities": [
       {
-        "type": "email",
-        "value": "emmajones@test.com",
-        "verified": true
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "g0cjeqvf1i918sj815dqjsi",
+        "isSocial": false
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": false
+      }
+    },
+    "created_at": "2025-03-27T18:37:43.579Z",
+    "updated_at": "2025-05-10T17:22:51.902Z",
+    "last_login": "2025-06-14T06:14:12.679Z",
+    "last_ip": "10.1.148.135",
+    "logins_count": 123,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000010"
-    },
-    "email": "frankgarcia@test.com",
-    "given_name": "Frank",
+    "user_id": "auth0|ucyngrcfyul5tswnd13e8w",
+    "email": "ava.garcia@icloud.com",
+    "email_verified": true,
+    "username": null,
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Ava Garcia",
+    "given_name": "Ava",
     "family_name": "Garcia",
+    "nickname": "ava",
+    "picture": "https://s.gravatar.com/avatar/9bnak4jjfqrfaiefah821i?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fag.png",
+    "identities": [
+      {
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "ucyngrcfyul5tswnd13e8w",
+        "isSocial": false
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "free"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-12-10T00:36:12.411Z",
+    "updated_at": "2026-01-24T02:40:50.743Z",
+    "last_login": "2025-12-19T15:01:33.274Z",
+    "last_ip": "158.70.123.253",
+    "logins_count": 51,
+    "blocked": true
+  },
+  {
+    "user_id": "auth0|8zeowqfk9ne1s6eo38ya04",
+    "email": "william.miller@company.io",
     "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "username": "williammiller0",
+    "phone_number": "+19863500676",
+    "phone_verified": true,
+    "name": "William Miller",
+    "given_name": "William",
+    "family_name": "Miller",
+    "nickname": "william",
+    "picture": "https://s.gravatar.com/avatar/dkh3w1ivxyleprigfe48u?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fwm.png",
+    "identities": [
       {
-        "type": "email",
-        "value": "frankgarcia@test.com",
-        "verified": true
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "8zeowqfk9ne1s6eo38ya04",
+        "isSocial": false
+      },
+      {
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "764209094543176000000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-09-04T06:45:01.073Z",
+    "updated_at": "2026-01-25T02:15:55.651Z",
+    "last_login": null,
+    "last_ip": "224.174.62.108",
+    "logins_count": 60,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000011"
-    },
-    "email": "sconnor@test.com",
-    "username": "sconnor",
-    "given_name": "Sarah",
-    "family_name": "Connor",
+    "user_id": "auth0|mlr258se2zpyv05who1ka",
+    "email": "sophia.davis@startup.co",
     "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "username": null,
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Sophia Davis",
+    "given_name": "Sophia",
+    "family_name": "Davis",
+    "nickname": "sophia",
+    "picture": "https://s.gravatar.com/avatar/g2zq1g5eomrigtuqh7w8a?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fsd.png",
+    "identities": [
       {
-        "type": "email",
-        "value": "sconnor@test.com",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "sconnor"
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "mlr258se2zpyv05who1ka",
+        "isSocial": false
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "free"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": true
+      }
+    },
+    "created_at": "2026-01-29T22:42:49.974Z",
+    "updated_at": "2026-01-30T21:35:29.082Z",
+    "last_login": "2026-01-31T11:20:55.026Z",
+    "last_ip": "147.178.32.178",
+    "logins_count": 122,
+    "blocked": true
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000012"
-    },
-    "email": "mscott@test.com",
-    "username": "mscott",
-    "given_name": "Michael",
-    "family_name": "Scott",
+    "user_id": "github|71918329",
+    "email": "oliver.rodriguez@gmail.com",
     "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "username": "oliverrodriguez84",
+    "phone_number": "+18639084160",
+    "phone_verified": false,
+    "name": "Oliver Rodriguez",
+    "given_name": "Oliver",
+    "family_name": "Rodriguez",
+    "nickname": "oliver",
+    "picture": "https://s.gravatar.com/avatar/bnl5kj9vpkmsfcklbmrte?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2For.png",
+    "identities": [
       {
-        "type": "email",
-        "value": "mscott@test.com",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "mscott"
+        "connection": "github",
+        "provider": "github",
+        "user_id": "71918329",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-02-04T04:49:46.871Z",
+    "updated_at": "2025-09-25T20:19:24.261Z",
+    "last_login": null,
+    "last_ip": "1.59.131.219",
+    "logins_count": 35,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000013"
-    },
-    "email": "lknope@test.com",
-    "username": "lknope",
-    "given_name": "Leslie",
-    "family_name": "Knope",
+    "user_id": "google-oauth2|214446264876407980000",
+    "email": "isabella.martinez@yahoo.com",
     "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "username": "isabellamartinez21",
+    "phone_number": "+15148469027",
+    "phone_verified": false,
+    "name": "Isabella Martinez",
+    "given_name": "Isabella",
+    "family_name": "Martinez",
+    "nickname": "isabella",
+    "picture": "https://s.gravatar.com/avatar/sl0f3o6xhzijc62feg0rs?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fim.png",
+    "identities": [
       {
-        "type": "email",
-        "value": "lknope@test.com",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "lknope"
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "214446264876407980000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": false
+      }
+    },
+    "created_at": "2025-03-31T14:11:24.525Z",
+    "updated_at": "2025-04-15T23:42:14.332Z",
+    "last_login": "2025-04-08T07:46:52.122Z",
+    "last_ip": "193.149.93.101",
+    "logins_count": 124,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000014"
-    },
-    "email": "rswanson@test.com",
-    "username": "rswanson",
-    "given_name": "Ron",
-    "family_name": "Swanson",
+    "user_id": "auth0|bwpk5vub9rcou1ii099o",
+    "email": "ethan.hernandez@outlook.com",
     "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "username": "ethanhernandez16",
+    "phone_number": "+18001429956",
+    "phone_verified": false,
+    "name": "Ethan Hernandez",
+    "given_name": "Ethan",
+    "family_name": "Hernandez",
+    "nickname": "ethan",
+    "picture": "https://s.gravatar.com/avatar/fqixv28qecio8q44v0yj?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Feh.png",
+    "identities": [
       {
-        "type": "email",
-        "value": "rswanson@test.com",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "rswanson"
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "bwpk5vub9rcou1ii099o",
+        "isSocial": false
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "free"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-10-19T14:45:05.997Z",
+    "updated_at": "2026-01-27T21:18:02.276Z",
+    "last_login": "2026-01-23T21:42:15.287Z",
+    "last_ip": "198.68.163.123",
+    "logins_count": 106,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000015"
-    },
-    "email": "aludgate@test.com",
-    "username": "aludgate",
-    "given_name": "April",
-    "family_name": "Ludgate",
+    "user_id": "auth0|iir86awkj16azetsjgolu",
+    "email": "mia.lopez@hotmail.com",
     "email_verified": true,
-    "tenant": "dev-test",
-    "connection": "Username-Password-Authentication",
-    "passwordHash": "$2b$10$U4C0ZY8OG8y41F9LusfKyu3HRMBL0rCZcKBVsXhgr.n8Ou6FPhzO2",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "username": null,
+    "phone_number": "+12135660203",
+    "phone_verified": true,
+    "name": "Mia Lopez",
+    "given_name": "Mia",
+    "family_name": "Lopez",
+    "nickname": "mia",
+    "picture": "https://s.gravatar.com/avatar/yic70xrvd6bjtxexbwhwg?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fml.png",
+    "identities": [
       {
-        "type": "email",
-        "value": "aludgate@test.com",
-        "verified": true
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "iir86awkj16azetsjgolu",
+        "isSocial": false
       },
       {
-        "type": "username",
-        "value": "aludgate"
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "975564926879587100000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-11-30T08:13:23.497Z",
+    "updated_at": "2026-01-11T23:31:45.429Z",
+    "last_login": "2026-01-12T04:23:08.940Z",
+    "last_ip": "114.24.113.115",
+    "logins_count": 115,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000016"
-    },
-    "username": "phoneuser1",
-    "phone_number": "+12125550100",
-    "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "user_id": "github|12585073",
+    "email": "lucas.gonzalez@proton.me",
+    "email_verified": true,
+    "username": "lucasgonzalez77",
+    "phone_number": "+17834902103",
+    "phone_verified": false,
+    "name": "Lucas Gonzalez",
+    "given_name": "Lucas",
+    "family_name": "Gonzalez",
+    "nickname": "lucas",
+    "picture": "https://s.gravatar.com/avatar/4hiy50gnlbfxcz3lq1gov?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Flg.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550100",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "phoneuser1"
+        "connection": "github",
+        "provider": "github",
+        "user_id": "12585073",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": false
+      }
+    },
+    "created_at": "2025-05-10T16:20:38.892Z",
+    "updated_at": "2025-10-24T12:23:12.144Z",
+    "last_login": "2025-06-10T09:59:12.851Z",
+    "last_ip": "53.186.247.11",
+    "logins_count": 129,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000017"
-    },
-    "username": "phoneuser2",
-    "phone_number": "+12125550101",
-    "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "user_id": "auth0|tjqifuiumklvqepnp2jhol",
+    "email": "charlotte.wilson@icloud.com",
+    "email_verified": false,
+    "username": null,
+    "phone_number": "+17313632825",
+    "phone_verified": false,
+    "name": "Charlotte Wilson",
+    "given_name": "Charlotte",
+    "family_name": "Wilson",
+    "nickname": "charlotte",
+    "picture": "https://s.gravatar.com/avatar/uqaqn21op5lsc6205k0t?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fcw.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550101",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "phoneuser2"
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "tjqifuiumklvqepnp2jhol",
+        "isSocial": false
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-03-18T09:33:32.398Z",
+    "updated_at": "2025-08-06T02:20:56.384Z",
+    "last_login": "2025-07-23T18:06:39.077Z",
+    "last_ip": "217.33.246.97",
+    "logins_count": 41,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000018"
-    },
-    "username": "phoneuser3",
-    "phone_number": "+12125550102",
+    "user_id": "google-oauth2|531426663278668000000",
+    "email": "mason.anderson@company.io",
+    "email_verified": true,
+    "username": "masonanderson50",
+    "phone_number": "+14440789777",
     "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "name": "Mason Anderson",
+    "given_name": "Mason",
+    "family_name": "Anderson",
+    "nickname": "mason",
+    "picture": "https://s.gravatar.com/avatar/ecippf520orozfc1wwi52p?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fma.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550102",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "phoneuser3"
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "531426663278668000000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-11-08T18:24:13.759Z",
+    "updated_at": "2025-11-12T22:25:51.719Z",
+    "last_login": null,
+    "last_ip": "49.126.185.181",
+    "logins_count": 13,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000019"
-    },
-    "username": "phoneuser4",
-    "phone_number": "+12125550103",
+    "user_id": "github|38484123",
+    "email": "amelia.thomas@startup.co",
+    "email_verified": true,
+    "username": "ameliathomas59",
+    "phone_number": "+14066254990",
     "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "name": "Amelia Thomas",
+    "given_name": "Amelia",
+    "family_name": "Thomas",
+    "nickname": "amelia",
+    "picture": "https://s.gravatar.com/avatar/8gakywud8mhaerqt7tbht?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fat.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550103",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "phoneuser4"
+        "connection": "github",
+        "provider": "github",
+        "user_id": "38484123",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-09-01T14:13:24.195Z",
+    "updated_at": "2025-10-26T06:05:41.120Z",
+    "last_login": "2025-12-24T06:51:40.277Z",
+    "last_ip": "240.61.237.133",
+    "logins_count": 111,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000020"
-    },
-    "username": "phoneuser5",
-    "phone_number": "+12125550104",
-    "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "user_id": "auth0|e64ujb31asrh98tqdt6hit",
+    "email": "logan.taylor@gmail.com",
+    "email_verified": true,
+    "username": "logantaylor28",
+    "phone_number": "+14284415907",
+    "phone_verified": false,
+    "name": "Logan Taylor",
+    "given_name": "Logan",
+    "family_name": "Taylor",
+    "nickname": "logan",
+    "picture": "https://s.gravatar.com/avatar/ih6azwkwp9nchcrf14is?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Flt.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550104",
-        "verified": true
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "e64ujb31asrh98tqdt6hit",
+        "isSocial": false
       },
       {
-        "type": "username",
-        "value": "phoneuser5"
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "291701835902573350000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-09-02T06:03:38.448Z",
+    "updated_at": "2025-12-04T02:06:12.349Z",
+    "last_login": "2025-10-05T12:41:30.517Z",
+    "last_ip": "1.7.85.160",
+    "logins_count": 23,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000021"
-    },
-    "username": "phoneuser6",
-    "phone_number": "+12125550105",
-    "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "user_id": "google-oauth2|134893492040119620000",
+    "email": "harper.moore@yahoo.com",
+    "email_verified": true,
+    "username": null,
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Harper Moore",
+    "given_name": "Harper",
+    "family_name": "Moore",
+    "nickname": "harper",
+    "picture": "https://s.gravatar.com/avatar/2rgtsqblhv6xg053hitkgs?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fhm.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550105",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "phoneuser6"
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "134893492040119620000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-10-10T17:17:31.042Z",
+    "updated_at": "2025-12-10T23:31:54.945Z",
+    "last_login": "2025-10-24T15:32:22.739Z",
+    "last_ip": "109.57.245.129",
+    "logins_count": 90,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000022"
-    },
-    "username": "phoneuser7",
-    "phone_number": "+12125550106",
-    "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "user_id": "google-oauth2|523856260541189500000",
+    "email": "alexander.jackson@outlook.com",
+    "email_verified": true,
+    "username": "alexanderjackson69",
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Alexander Jackson",
+    "given_name": "Alexander",
+    "family_name": "Jackson",
+    "nickname": "alexander",
+    "picture": "https://s.gravatar.com/avatar/n2cgvsq35u50xy1l2blck?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Faj.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550106",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "phoneuser7"
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "523856260541189500000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": false
+      }
+    },
+    "created_at": "2025-02-22T00:36:18.452Z",
+    "updated_at": "2025-07-14T03:44:17.327Z",
+    "last_login": "2025-10-21T16:53:14.344Z",
+    "last_ip": "73.140.65.61",
+    "logins_count": 80,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000023"
-    },
-    "username": "phoneuser8",
-    "phone_number": "+12125550107",
-    "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "user_id": "github|50039558",
+    "email": "evelyn.martin@hotmail.com",
+    "email_verified": true,
+    "username": null,
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Evelyn Martin",
+    "given_name": "Evelyn",
+    "family_name": "Martin",
+    "nickname": "evelyn",
+    "picture": "https://s.gravatar.com/avatar/49qmuvn5t9mcnggh8uz4?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fem.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550107",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "phoneuser8"
+        "connection": "github",
+        "provider": "github",
+        "user_id": "50039558",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-03-31T05:22:25.583Z",
+    "updated_at": "2025-08-02T21:23:47.654Z",
+    "last_login": "2025-04-10T01:30:20.956Z",
+    "last_ip": "52.99.7.154",
+    "logins_count": 134,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000024"
-    },
-    "username": "phoneuser9",
-    "phone_number": "+12125550108",
-    "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "user_id": "google-oauth2|469821101353568440000",
+    "email": "sebastian.lee@proton.me",
+    "email_verified": true,
+    "username": "sebastianlee41",
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Sebastian Lee",
+    "given_name": "Sebastian",
+    "family_name": "Lee",
+    "nickname": "sebastian",
+    "picture": "https://s.gravatar.com/avatar/rtgd8gx5ffaiya4ppkzo?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fsl.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550108",
-        "verified": true
-      },
-      {
-        "type": "username",
-        "value": "phoneuser9"
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "469821101353568440000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": false
+      }
+    },
+    "created_at": "2025-06-19T07:15:50.727Z",
+    "updated_at": "2025-10-25T01:07:10.527Z",
+    "last_login": "2025-11-27T06:23:45.372Z",
+    "last_ip": "67.149.172.24",
+    "logins_count": 90,
+    "blocked": false
   },
   {
-    "_id": {
-      "$oid": "657376510000000000000025"
-    },
-    "username": "phoneuser10",
-    "phone_number": "+12125550109",
+    "user_id": "github|97569144",
+    "email": "aria.perez@icloud.com",
+    "email_verified": true,
+    "username": "ariaperez52",
+    "phone_number": "+15446763362",
     "phone_verified": true,
-    "tenant": "dev-test",
-    "connection": "sms",
-    "_tmp_is_unique": true,
-    "version": "1.1",
-    "identifiers": [
+    "name": "Aria Perez",
+    "given_name": "Aria",
+    "family_name": "Perez",
+    "nickname": "aria",
+    "picture": "https://s.gravatar.com/avatar/czukvy17hhzbsmvmyn5b?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fap.png",
+    "identities": [
       {
-        "type": "phone_number",
-        "value": "+12125550109",
-        "verified": true
+        "connection": "github",
+        "provider": "github",
+        "user_id": "97569144",
+        "isSocial": true
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": false
+      }
+    },
+    "created_at": "2025-09-20T22:00:26.035Z",
+    "updated_at": "2025-10-09T07:09:10.945Z",
+    "last_login": "2025-11-20T07:46:44.774Z",
+    "last_ip": "10.181.115.157",
+    "logins_count": 7,
+    "blocked": false
+  },
+  {
+    "user_id": "google-oauth2|507434335311645000000",
+    "email": "jack.thompson@company.io",
+    "email_verified": false,
+    "username": "jackthompson70",
+    "phone_number": "+19549847227",
+    "phone_verified": true,
+    "name": "Jack Thompson",
+    "given_name": "Jack",
+    "family_name": "Thompson",
+    "nickname": "jack",
+    "picture": "https://s.gravatar.com/avatar/8ra25pnniykybtbwt1v91n?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fjt.png",
+    "identities": [
+      {
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "507434335311645000000",
+        "isSocial": true
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "free"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2026-01-21T12:51:11.461Z",
+    "updated_at": "2026-01-23T07:39:36.555Z",
+    "last_login": null,
+    "last_ip": "81.83.142.197",
+    "logins_count": 127,
+    "blocked": false
+  },
+  {
+    "user_id": "auth0|tj1mxemew1h0ew0eelkjg3j",
+    "email": "luna.white@startup.co",
+    "email_verified": false,
+    "username": null,
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Luna White",
+    "given_name": "Luna",
+    "family_name": "White",
+    "nickname": "luna",
+    "picture": "https://s.gravatar.com/avatar/tj6sdh9b48l17xr4f96gl?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Flw.png",
+    "identities": [
+      {
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "tj1mxemew1h0ew0eelkjg3j",
+        "isSocial": false
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-10-07T13:03:26.271Z",
+    "updated_at": "2026-01-25T08:27:45.092Z",
+    "last_login": "2025-10-22T23:08:30.622Z",
+    "last_ip": "211.193.30.120",
+    "logins_count": 148,
+    "blocked": false
+  },
+  {
+    "user_id": "auth0|qdkt9hzk88m1ixk4ut5moh",
+    "email": "aiden.harris@gmail.com",
+    "email_verified": true,
+    "username": "aidenharris50",
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Aiden Harris",
+    "given_name": "Aiden",
+    "family_name": "Harris",
+    "nickname": "aiden",
+    "picture": "https://s.gravatar.com/avatar/nhgj3bwzpk95c5yjzdi87o?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fah.png",
+    "identities": [
+      {
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "qdkt9hzk88m1ixk4ut5moh",
+        "isSocial": false
       },
       {
-        "type": "username",
-        "value": "phoneuser10"
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "752835594317966900000",
+        "isSocial": true
       }
-    ]
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-09-18T19:02:02.574Z",
+    "updated_at": "2026-01-30T16:50:08.767Z",
+    "last_login": "2026-01-10T20:55:05.522Z",
+    "last_ip": "77.144.167.28",
+    "logins_count": 76,
+    "blocked": false
+  },
+  {
+    "user_id": "auth0|xgns00y8uexb32ny7bq4",
+    "email": "chloe.sanchez@yahoo.com",
+    "email_verified": true,
+    "username": "chloesanchez26",
+    "phone_number": "+16946467453",
+    "phone_verified": true,
+    "name": "Chloe Sanchez",
+    "given_name": "Chloe",
+    "family_name": "Sanchez",
+    "nickname": "chloe",
+    "picture": "https://s.gravatar.com/avatar/070hnpj2uc44k4ty419e2zo?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fcs.png",
+    "identities": [
+      {
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "xgns00y8uexb32ny7bq4",
+        "isSocial": false
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "light",
+        "notifications": false
+      }
+    },
+    "created_at": "2025-05-12T07:49:57.051Z",
+    "updated_at": "2025-05-30T23:59:59.016Z",
+    "last_login": "2025-05-25T17:23:31.952Z",
+    "last_ip": "208.129.197.124",
+    "logins_count": 90,
+    "blocked": false
+  },
+  {
+    "user_id": "google-oauth2|117766103330682800000",
+    "email": "owen.clark@outlook.com",
+    "email_verified": true,
+    "username": "owenclark63",
+    "phone_number": "+19284849079",
+    "phone_verified": false,
+    "name": "Owen Clark",
+    "given_name": "Owen",
+    "family_name": "Clark",
+    "nickname": "owen",
+    "picture": "https://s.gravatar.com/avatar/3gme09rv94lodcu7le0skl?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Foc.png",
+    "identities": [
+      {
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "117766103330682800000",
+        "isSocial": true
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "free"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-03-12T12:36:20.405Z",
+    "updated_at": "2025-07-23T22:16:24.475Z",
+    "last_login": "2025-06-14T04:42:11.380Z",
+    "last_ip": "138.68.103.104",
+    "logins_count": 44,
+    "blocked": false
+  },
+  {
+    "user_id": "google-oauth2|575489289499914900000",
+    "email": "penelope.ramirez@hotmail.com",
+    "email_verified": true,
+    "username": "peneloperamirez99",
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Penelope Ramirez",
+    "given_name": "Penelope",
+    "family_name": "Ramirez",
+    "nickname": "penelope",
+    "picture": "https://s.gravatar.com/avatar/38eu0uo0yii40lkqxmn2kh?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fpr.png",
+    "identities": [
+      {
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "575489289499914900000",
+        "isSocial": true
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "enterprise"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": false
+      }
+    },
+    "created_at": "2026-02-03T01:44:17.159Z",
+    "updated_at": "2026-02-03T02:37:38.937Z",
+    "last_login": "2026-02-03T19:17:50.299Z",
+    "last_ip": "92.164.182.110",
+    "logins_count": 33,
+    "blocked": false
+  },
+  {
+    "user_id": "auth0|w02c0h7jy9epcn0226k70m",
+    "email": "samuel.lewis@proton.me",
+    "email_verified": true,
+    "username": "samuellewis54",
+    "phone_number": "+12595219783",
+    "phone_verified": true,
+    "name": "Samuel Lewis",
+    "given_name": "Samuel",
+    "family_name": "Lewis",
+    "nickname": "samuel",
+    "picture": "https://s.gravatar.com/avatar/8efmezxaqeikrjwvupr3ei?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Fsl.png",
+    "identities": [
+      {
+        "connection": "Username-Password-Authentication",
+        "provider": "auth0",
+        "user_id": "w02c0h7jy9epcn0226k70m",
+        "isSocial": false
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": false
+      }
+    },
+    "created_at": "2025-03-10T04:35:10.202Z",
+    "updated_at": "2025-11-05T22:00:06.357Z",
+    "last_login": "2025-08-08T16:53:47.138Z",
+    "last_ip": "81.200.239.127",
+    "logins_count": 69,
+    "blocked": false
+  },
+  {
+    "user_id": "google-oauth2|134708062342667390000",
+    "email": "layla.robinson@icloud.com",
+    "email_verified": true,
+    "username": "laylarobinson76",
+    "phone_number": null,
+    "phone_verified": false,
+    "name": "Layla Robinson",
+    "given_name": "Layla",
+    "family_name": "Robinson",
+    "nickname": "layla",
+    "picture": "https://s.gravatar.com/avatar/jdn255jxiomtuthi0hd4b?s=480&r=pg&d=https%3A%2F%2Fcdn.auth0.com%2Favatars%2Flr.png",
+    "identities": [
+      {
+        "connection": "google-oauth2",
+        "provider": "google-oauth2",
+        "user_id": "134708062342667390000",
+        "isSocial": true
+      }
+    ],
+    "app_metadata": {
+      "roles": [
+        "user"
+      ],
+      "subscription": "pro"
+    },
+    "user_metadata": {
+      "preferences": {
+        "theme": "dark",
+        "notifications": true
+      }
+    },
+    "created_at": "2025-05-03T11:08:18.979Z",
+    "updated_at": "2025-12-22T15:51:00.061Z",
+    "last_login": null,
+    "last_ip": "97.198.45.183",
+    "logins_count": 105,
+    "blocked": false
   }
 ]

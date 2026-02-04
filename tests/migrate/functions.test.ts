@@ -122,33 +122,42 @@ test('Auth0 - loadUsersFromFile - JSON', async () => {
 		'auth0'
 	);
 
+	// Verify we have users
+	expect(usersFromAuth0.length).toBeGreaterThan(0);
+
 	// Find users with verified emails
 	const usersWithEmail = usersFromAuth0.filter(
 		(u) => u.email && (Array.isArray(u.email) ? u.email.length > 0 : u.email)
 	);
 	expect(usersWithEmail.length).toBeGreaterThanOrEqual(2);
 
+	// Find users with unverified emails
+	const usersWithUnverifiedEmail = usersFromAuth0.filter(
+		(u) => u.unverifiedEmailAddresses
+	);
+	expect(usersWithUnverifiedEmail.length).toBeGreaterThanOrEqual(1);
+
 	// Find users with username
 	const usersWithUsername = usersFromAuth0.filter((u) => u.username);
 	expect(usersWithUsername.length).toBeGreaterThanOrEqual(2);
 
-	// Find users with username and password
-	const usersWithUsernameAndPassword = usersFromAuth0.filter(
-		(u) => u.username && u.password && u.passwordHasher
-	);
-	expect(usersWithUsernameAndPassword.length).toBeGreaterThanOrEqual(2);
-
-	// Find users with email and password
-	const usersWithEmailAndPassword = usersFromAuth0.filter(
-		(u) => u.email && u.password && u.passwordHasher
-	);
-	expect(usersWithEmailAndPassword.length).toBeGreaterThanOrEqual(2);
-
-	// Find users with phone
+	// Find users with phone (verified)
 	const usersWithPhone = usersFromAuth0.filter(
 		(u) => u.phone && (Array.isArray(u.phone) ? u.phone.length > 0 : u.phone)
 	);
 	expect(usersWithPhone.length).toBeGreaterThanOrEqual(2);
+
+	// Find users with unverified phone
+	const usersWithUnverifiedPhone = usersFromAuth0.filter(
+		(u) => u.unverifiedPhoneNumbers
+	);
+	expect(usersWithUnverifiedPhone.length).toBeGreaterThanOrEqual(1);
+
+	// Verify createdAt is mapped
+	const usersWithCreatedAt = usersFromAuth0.filter((u) => u.createdAt);
+	expect(usersWithCreatedAt.length).toBeGreaterThanOrEqual(2);
+
+	// Note: Auth0 does not export password hashes, so no password tests
 });
 
 // ============================================================================
@@ -233,30 +242,33 @@ describe('transformKeys', () => {
 
 		test('transforms Auth0-specific keys', () => {
 			const data = {
-				_id: { $oid: 'auth0123' },
+				user_id: 'auth0|abc123',
 				email: 'user@example.com',
 				email_verified: true,
 				username: 'bobuser',
 				given_name: 'Bob',
 				family_name: 'Jones',
 				phone_number: '+1987654321',
-				passwordHash: '$2b$10$hash',
+				phone_verified: false,
 				user_metadata: { role: 'admin' },
+				app_metadata: { subscription: 'pro' },
+				created_at: '2025-01-15T10:30:00.000Z',
 			};
 
 			const result = transformKeys(data, auth0Transformer);
 
-			// transformKeys now extracts nested paths like "_id.$oid"
 			expect(result).toEqual({
-				userId: 'auth0123',
+				userId: 'auth0|abc123',
 				email: 'user@example.com',
 				emailVerified: true,
 				username: 'bobuser',
 				firstName: 'Bob',
 				lastName: 'Jones',
 				phone: '+1987654321',
-				password: '$2b$10$hash',
+				phoneVerified: false,
 				publicMetadata: { role: 'admin' },
+				privateMetadata: { subscription: 'pro' },
+				createdAt: '2025-01-15T10:30:00.000Z',
 			});
 		});
 
