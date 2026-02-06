@@ -26,7 +26,12 @@ Do not ask "would you like me to create one?" - just ask for the key directly an
 
 ## Requirements
 
-1. Analyze the JSON/CSV structure to identify:
+1. Before beginning work, check if CLERK_SECRET_KEY is present.
+   - Check if `.env` exists with `CLERK_SECRET_KEY`
+   - If not, ask me for the key (found in Clerk Dashboard → API Keys → Secret keys, or https://dashboard.clerk.com/~/api-keys)
+   - Create/update the `.env` file with the key
+
+2. Analyze the JSON/CSV structure to identify:
    - User ID field (maps to `userId`)
    - Email field(s) and verification status
    - Phone field(s) and verification status
@@ -34,7 +39,7 @@ Do not ask "would you like me to create one?" - just ask for the key directly an
    - Password field and hash algorithm
    - Any metadata fields
 
-2. Generate a complete transformer file following this structure:
+3. Generate a complete transformer file following this structure:
 
 ```typescript
 // src/transformers/[platform-name].ts
@@ -54,6 +59,27 @@ const [platformName]Transformer = {
 };
 
 export default [platformName]Transformer;
+```
+
+4. **CRITICAL - Register the transformer**: After creating the transformer file, you MUST register it in `src/transformers/index.ts`. This is NOT optional. The migration and delete commands will fail silently if the transformer is not registered.
+
+   Add both an import and include it in the exports array:
+
+   ```typescript
+   // Add import at the top
+   import customTransformer from './custom';
+
+   // Add to the transformers array
+   export const transformers = [
+     // ... existing transformers
+     customTransformer,  // ADD YOUR TRANSFORMER HERE
+   ];
+   ```
+
+   **WARNING**: If you skip this step:
+   - The transformer will NOT appear in the CLI's platform selection
+   - The `bun delete` command will NOT be able to find migrated users
+   - Users will see "Found 0 migrated users to delete" even after successful migration
 ````
 
 ## Questions to Answer
@@ -162,19 +188,32 @@ See [Schema Fields Reference](schema-fields.md) for the complete list.
 
 ---
 
-## Testing Commands
+## Post-Generation Checklist
 
-After generating your transformer:
+After generating your transformer, verify these steps were completed:
+
+### 1. Transformer File Created
+
+- [ ] File exists at `src/transformers/[platform-name].ts`
+- [ ] Has a default export with `key`, `value`, `label`, `description`, and `transformer` fields
+- [ ] The `transformer` object maps source fields to Clerk fields (including a field that maps to `userId`)
+
+### 2. Transformer Registered (CRITICAL)
+
+- [ ] Import added to `src/transformers/index.ts`
+- [ ] Transformer added to the `transformers` array export
+
+**If you skip registration, the delete command will fail to find migrated users!**
+
+### 3. Validate the Setup
 
 ```bash
-# Add the transformer to src/transformers/index.ts
-
-# Test with the CLI
-bun migrate
-
-# Run validation tests
+# Run tests to verify transformer is properly registered
 bun run test
 
 # Check for lint errors
 bun lint
+
+# Test the migration CLI (should show your new platform in the list)
+bun migrate
 ```

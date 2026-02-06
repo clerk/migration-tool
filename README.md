@@ -103,14 +103,14 @@ bun migrate [OPTIONS]
 
 ### Options
 
-| Option                            | Description                                                   |
-| --------------------------------- | ------------------------------------------------------------- |
-| `-t, --transformer <transformer>` | Source transformer (clerk, auth0, authjs, firebase, supabase) |
-| `-f, --file <path>`               | Path to the user data file (JSON or CSV)                      |
-| `-r, --resume-after <userId>`     | Resume migration after this user ID                           |
-| `--skip-password-requirement`     | Migrate users even if they don't have passwords               |
-| `-y, --yes`                       | Non-interactive mode (skip all confirmations)                 |
-| `-h, --help`                      | Show help message                                             |
+| Option                            | Description                                                                              |
+| --------------------------------- | ---------------------------------------------------------------------------------------- |
+| `-t, --transformer <transformer>` | Source transformer (clerk, auth0, authjs, firebase, supabase)                            |
+| `-f, --file <path>`               | Path to the user data file (JSON or CSV)                                                 |
+| `-r, --resume-after <userId>`     | Resume migration after this user ID                                                      |
+| `--require-password`              | Only migrate users who have passwords (by default, users without passwords are migrated) |
+| `-y, --yes`                       | Non-interactive mode (skip all confirmations)                                            |
+| `-h, --help`                      | Show help message                                                                        |
 
 ### Authentication Options
 

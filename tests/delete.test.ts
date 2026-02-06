@@ -561,10 +561,7 @@ describe('delete-users', () => {
 		});
 
 		test('falls back to userId/id when transformer key is not provided', async () => {
-			const mockUsers = [
-				{ user_id: 'auth0|abc123', userId: 'fallback_1' },
-				{ id: 'fallback_2' },
-			];
+			const mockUsers = [{ userId: 'fallback_1' }, { id: 'fallback_2' }];
 
 			mockExistsSync.mockReturnValue(true);
 			mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
@@ -574,6 +571,27 @@ describe('delete-users', () => {
 			expect(result.size).toBe(2);
 			expect(result.has('fallback_1')).toBe(true);
 			expect(result.has('fallback_2')).toBe(true);
+		});
+
+		test('user_id takes precedence over id but not userId in fallback chain', async () => {
+			const mockUsers = [
+				{ userId: 'primary', user_id: 'secondary', id: 'tertiary' },
+				{ user_id: 'secondary_only', id: 'tertiary' },
+				{ id: 'tertiary_only' },
+			];
+
+			mockExistsSync.mockReturnValue(true);
+			mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
+
+			const result = await readMigrationFile('samples/users.json');
+
+			expect(result.size).toBe(3);
+			// userId takes precedence
+			expect(result.has('primary')).toBe(true);
+			// user_id is used when no userId
+			expect(result.has('secondary_only')).toBe(true);
+			// id is used as last resort
+			expect(result.has('tertiary_only')).toBe(true);
 		});
 	});
 

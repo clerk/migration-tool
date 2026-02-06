@@ -69,7 +69,7 @@ OPTIONS:
   -t, --transformer <transformer>   Source transformer (${validPlatforms})
   -f, --file <path>                 Path to the user data file (JSON or CSV)
   -r, --resume-after <userId>       Resume migration after this user ID
-  --skip-password-requirement       Migrate users even if they don't have passwords
+  --require-password                Only migrate users who have passwords (default: false)
   -y, --yes                         Non-interactive mode (skip all confirmations)
   -h, --help                        Show this help message
 
@@ -262,7 +262,7 @@ async function ensureClerkSecretKey(
  */
 export function parseArgs(argv: string[]): CLIArgs {
 	const args: CLIArgs = {
-		skipPasswordRequirement: false,
+		skipPasswordRequirement: true,
 		nonInteractive: false,
 		help: false,
 	};
@@ -296,7 +296,11 @@ export function parseArgs(argv: string[]): CLIArgs {
 				i++;
 				break;
 			case '--skip-password-requirement':
+				// Legacy flag, kept for backwards compatibility (now default)
 				args.skipPasswordRequirement = true;
+				break;
+			case '--require-password':
+				args.skipPasswordRequirement = false;
 				break;
 			case '--clerk-secret-key':
 				args.clerkSecretKey = nextArg;
@@ -532,10 +536,10 @@ export async function runNonInteractive(args: CLIArgs): Promise<{
 	const usersWithPasswords = analysis.fieldCounts.password || 0;
 	if (usersWithPasswords === 0) {
 		skipPasswordRequirement = true;
-	} else if (usersWithPasswords < userCount && !args.skipPasswordRequirement) {
+	} else if (usersWithPasswords < userCount && skipPasswordRequirement) {
 		console.log(
-			`Note: ${userCount - usersWithPasswords} user(s) don't have passwords. ` +
-				`Use --skip-password-requirement to migrate them anyway.`
+			`Note: ${userCount - usersWithPasswords} user(s) don't have passwords and will be migrated. ` +
+				`Use --require-password to skip them.`
 		);
 	}
 

@@ -171,6 +171,10 @@ export const readMigrationFile = async (
 					if (sourceUserIdField && data[sourceUserIdField]) {
 						userIds.add(data[sourceUserIdField]);
 					}
+					// Common field name for user IDs (custom transformers)
+					else if (data.user_id) {
+						userIds.add(data.user_id);
+					}
 					// Firebase uses 'localId' for user IDs
 					else if (data.localId) {
 						userIds.add(data.localId);
@@ -218,6 +222,10 @@ export const readMigrationFile = async (
 		// JSON files have 'userId' property
 		else if (typeof user.userId === 'string' && user.userId) {
 			userIds.add(user.userId);
+		}
+		// Common field name for user IDs (custom transformers)
+		else if (typeof user.user_id === 'string' && user.user_id) {
+			userIds.add(user.user_id);
 		}
 		// Firebase uses 'localId' for user IDs
 		else if (typeof user.localId === 'string' && user.localId) {

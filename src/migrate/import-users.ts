@@ -436,13 +436,13 @@ function displaySummary(summary: ImportSummary) {
  * Logs all results to timestamped log files.
  *
  * @param users - Array of validated users to import
- * @param skipPasswordRequirement - Whether to allow users without passwords (default: false)
+ * @param skipPasswordRequirement - Whether to allow users without passwords (default: true)
  * @param validationFailed - Number of users that failed validation (default: 0)
  * @returns A promise that resolves when all users are processed
  */
 export async function importUsers(
 	users: User[],
-	skipPasswordRequirement: boolean = false,
+	skipPasswordRequirement: boolean = true,
 	validationFailed: number = 0
 ) {
 	const dateTime = getDateTimeStamp();
