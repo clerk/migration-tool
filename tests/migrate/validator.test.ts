@@ -191,6 +191,39 @@ describe('userSchema', () => {
 			});
 			expect(result.success).toBe(true);
 		});
+
+		test('passes with banned true', () => {
+			const result = userSchema.safeParse({
+				userId: 'user_123',
+				email: 'test@example.com',
+				banned: true,
+			});
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.banned).toBe(true);
+			}
+		});
+
+		test('passes with banned false', () => {
+			const result = userSchema.safeParse({
+				userId: 'user_123',
+				email: 'test@example.com',
+				banned: false,
+			});
+			expect(result.success).toBe(true);
+			if (result.success) {
+				expect(result.data.banned).toBe(false);
+			}
+		});
+
+		test('fails with banned as non-boolean', () => {
+			const result = userSchema.safeParse({
+				userId: 'user_123',
+				email: 'test@example.com',
+				banned: 'true',
+			});
+			expect(result.success).toBe(false);
+		});
 	});
 
 	describe('full user object', () => {

@@ -90,6 +90,7 @@ async function createUser(
 		userParams.publicMetadata = userData.publicMetadata;
 
 	// Additional Clerk API fields
+	if (userData.banned !== undefined) userParams.banned = userData.banned;
 	if (userData.bypassClientTrust !== undefined)
 		userParams.bypassClientTrust = userData.bypassClientTrust;
 	if (userData.createOrganizationEnabled !== undefined)

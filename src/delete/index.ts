@@ -18,6 +18,7 @@ import * as path from 'path';
 import csvParser from 'csv-parser';
 import pLimit from 'p-limit';
 import type { SettingsResult } from '../types';
+import { transformers } from '../transformers';
 
 const LIMIT = 500;
 const users: User[] = [];
@@ -97,8 +98,39 @@ const FIREBASE_CSV_HEADERS = [
 ];
 
 /**
+ * Finds the source field name that maps to 'userId' in a transformer's field mapping
+ *
+ * For example, Auth0's transformer maps `user_id` → `userId`, so this returns `'user_id'`.
+ * Supabase maps `id` → `userId`, so this returns `'id'`.
+ *
+ * @param transformerKey - The transformer key (e.g., 'auth0', 'firebase')
+ * @returns The source field name, or undefined if no transformer or mapping found
+ */
+export const getSourceUserIdField = (
+	transformerKey?: string
+): string | undefined => {
+	if (!transformerKey) return undefined;
+	const transformer = transformers.find((t) => t.key === transformerKey);
+	if (!transformer) return undefined;
+
+	for (const [sourceField, targetField] of Object.entries(
+		transformer.transformer
+	)) {
+		if (targetField === 'userId') {
+			return sourceField;
+		}
+	}
+	return undefined;
+};
+
+/**
  * Reads a migration file and extracts user IDs
  * Supports both JSON and CSV files
+ *
+ * Uses the transformer's field mapping to determine which source field contains the user ID.
+ * For example, Auth0 uses 'user_id', Supabase uses 'id', Firebase uses 'localId'.
+ * Falls back to checking 'userId', 'localId', and 'id' if no transformer mapping is found.
+ *
  * @param filePath - The relative path to the migration file
  * @param transformerKey - The transformer key used for migration (e.g., 'firebase')
  * @returns A Promise that resolves to a Set of user IDs from the migration file
@@ -118,6 +150,9 @@ export const readMigrationFile = async (
 	const type = getFileType(fullPath);
 	const userIds = new Set<string>();
 
+	// Resolve the source field name that maps to 'userId' in the transformer
+	const sourceUserIdField = getSourceUserIdField(transformerKey);
+
 	// Handle CSV files
 	if (type === 'text/csv') {
 		// Firebase CSV files don't have headers, so we need to provide them
@@ -131,9 +166,13 @@ export const readMigrationFile = async (
 		return new Promise((resolve, reject) => {
 			fs.createReadStream(fullPath)
 				.pipe(csvParser(parserOptions))
-				.on('data', (data: { id?: string; localId?: string }) => {
+				.on('data', (data: Record<string, string>) => {
+					// Check transformer-mapped source field first
+					if (sourceUserIdField && data[sourceUserIdField]) {
+						userIds.add(data[sourceUserIdField]);
+					}
 					// Firebase uses 'localId' for user IDs
-					if (data.localId) {
+					else if (data.localId) {
 						userIds.add(data.localId);
 					}
 					// Other CSV files have 'id' column for user IDs
@@ -154,8 +193,8 @@ export const readMigrationFile = async (
 	// Handle JSON files
 	const fileContent = fs.readFileSync(fullPath, 'utf-8');
 	const parsed = JSON.parse(fileContent) as
-		| Array<{ userId?: string; id?: string; localId?: string }>
-		| { users?: Array<{ userId?: string; id?: string; localId?: string }> };
+		| Array<Record<string, unknown>>
+		| { users?: Array<Record<string, unknown>> };
 
 	// Handle both direct array and { users: [...] } wrapper (Firebase format)
 	const users = Array.isArray(parsed) ? parsed : parsed.users;
@@ -171,16 +210,21 @@ export const readMigrationFile = async (
 
 	// Extract user IDs from the migration file
 	for (const user of users) {
+		// Check transformer-mapped source field first (e.g., 'user_id' for Auth0)
+		const sourceValue = sourceUserIdField ? user[sourceUserIdField] : undefined;
+		if (typeof sourceValue === 'string' && sourceValue) {
+			userIds.add(sourceValue);
+		}
 		// JSON files have 'userId' property
-		if (user.userId) {
+		else if (typeof user.userId === 'string' && user.userId) {
 			userIds.add(user.userId);
 		}
 		// Firebase uses 'localId' for user IDs
-		else if (user.localId) {
+		else if (typeof user.localId === 'string' && user.localId) {
 			userIds.add(user.localId);
 		}
 		// Also check for 'id' property as fallback
-		else if (user.id) {
+		else if (typeof user.id === 'string' && user.id) {
 			userIds.add(user.id);
 		}
 	}

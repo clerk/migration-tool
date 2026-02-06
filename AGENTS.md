@@ -54,13 +54,15 @@ src/
 
 ## After Making Changes
 
-Always run after code changes:
+Always run after changes:
 
-- `bun run test` - Run all tests
 - `bun lint:fix` - Fix linting issues
 - `bun format` - Format code
+- `bun run test` - Run all tests
 
 When adding/modifying features, add or update tests in the corresponding test files.
+
+Always perform these checks after **any** change.
 
 ## Architecture
 

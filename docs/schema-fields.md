@@ -68,6 +68,7 @@ At least one identifier (email, phone, or username) is required.
 
 | Field                       | Type      | Description                                     |
 | --------------------------- | --------- | ----------------------------------------------- |
+| `banned`                    | `boolean` | Whether the user is banned                      |
 | `bypassClientTrust`         | `boolean` | Skip client trust verification                  |
 | `createOrganizationEnabled` | `boolean` | Whether user can create organizations           |
 | `createOrganizationsLimit`  | `number`  | Maximum number of organizations user can create |
