@@ -11,6 +11,14 @@ Copy and paste the following prompt, replacing `[YOUR SAMPLE DATA]` with a sampl
 ````
 I need to create a custom transformer for the Clerk user migration script. Please analyze my sample user data and generate a transformer file.
 
+## Environment Setup
+
+Before we begin, please check:
+1. Does a `.env` file exist in the project root?
+2. If not, would you like me to help you create one with your CLERK_SECRET_KEY?
+
+You can find your secret key in the Clerk Dashboard under API Keys → Secret keys.
+
 ## Sample User Data
 
 [YOUR SAMPLE DATA]
@@ -72,6 +80,21 @@ After I answer these questions, generate the complete transformer file with:
 - postTransform function (if verification handling or field splitting is needed)
 - Appropriate defaults
 - JSDoc comments explaining the transformer
+
+## Environment Check
+
+Before generating the transformer, also verify:
+
+1. Check if a `.env` file exists in the project root
+2. If it doesn't exist, ask if I want to create one
+3. If yes, ask for my CLERK_SECRET_KEY and create the `.env` file with:
+   ```
+   CLERK_SECRET_KEY=<provided-key>
+   ```
+4. If no, remind me that I'll need to either:
+   - Create a `.env` file manually, or
+   - Pass `--clerk-secret-key` when running the migration, or
+   - Set the CLERK_SECRET_KEY environment variable
 
 ````
 

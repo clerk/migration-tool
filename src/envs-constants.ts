@@ -88,15 +88,68 @@ const envSchema = createEnvSchema();
  */
 export type EnvSchema = z.infer<typeof envSchema>;
 
-const parsed = envSchema.safeParse(process.env);
+// Lazy validation - don't exit immediately, allow CLI to handle missing key
+let _env: EnvSchema | null = null;
+let _validationError: z.ZodError | null = null;
 
-if (!parsed.success) {
-	// Infrastructure error at module load time - occurs before CLI is initialized
-	// eslint-disable-next-line no-console
-	console.error('❌ Invalid environment variables:');
-	// eslint-disable-next-line no-console
-	console.error(JSON.stringify(parsed.error.issues, null, 2));
-	process.exit(1);
+/**
+ * Attempts to validate environment variables
+ * @returns true if valid, false if invalid
+ */
+function tryValidateEnv(): boolean {
+	const parsed = envSchema.safeParse(process.env);
+	if (parsed.success) {
+		_env = parsed.data;
+		_validationError = null;
+		return true;
+	}
+	_validationError = parsed.error;
+	return false;
+}
+
+// Initial validation attempt
+tryValidateEnv();
+
+/**
+ * Checks if CLERK_SECRET_KEY is set in the environment
+ * @returns true if the key is set (even if not validated yet)
+ */
+export function hasClerkSecretKey(): boolean {
+	return !!process.env.CLERK_SECRET_KEY;
+}
+
+/**
+ * Sets the CLERK_SECRET_KEY in process.env and re-validates
+ * @param key - The Clerk secret key to set
+ * @returns true if validation succeeds after setting the key
+ */
+export function setClerkSecretKey(key: string): boolean {
+	process.env.CLERK_SECRET_KEY = key;
+	return tryValidateEnv();
+}
+
+/**
+ * Gets the validation error if env validation failed
+ * @returns The Zod error or null if validation succeeded
+ */
+export function getEnvValidationError(): z.ZodError | null {
+	return _validationError;
+}
+
+/**
+ * Validates environment and exits if invalid
+ * Call this after giving the user a chance to provide missing values
+ */
+export function requireValidEnv(): void {
+	if (!_env) {
+		// eslint-disable-next-line no-console
+		console.error('❌ Invalid environment variables:');
+		if (_validationError) {
+			// eslint-disable-next-line no-console
+			console.error(JSON.stringify(_validationError.issues, null, 2));
+		}
+		process.exit(1);
+	}
 }
 
 /**
@@ -106,7 +159,15 @@ if (!parsed.success) {
  * @property RATE_LIMIT - Rate limit in requests per second (auto-configured based on instance type)
  * @property CONCURRENCY_LIMIT - Number of concurrent requests (defaults to ~95% of rate limit, can be overridden in .env)
  */
-export const env = parsed.data;
+export const env: EnvSchema = new Proxy({} as EnvSchema, {
+	get(_, prop: keyof EnvSchema) {
+		if (!_env) {
+			requireValidEnv();
+		}
+		// _env is guaranteed to be defined here since requireValidEnv exits if null
+		return (_env as EnvSchema)[prop];
+	},
+});
 
 /**
  * Maximum number of retries for rate limit (429) errors

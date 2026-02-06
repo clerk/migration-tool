@@ -16,7 +16,12 @@ import {
 	transformKeys as transformKeysFromFunctions,
 	tryCatch,
 } from '../utils';
-import { env } from '../envs-constants';
+import {
+	env,
+	hasClerkSecretKey,
+	requireValidEnv,
+	setClerkSecretKey,
+} from '../envs-constants';
 import type {
 	FieldAnalysis,
 	FirebaseHashConfig,
@@ -24,9 +29,534 @@ import type {
 	Settings,
 } from '../types';
 
+/**
+ * Parsed command-line arguments for the migration script
+ */
+export type CLIArgs = {
+	platform?: string;
+	file?: string;
+	resumeAfter?: string;
+	skipPasswordRequirement: boolean;
+	nonInteractive: boolean;
+	help: boolean;
+	// Authentication
+	clerkSecretKey?: string;
+	// Firebase-specific options
+	firebaseSignerKey?: string;
+	firebaseSaltSeparator?: string;
+	firebaseRounds?: number;
+	firebaseMemCost?: number;
+};
+
 const SETTINGS_FILE = '.settings';
 
 const DEV_USER_LIMIT = 500;
+
+/**
+ * Displays help information for the CLI
+ */
+function showHelp(): void {
+	const validPlatforms = transformers.map((t) => t.key).join(', ');
+
+	// eslint-disable-next-line no-console
+	console.log(`
+Clerk User Migration Utility
+
+USAGE:
+  bun migrate [OPTIONS]
+
+OPTIONS:
+  -p, --platform <platform>     Source platform (${validPlatforms})
+  -f, --file <path>             Path to the user data file (JSON or CSV)
+  -r, --resume-after <userId>   Resume migration after this user ID
+  --skip-password-requirement   Migrate users even if they don't have passwords
+  -y, --yes                     Non-interactive mode (skip all confirmations)
+  -h, --help                    Show this help message
+
+AUTHENTICATION:
+  --clerk-secret-key <key>      Clerk secret key (alternative to .env file)
+                                Can also be set via CLERK_SECRET_KEY env var
+
+FIREBASE OPTIONS (required when platform is 'firebase'):
+  --firebase-signer-key <key>       Firebase hash signer key (base64)
+  --firebase-salt-separator <sep>   Firebase salt separator (base64)
+  --firebase-rounds <num>           Firebase hash rounds
+  --firebase-mem-cost <num>         Firebase memory cost
+
+EXAMPLES:
+  # Interactive mode (default)
+  bun migrate
+
+  # Non-interactive mode with all options
+  bun migrate -y -p auth0 -f users.json
+
+  # Non-interactive with secret key (no .env needed)
+  bun migrate -y -p clerk -f users.json --clerk-secret-key sk_test_xxx
+
+  # Resume a failed migration
+  bun migrate -y -p clerk -f users.json -r user_abc123
+
+  # Firebase migration with hash config
+  bun migrate -y -p firebase -f users.csv \\
+    --firebase-signer-key "abc123..." \\
+    --firebase-salt-separator "Bw==" \\
+    --firebase-rounds 8 \\
+    --firebase-mem-cost 14
+
+ENVIRONMENT VARIABLES:
+  CLERK_SECRET_KEY      Your Clerk secret key (required, or use --clerk-secret-key)
+  RATE_LIMIT            Override requests per second (default: 100 prod, 10 dev)
+  CONCURRENCY_LIMIT     Override concurrent requests (default: ~9 prod, ~1 dev)
+
+NOTES:
+  - In non-interactive mode (-y), --platform and --file are required
+  - Firebase migrations require all four --firebase-* options
+  - The script auto-detects dev/prod instance from CLERK_SECRET_KEY
+`);
+}
+
+/**
+ * Prompts the user to provide the CLERK_SECRET_KEY if it's missing
+ *
+ * In interactive mode, prompts the user to enter the key directly.
+ * In non-interactive mode, shows an error message with instructions.
+ *
+ * @param nonInteractive - Whether running in non-interactive mode
+ * @param cliProvidedKey - Optional key provided via --clerk-secret-key flag
+ * @returns true if the key was provided and validated, false otherwise
+ */
+async function ensureClerkSecretKey(
+	nonInteractive: boolean,
+	cliProvidedKey?: string
+): Promise<boolean> {
+	// If key was provided via CLI flag, use it
+	if (cliProvidedKey) {
+		const isValid = setClerkSecretKey(cliProvidedKey);
+		if (!isValid) {
+			if (nonInteractive) {
+				// eslint-disable-next-line no-console
+				console.error('Error: Invalid CLERK_SECRET_KEY provided.');
+			} else {
+				p.log.error('Invalid CLERK_SECRET_KEY provided.');
+			}
+			return false;
+		}
+		return true;
+	}
+
+	if (hasClerkSecretKey()) {
+		requireValidEnv();
+		return true;
+	}
+
+	if (nonInteractive) {
+		// eslint-disable-next-line no-console
+		console.error('Error: CLERK_SECRET_KEY is not set.\n');
+		// eslint-disable-next-line no-console
+		console.error('To fix this, either:');
+		// eslint-disable-next-line no-console
+		console.error('  1. Create a .env file with: CLERK_SECRET_KEY=sk_test_...');
+		// eslint-disable-next-line no-console
+		console.error(
+			'  2. Set the environment variable: export CLERK_SECRET_KEY=sk_test_...\n'
+		);
+		// eslint-disable-next-line no-console
+		console.error(
+			'You can find your secret key in the Clerk Dashboard under API Keys.'
+		);
+		return false;
+	}
+
+	// Interactive mode - prompt for the key
+	p.note(
+		`${color.yellow('CLERK_SECRET_KEY is not set.')}\n\n` +
+			`You can find your secret key in the Clerk Dashboard:\n` +
+			`${color.cyan('Dashboard → API Keys → Secret keys')}\n\n` +
+			`Alternatively, create a ${color.bold('.env')} file with:\n` +
+			`${color.dim('CLERK_SECRET_KEY=sk_test_...')}`,
+		'Missing API Key'
+	);
+
+	const secretKey = await p.text({
+		message: 'Enter your Clerk Secret Key',
+		placeholder: 'sk_test_... or sk_live_...',
+		validate: (value) => {
+			if (!value || value.trim() === '') {
+				return 'Secret key is required';
+			}
+			if (!value.startsWith('sk_test_') && !value.startsWith('sk_live_')) {
+				return 'Secret key must start with sk_test_ or sk_live_';
+			}
+		},
+	});
+
+	if (p.isCancel(secretKey)) {
+		p.cancel('Migration cancelled.');
+		process.exit(0);
+	}
+
+	const trimmedKey = secretKey.trim();
+	const isValid = setClerkSecretKey(trimmedKey);
+	if (!isValid) {
+		p.log.error('Failed to validate the secret key.');
+		return false;
+	}
+
+	p.log.success('Secret key validated successfully.');
+
+	// Ask if user wants to save the key to .env file
+	const envPath = path.join(process.cwd(), '.env');
+	const envExists = fs.existsSync(envPath);
+
+	const saveToEnv = await p.confirm({
+		message: envExists
+			? 'Would you like to add CLERK_SECRET_KEY to your existing .env file?'
+			: 'Would you like to create a .env file with your secret key?',
+		initialValue: true,
+	});
+
+	if (p.isCancel(saveToEnv)) {
+		// User cancelled, but key is still valid for this session
+		return true;
+	}
+
+	if (saveToEnv) {
+		try {
+			const envLine = `CLERK_SECRET_KEY=${trimmedKey}\n`;
+			if (envExists) {
+				// Check if CLERK_SECRET_KEY already exists in the file
+				const existingContent = fs.readFileSync(envPath, 'utf-8');
+				if (existingContent.includes('CLERK_SECRET_KEY=')) {
+					// Replace existing key
+					const updatedContent = existingContent.replace(
+						/CLERK_SECRET_KEY=.*/,
+						`CLERK_SECRET_KEY=${trimmedKey}`
+					);
+					fs.writeFileSync(envPath, updatedContent);
+					p.log.success('Updated CLERK_SECRET_KEY in .env file.');
+				} else {
+					// Append to existing file
+					fs.appendFileSync(envPath, envLine);
+					p.log.success('Added CLERK_SECRET_KEY to .env file.');
+				}
+			} else {
+				// Create new .env file
+				fs.writeFileSync(envPath, envLine);
+				p.log.success('Created .env file with CLERK_SECRET_KEY.');
+			}
+		} catch {
+			p.log.warn(
+				'Could not save to .env file. The key will still work for this session.'
+			);
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Parses command-line arguments into a CLIArgs object
+ *
+ * @param argv - Array of command-line arguments (without node/bun and script path)
+ * @returns Parsed CLI arguments
+ */
+export function parseArgs(argv: string[]): CLIArgs {
+	const args: CLIArgs = {
+		skipPasswordRequirement: false,
+		nonInteractive: false,
+		help: false,
+	};
+
+	for (let i = 0; i < argv.length; i++) {
+		const arg = argv[i];
+		const nextArg = argv[i + 1];
+
+		switch (arg) {
+			case '-h':
+			case '--help':
+				args.help = true;
+				break;
+			case '-y':
+			case '--yes':
+				args.nonInteractive = true;
+				break;
+			case '-p':
+			case '--platform':
+				args.platform = nextArg;
+				i++;
+				break;
+			case '-f':
+			case '--file':
+				args.file = nextArg;
+				i++;
+				break;
+			case '-r':
+			case '--resume-after':
+				args.resumeAfter = nextArg;
+				i++;
+				break;
+			case '--skip-password-requirement':
+				args.skipPasswordRequirement = true;
+				break;
+			case '--clerk-secret-key':
+				args.clerkSecretKey = nextArg;
+				i++;
+				break;
+			case '--firebase-signer-key':
+				args.firebaseSignerKey = nextArg;
+				i++;
+				break;
+			case '--firebase-salt-separator':
+				args.firebaseSaltSeparator = nextArg;
+				i++;
+				break;
+			case '--firebase-rounds':
+				args.firebaseRounds = parseInt(nextArg, 10);
+				i++;
+				break;
+			case '--firebase-mem-cost':
+				args.firebaseMemCost = parseInt(nextArg, 10);
+				i++;
+				break;
+		}
+	}
+
+	return args;
+}
+
+/**
+ * Validates CLI arguments for non-interactive mode
+ *
+ * @param args - Parsed CLI arguments
+ * @returns Error message if validation fails, null if valid
+ */
+function validateNonInteractiveArgs(args: CLIArgs): string | null {
+	if (!args.platform) {
+		return 'Missing required argument: --platform (-p)';
+	}
+
+	const validPlatforms = transformers.map((t) => t.key);
+	if (!validPlatforms.includes(args.platform)) {
+		return `Invalid platform: ${args.platform}. Valid options: ${validPlatforms.join(', ')}`;
+	}
+
+	if (!args.file) {
+		return 'Missing required argument: --file (-f)';
+	}
+
+	if (!checkIfFileExists(args.file)) {
+		return `File not found: ${args.file}`;
+	}
+
+	const fileType = getFileType(args.file);
+	if (fileType !== 'text/csv' && fileType !== 'application/json') {
+		return 'Invalid file type. Please supply a valid JSON or CSV file';
+	}
+
+	// Firebase-specific validation
+	if (args.platform === 'firebase') {
+		const hasAnyFirebaseArg =
+			args.firebaseSignerKey ||
+			args.firebaseSaltSeparator ||
+			args.firebaseRounds ||
+			args.firebaseMemCost;
+
+		const hasAllFirebaseArgs =
+			args.firebaseSignerKey &&
+			args.firebaseSaltSeparator &&
+			args.firebaseRounds &&
+			args.firebaseMemCost;
+
+		// Check if config is already set in transformer or settings
+		if (!isFirebaseHashConfigComplete() && !hasAllFirebaseArgs) {
+			const savedSettings = loadSettings();
+			const savedConfig = savedSettings.firebaseHashConfig;
+			const hasSettingsConfig =
+				savedConfig &&
+				savedConfig.base64_signer_key &&
+				savedConfig.base64_salt_separator &&
+				savedConfig.rounds &&
+				savedConfig.mem_cost;
+
+			if (!hasSettingsConfig) {
+				if (hasAnyFirebaseArg) {
+					return 'Firebase migration requires all hash config options: --firebase-signer-key, --firebase-salt-separator, --firebase-rounds, --firebase-mem-cost';
+				}
+				return 'Firebase migration requires hash configuration. Provide all --firebase-* options or run in interactive mode to configure.';
+			}
+		}
+	}
+
+	return null;
+}
+
+/**
+ * Runs the migration in non-interactive mode using CLI arguments
+ *
+ * @param args - Parsed CLI arguments
+ * @returns Configuration object for the migration
+ */
+/* eslint-disable no-console */
+export async function runNonInteractive(args: CLIArgs): Promise<{
+	key: string;
+	file: string;
+	resumeAfter: string;
+	instance: 'dev' | 'prod';
+	begin: boolean;
+	skipPasswordRequirement: boolean;
+}> {
+	// Handle help flag
+	if (args.help) {
+		showHelp();
+		process.exit(0);
+	}
+
+	// Ensure CLERK_SECRET_KEY is set (via CLI flag, env var, or .env file)
+	const hasKey = await ensureClerkSecretKey(true, args.clerkSecretKey);
+	if (!hasKey) {
+		process.exit(1);
+	}
+
+	// Validate arguments
+	const validationError = validateNonInteractiveArgs(args);
+	if (validationError) {
+		console.error(`Error: ${validationError}`);
+		console.error('Run "bun migrate --help" for usage information.');
+		process.exit(1);
+	}
+
+	// These are guaranteed to be defined after validation
+	const platform = args.platform as string;
+	const file = args.file as string;
+
+	console.log(`\nClerk User Migration Utility (non-interactive mode)\n`);
+	console.log(`Platform: ${platform}`);
+	console.log(`File: ${file}`);
+	if (args.resumeAfter) {
+		console.log(`Resume after: ${args.resumeAfter}`);
+	}
+
+	// Handle Firebase hash configuration
+	if (platform === 'firebase') {
+		if (
+			args.firebaseSignerKey &&
+			args.firebaseSaltSeparator &&
+			args.firebaseRounds &&
+			args.firebaseMemCost
+		) {
+			// Use CLI-provided config
+			const firebaseConfig: FirebaseHashConfig = {
+				base64_signer_key: args.firebaseSignerKey,
+				base64_salt_separator: args.firebaseSaltSeparator,
+				rounds: args.firebaseRounds,
+				mem_cost: args.firebaseMemCost,
+			};
+			setFirebaseHashConfig(firebaseConfig);
+			console.log('Firebase hash configuration: provided via CLI');
+		} else if (!isFirebaseHashConfigComplete()) {
+			// Use saved settings
+			const savedSettings = loadSettings();
+			if (savedSettings.firebaseHashConfig) {
+				setFirebaseHashConfig(savedSettings.firebaseHashConfig);
+				console.log('Firebase hash configuration: loaded from .settings');
+			}
+		} else {
+			console.log('Firebase hash configuration: found in transformer');
+		}
+	}
+
+	// Load and analyze users
+	console.log('\nAnalyzing import file...');
+
+	const [users, error] = await tryCatch(loadRawUsers(file, platform));
+
+	if (error) {
+		console.error(
+			'Failed to analyze import file. Please check the file format.'
+		);
+		process.exit(1);
+	}
+
+	// Filter users if resuming
+	let filteredUsers = users;
+	if (args.resumeAfter) {
+		const resumeIndex = users.findIndex((u) => u.userId === args.resumeAfter);
+		if (resumeIndex === -1) {
+			console.error(
+				`Could not find user ID "${args.resumeAfter}" in the import file.`
+			);
+			process.exit(1);
+		}
+		filteredUsers = users.slice(resumeIndex + 1);
+		console.log(
+			`Resuming after user ID: ${args.resumeAfter} (skipping ${resumeIndex + 1} users)`
+		);
+	}
+
+	const userCount = filteredUsers.length;
+	console.log(`Found ${userCount} users to migrate`);
+
+	// Check instance type
+	const instanceType = detectInstanceType();
+	console.log(`Instance type: ${instanceType}`);
+
+	if (instanceType === 'dev' && userCount > DEV_USER_LIMIT) {
+		console.error(
+			`Cannot import ${userCount} users to a development instance. ` +
+				`Development instances are limited to ${DEV_USER_LIMIT} users.`
+		);
+		process.exit(1);
+	}
+
+	// Analyze fields for validation feedback
+	const analysis = analyzeFields(filteredUsers);
+
+	if (analysis.identifiers.hasAnyIdentifier === 0) {
+		console.error(
+			'No users can be imported. All users are missing an identifier (verified email, verified phone, or username).'
+		);
+		process.exit(1);
+	}
+
+	// Check for users without identifiers
+	const usersWithoutIdentifier =
+		analysis.totalUsers - analysis.identifiers.hasAnyIdentifier;
+	if (usersWithoutIdentifier > 0) {
+		console.warn(
+			`Warning: ${usersWithoutIdentifier} user(s) will be skipped (missing identifier)`
+		);
+	}
+
+	// Determine skipPasswordRequirement
+	let skipPasswordRequirement = args.skipPasswordRequirement;
+	const usersWithPasswords = analysis.fieldCounts.password || 0;
+	if (usersWithPasswords === 0) {
+		skipPasswordRequirement = true;
+	} else if (usersWithPasswords < userCount && !args.skipPasswordRequirement) {
+		console.log(
+			`Note: ${userCount - usersWithPasswords} user(s) don't have passwords. ` +
+				`Use --skip-password-requirement to migrate them anyway.`
+		);
+	}
+
+	console.log('\nStarting migration...\n');
+
+	// Save settings for future runs
+	saveSettings({
+		key: platform,
+		file,
+	});
+
+	return {
+		key: platform,
+		file,
+		resumeAfter: args.resumeAfter || '',
+		instance: instanceType,
+		begin: true,
+		skipPasswordRequirement,
+	};
+}
+/* eslint-enable no-console */
 
 const DASHBOARD_CONFIGURATION = color.bold(
 	color.whiteBright('Dashboard Configuration:\n')
@@ -712,12 +1242,26 @@ export async function handleFirebaseHashConfig(
  *
  * Saves settings for future runs and returns all configuration options.
  *
+ * @param cliArgs - Optional CLI arguments to pre-populate values
  * @returns Configuration object with transformer key, file path, resumeAfter, instance type,
  *          and skipPasswordRequirement flag
  * @throws Exits the process if migration is cancelled or validation fails
  */
-export async function runCLI() {
+export async function runCLI(cliArgs?: CLIArgs) {
+	// Handle help flag in interactive mode
+	if (cliArgs?.help) {
+		showHelp();
+		process.exit(0);
+	}
+
 	p.intro(`${color.bgCyan(color.black('Clerk User Migration Utility'))}`);
+
+	// Ensure CLERK_SECRET_KEY is set (via CLI flag, env var, or prompts user if missing)
+	const hasKey = await ensureClerkSecretKey(false, cliArgs?.clerkSecretKey);
+	if (!hasKey) {
+		p.cancel('Could not validate CLERK_SECRET_KEY.');
+		process.exit(1);
+	}
 
 	// Load previous settings to use as defaults
 	const savedSettings = loadSettings();
@@ -734,20 +1278,26 @@ export async function runCLI() {
 	// Map transformers to include 'value' property for p.select (uses key as value)
 	const selectOptions = transformers.map((t) => ({ ...t, value: t.key }));
 
+	// Use CLI args as initial values if provided
+	const initialPlatform =
+		cliArgs?.platform || savedSettings.key || transformers[0].key;
+	const initialFile = cliArgs?.file || savedSettings.file || 'users.json';
+	const initialResumeAfter = cliArgs?.resumeAfter || '';
+
 	const initialArgs = await p.group(
 		{
 			key: () =>
 				p.select({
 					message: 'What platform are you migrating your users from?',
-					initialValue: savedSettings.key || transformers[0].key,
+					initialValue: initialPlatform,
 					maxItems: 1,
 					options: selectOptions,
 				}),
 			file: () =>
 				p.text({
 					message: 'Specify the file to use for importing your users',
-					initialValue: savedSettings.file || 'users.json',
-					placeholder: savedSettings.file || 'users.json',
+					initialValue: initialFile,
+					placeholder: initialFile,
 					validate: (value) => {
 						if (!value) {
 							return 'Please provide a file path';
@@ -764,7 +1314,7 @@ export async function runCLI() {
 			resumeAfter: () =>
 				p.text({
 					message: 'Resume after user ID (leave empty to start from beginning)',
-					initialValue: '',
+					initialValue: initialResumeAfter,
 					defaultValue: '',
 					placeholder: 'user_xxx or leave empty',
 				}),

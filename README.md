@@ -47,11 +47,32 @@ Some sample users have passwords. The password is `Kk4aPMeiaRpAs2OeX1NE`.
 
 ### Secret Key
 
-Create a `.env` file in the root of the folder and add your `CLERK_SECRET_KEY` to it. You can find your secret key in the [Clerk dashboard](https://dashboard.clerk.dev/).
+You have several options for providing your Clerk secret key:
+
+**Option 1: Create a `.env` file** (recommended for repeated use)
 
 ```bash
 CLERK_SECRET_KEY=your-secret-key
 ```
+
+**Option 2: Pass via command line** (useful for automation/AI agents)
+
+```bash
+bun migrate --clerk-secret-key sk_test_xxx
+```
+
+**Option 3: Set environment variable**
+
+```bash
+export CLERK_SECRET_KEY=sk_test_xxx
+bun migrate
+```
+
+**Option 4: Enter interactively**
+
+If no key is found, the interactive CLI will prompt you to enter one and optionally save it to a `.env` file.
+
+You can find your secret key in the [Clerk Dashboard](https://dashboard.clerk.dev/) under **API Keys**.
 
 ### Run the script
 
@@ -68,6 +89,84 @@ The script can be run on the same data multiple times. Clerk automatically uses 
 ```bash
 bun migrate --resume-after="user_xxx"
 ```
+
+## CLI Reference
+
+The migration script supports both interactive and non-interactive modes.
+
+### Usage
+
+```bash
+bun migrate [OPTIONS]
+```
+
+### Options
+
+| Option                        | Description                                                |
+| ----------------------------- | ---------------------------------------------------------- |
+| `-p, --platform <platform>`   | Source platform (clerk, auth0, authjs, firebase, supabase) |
+| `-f, --file <path>`           | Path to the user data file (JSON or CSV)                   |
+| `-r, --resume-after <userId>` | Resume migration after this user ID                        |
+| `--skip-password-requirement` | Migrate users even if they don't have passwords            |
+| `-y, --yes`                   | Non-interactive mode (skip all confirmations)              |
+| `-h, --help`                  | Show help message                                          |
+
+### Authentication Options
+
+| Option                     | Description                                 |
+| -------------------------- | ------------------------------------------- |
+| `--clerk-secret-key <key>` | Clerk secret key (alternative to .env file) |
+
+### Firebase Options
+
+Required when `--platform` is `firebase`:
+
+| Option                            | Description                       |
+| --------------------------------- | --------------------------------- |
+| `--firebase-signer-key <key>`     | Firebase hash signer key (base64) |
+| `--firebase-salt-separator <sep>` | Firebase salt separator (base64)  |
+| `--firebase-rounds <num>`         | Firebase hash rounds              |
+| `--firebase-mem-cost <num>`       | Firebase memory cost              |
+
+### Examples
+
+```bash
+# Interactive mode (default)
+bun migrate
+
+# Non-interactive mode with required options
+bun migrate -y -p auth0 -f users.json
+
+# Non-interactive with secret key (no .env needed)
+bun migrate -y -p clerk -f users.json --clerk-secret-key sk_test_xxx
+
+# Resume a failed migration
+bun migrate -y -p clerk -f users.json -r user_abc123
+
+# Firebase migration with hash config
+bun migrate -y -p firebase -f users.csv \
+  --firebase-signer-key "abc123..." \
+  --firebase-salt-separator "Bw==" \
+  --firebase-rounds 8 \
+  --firebase-mem-cost 14
+```
+
+### Non-Interactive Mode
+
+For automation and AI agent usage, use the `-y` flag with required options:
+
+```bash
+bun migrate -y \
+  --platform clerk \
+  --file users.json \
+  --clerk-secret-key sk_test_xxx
+```
+
+**Required in non-interactive mode:**
+
+- `--platform` (or `-p`)
+- `--file` (or `-f`)
+- `CLERK_SECRET_KEY` (via `--clerk-secret-key`, environment variable, or `.env` file)
 
 ## Migrating OAuth Connections
 
