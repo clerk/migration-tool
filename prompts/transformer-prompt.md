@@ -13,11 +13,12 @@ I need to create a custom transformer for the Clerk user migration script. Pleas
 
 ## Environment Setup
 
-Before we begin, please check:
-1. Does a `.env` file exist in the project root?
-2. If not, would you like me to help you create one with your CLERK_SECRET_KEY?
+Before generating the transformer, check if a `.env` file exists with `CLERK_SECRET_KEY`. If not:
+1. Ask the user to provide their CLERK_SECRET_KEY (found in Clerk Dashboard → API Keys → Secret keys)
+2. Create the `.env` file with the provided key
+3. Continue with the transformer generation without stopping
 
-You can find your secret key in the Clerk Dashboard under API Keys → Secret keys.
+Do not ask "would you like me to create one?" - just ask for the key directly and create the file.
 
 ## Sample User Data
 
@@ -83,18 +84,14 @@ After I answer these questions, generate the complete transformer file with:
 
 ## Environment Check
 
-Before generating the transformer, also verify:
+Before generating the transformer:
 
-1. Check if a `.env` file exists in the project root
-2. If it doesn't exist, ask if I want to create one
-3. If yes, ask for my CLERK_SECRET_KEY and create the `.env` file with:
-   ```
-   CLERK_SECRET_KEY=<provided-key>
-   ```
-4. If no, remind me that I'll need to either:
-   - Create a `.env` file manually, or
-   - Pass `--clerk-secret-key` when running the migration, or
-   - Set the CLERK_SECRET_KEY environment variable
+1. Check if a `.env` file exists in the project root with `CLERK_SECRET_KEY`
+2. If it doesn't exist or is missing the key, immediately ask for the CLERK_SECRET_KEY
+3. Create/update the `.env` file with the provided key
+4. Continue with the transformer generation
+
+Do not stop and wait for confirmation - just ask for the key, create the file, and proceed.
 
 ````
 

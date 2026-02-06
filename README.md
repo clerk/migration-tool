@@ -17,7 +17,8 @@ This repository contains a script that takes a JSON file as input, containing a 
 
 - [Schema Fields Reference](docs/schema-fields.md)
 - [Creating Custom Transformers](docs/creating-transformers.md)
-- [AI Transformer Generation Prompt](docs/transformer-prompt.md)
+- [AI Migration Prompt](prompts/migration-prompt.md)
+- [AI Transformer Generation Prompt](prompts/transformer-prompt.md)
 
 ## Getting Started
 
@@ -102,14 +103,14 @@ bun migrate [OPTIONS]
 
 ### Options
 
-| Option                        | Description                                                |
-| ----------------------------- | ---------------------------------------------------------- |
-| `-p, --platform <platform>`   | Source platform (clerk, auth0, authjs, firebase, supabase) |
-| `-f, --file <path>`           | Path to the user data file (JSON or CSV)                   |
-| `-r, --resume-after <userId>` | Resume migration after this user ID                        |
-| `--skip-password-requirement` | Migrate users even if they don't have passwords            |
-| `-y, --yes`                   | Non-interactive mode (skip all confirmations)              |
-| `-h, --help`                  | Show help message                                          |
+| Option                            | Description                                                   |
+| --------------------------------- | ------------------------------------------------------------- |
+| `-t, --transformer <transformer>` | Source transformer (clerk, auth0, authjs, firebase, supabase) |
+| `-f, --file <path>`               | Path to the user data file (JSON or CSV)                      |
+| `-r, --resume-after <userId>`     | Resume migration after this user ID                           |
+| `--skip-password-requirement`     | Migrate users even if they don't have passwords               |
+| `-y, --yes`                       | Non-interactive mode (skip all confirmations)                 |
+| `-h, --help`                      | Show help message                                             |
 
 ### Authentication Options
 
@@ -119,7 +120,7 @@ bun migrate [OPTIONS]
 
 ### Firebase Options
 
-Required when `--platform` is `firebase`:
+Required when `--transformer` is `firebase`:
 
 | Option                            | Description                       |
 | --------------------------------- | --------------------------------- |
@@ -135,16 +136,16 @@ Required when `--platform` is `firebase`:
 bun migrate
 
 # Non-interactive mode with required options
-bun migrate -y -p auth0 -f users.json
+bun migrate -y -t auth0 -f users.json
 
 # Non-interactive with secret key (no .env needed)
-bun migrate -y -p clerk -f users.json --clerk-secret-key sk_test_xxx
+bun migrate -y -t clerk -f users.json --clerk-secret-key sk_test_xxx
 
 # Resume a failed migration
-bun migrate -y -p clerk -f users.json -r user_abc123
+bun migrate -y -t clerk -f users.json -r user_abc123
 
 # Firebase migration with hash config
-bun migrate -y -p firebase -f users.csv \
+bun migrate -y -t firebase -f users.csv \
   --firebase-signer-key "abc123..." \
   --firebase-salt-separator "Bw==" \
   --firebase-rounds 8 \
@@ -157,14 +158,14 @@ For automation and AI agent usage, use the `-y` flag with required options:
 
 ```bash
 bun migrate -y \
-  --platform clerk \
+  --transformer clerk \
   --file users.json \
   --clerk-secret-key sk_test_xxx
 ```
 
 **Required in non-interactive mode:**
 
-- `--platform` (or `-p`)
+- `--transformer` (or `-t`)
 - `--file` (or `-f`)
 - `CLERK_SECRET_KEY` (via `--clerk-secret-key`, environment variable, or `.env` file)
 

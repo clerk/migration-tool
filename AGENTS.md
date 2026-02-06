@@ -216,4 +216,5 @@ The script auto-detects instance type from `CLERK_SECRET_KEY`:
 
 - [docs/schema-fields.md](docs/schema-fields.md) - Complete field reference
 - [docs/creating-transformers.md](docs/creating-transformers.md) - Transformer development guide
-- [docs/transformer-prompt.md](docs/transformer-prompt.md) - AI prompt for generating transformers
+- [prompts/migration-prompt.md](prompts/migration-prompt.md) - AI prompt for running migrations
+- [prompts/transformer-prompt.md](prompts/transformer-prompt.md) - AI prompt for generating transformers

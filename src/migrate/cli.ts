@@ -33,7 +33,7 @@ import type {
  * Parsed command-line arguments for the migration script
  */
 export type CLIArgs = {
-	platform?: string;
+	transformer?: string;
 	file?: string;
 	resumeAfter?: string;
 	skipPasswordRequirement: boolean;
@@ -66,18 +66,18 @@ USAGE:
   bun migrate [OPTIONS]
 
 OPTIONS:
-  -p, --platform <platform>     Source platform (${validPlatforms})
-  -f, --file <path>             Path to the user data file (JSON or CSV)
-  -r, --resume-after <userId>   Resume migration after this user ID
-  --skip-password-requirement   Migrate users even if they don't have passwords
-  -y, --yes                     Non-interactive mode (skip all confirmations)
-  -h, --help                    Show this help message
+  -t, --transformer <transformer>   Source transformer (${validPlatforms})
+  -f, --file <path>                 Path to the user data file (JSON or CSV)
+  -r, --resume-after <userId>       Resume migration after this user ID
+  --skip-password-requirement       Migrate users even if they don't have passwords
+  -y, --yes                         Non-interactive mode (skip all confirmations)
+  -h, --help                        Show this help message
 
 AUTHENTICATION:
   --clerk-secret-key <key>      Clerk secret key (alternative to .env file)
                                 Can also be set via CLERK_SECRET_KEY env var
 
-FIREBASE OPTIONS (required when platform is 'firebase'):
+FIREBASE OPTIONS (required when transformer is 'firebase'):
   --firebase-signer-key <key>       Firebase hash signer key (base64)
   --firebase-salt-separator <sep>   Firebase salt separator (base64)
   --firebase-rounds <num>           Firebase hash rounds
@@ -88,16 +88,16 @@ EXAMPLES:
   bun migrate
 
   # Non-interactive mode with all options
-  bun migrate -y -p auth0 -f users.json
+  bun migrate -y -t auth0 -f users.json
 
   # Non-interactive with secret key (no .env needed)
-  bun migrate -y -p clerk -f users.json --clerk-secret-key sk_test_xxx
+  bun migrate -y -t clerk -f users.json --clerk-secret-key sk_test_xxx
 
   # Resume a failed migration
-  bun migrate -y -p clerk -f users.json -r user_abc123
+  bun migrate -y -t clerk -f users.json -r user_abc123
 
   # Firebase migration with hash config
-  bun migrate -y -p firebase -f users.csv \\
+  bun migrate -y -t firebase -f users.csv \\
     --firebase-signer-key "abc123..." \\
     --firebase-salt-separator "Bw==" \\
     --firebase-rounds 8 \\
@@ -109,7 +109,7 @@ ENVIRONMENT VARIABLES:
   CONCURRENCY_LIMIT     Override concurrent requests (default: ~9 prod, ~1 dev)
 
 NOTES:
-  - In non-interactive mode (-y), --platform and --file are required
+  - In non-interactive mode (-y), --transformer and --file are required
   - Firebase migrations require all four --firebase-* options
   - The script auto-detects dev/prod instance from CLERK_SECRET_KEY
 `);
@@ -280,9 +280,9 @@ export function parseArgs(argv: string[]): CLIArgs {
 			case '--yes':
 				args.nonInteractive = true;
 				break;
-			case '-p':
-			case '--platform':
-				args.platform = nextArg;
+			case '-t':
+			case '--transformer':
+				args.transformer = nextArg;
 				i++;
 				break;
 			case '-f':
@@ -331,13 +331,13 @@ export function parseArgs(argv: string[]): CLIArgs {
  * @returns Error message if validation fails, null if valid
  */
 function validateNonInteractiveArgs(args: CLIArgs): string | null {
-	if (!args.platform) {
-		return 'Missing required argument: --platform (-p)';
+	if (!args.transformer) {
+		return 'Missing required argument: --transformer (-t)';
 	}
 
-	const validPlatforms = transformers.map((t) => t.key);
-	if (!validPlatforms.includes(args.platform)) {
-		return `Invalid platform: ${args.platform}. Valid options: ${validPlatforms.join(', ')}`;
+	const validTransformers = transformers.map((t) => t.key);
+	if (!validTransformers.includes(args.transformer)) {
+		return `Invalid transformer: ${args.transformer}. Valid options: ${validTransformers.join(', ')}`;
 	}
 
 	if (!args.file) {
@@ -354,7 +354,7 @@ function validateNonInteractiveArgs(args: CLIArgs): string | null {
 	}
 
 	// Firebase-specific validation
-	if (args.platform === 'firebase') {
+	if (args.transformer === 'firebase') {
 		const hasAnyFirebaseArg =
 			args.firebaseSignerKey ||
 			args.firebaseSaltSeparator ||
@@ -426,18 +426,18 @@ export async function runNonInteractive(args: CLIArgs): Promise<{
 	}
 
 	// These are guaranteed to be defined after validation
-	const platform = args.platform as string;
+	const transformer = args.transformer as string;
 	const file = args.file as string;
 
 	console.log(`\nClerk User Migration Utility (non-interactive mode)\n`);
-	console.log(`Platform: ${platform}`);
+	console.log(`Transformer: ${transformer}`);
 	console.log(`File: ${file}`);
 	if (args.resumeAfter) {
 		console.log(`Resume after: ${args.resumeAfter}`);
 	}
 
 	// Handle Firebase hash configuration
-	if (platform === 'firebase') {
+	if (transformer === 'firebase') {
 		if (
 			args.firebaseSignerKey &&
 			args.firebaseSaltSeparator &&
@@ -468,7 +468,7 @@ export async function runNonInteractive(args: CLIArgs): Promise<{
 	// Load and analyze users
 	console.log('\nAnalyzing import file...');
 
-	const [users, error] = await tryCatch(loadRawUsers(file, platform));
+	const [users, error] = await tryCatch(loadRawUsers(file, transformer));
 
 	if (error) {
 		console.error(
@@ -543,12 +543,12 @@ export async function runNonInteractive(args: CLIArgs): Promise<{
 
 	// Save settings for future runs
 	saveSettings({
-		key: platform,
+		key: transformer,
 		file,
 	});
 
 	return {
-		key: platform,
+		key: transformer,
 		file,
 		resumeAfter: args.resumeAfter || '',
 		instance: instanceType,
@@ -1279,8 +1279,8 @@ export async function runCLI(cliArgs?: CLIArgs) {
 	const selectOptions = transformers.map((t) => ({ ...t, value: t.key }));
 
 	// Use CLI args as initial values if provided
-	const initialPlatform =
-		cliArgs?.platform || savedSettings.key || transformers[0].key;
+	const initialTransformer =
+		cliArgs?.transformer || savedSettings.key || transformers[0].key;
 	const initialFile = cliArgs?.file || savedSettings.file || 'users.json';
 	const initialResumeAfter = cliArgs?.resumeAfter || '';
 
@@ -1288,8 +1288,8 @@ export async function runCLI(cliArgs?: CLIArgs) {
 		{
 			key: () =>
 				p.select({
-					message: 'What platform are you migrating your users from?',
-					initialValue: initialPlatform,
+					message: 'Which transformer should be used for your user data?',
+					initialValue: initialTransformer,
 					maxItems: 1,
 					options: selectOptions,
 				}),
