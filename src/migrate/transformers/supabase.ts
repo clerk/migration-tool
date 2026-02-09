@@ -81,16 +81,29 @@ const supabaseTransformer = {
 		// (e.g., when using the Supabase admin API or a basic SQL export without COALESCE)
 		if (!user.firstName && user.publicMetadata) {
 			const meta = user.publicMetadata as Record<string, unknown>;
-			const displayName = (meta.display_name ??
-				meta.first_name ??
-				meta.name) as string | undefined;
+			let displayName = (meta.display_name ?? meta.first_name ?? meta.name) as
+				| string
+				| undefined;
 			if (typeof displayName === 'string' && displayName.trim()) {
-				const parts = displayName.trim().split(/\s+/);
-				user.firstName = parts[0];
-				if (parts.length > 1 && !user.lastName) {
-					user.lastName = parts.slice(1).join(' ');
+				// Strip Discord-style discriminators (e.g., "username#0", "name#1234")
+				displayName = displayName.replace(/#\d+$/, '').trim();
+				if (displayName) {
+					const parts = displayName.split(/\s+/);
+					user.firstName = parts[0];
+					if (parts.length > 1 && !user.lastName) {
+						user.lastName = parts.slice(1).join(' ');
+					}
 				}
 			}
+		}
+
+		// Strip Discord-style discriminators from names (e.g., "username#0" → "username")
+		// Discord sets display_name as "name#0" which gets misinterpreted as a URL
+		if (typeof user.firstName === 'string') {
+			user.firstName = user.firstName.replace(/#\d+$/, '').trim() || undefined;
+		}
+		if (typeof user.lastName === 'string') {
+			user.lastName = user.lastName.replace(/#\d+$/, '').trim() || undefined;
 		}
 
 		// Clean up the emailConfirmedAt and phoneConfirmedAt fields as they aren't

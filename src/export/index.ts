@@ -36,6 +36,18 @@ async function main() {
 
 	// Prompt for DB URL if not provided
 	if (!dbUrl) {
+		p.note(
+			`Find this in the Supabase Dashboard by clicking the ${color.bold('Connect')} button.\n\n` +
+				`${color.bold('Direct connection')} (requires IPv6):\n` +
+				`  ${color.dim('postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres')}\n\n` +
+				`${color.bold('Pooler connection')} (works on IPv4 — use this if direct fails):\n` +
+				`  ${color.dim('postgres://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres')}\n\n` +
+				color.dim(
+					'Alternatively, run the export SQL in the Supabase SQL Editor and save the result as JSON.'
+				),
+			'Connection String'
+		);
+
 		const input = await p.text({
 			message: 'Enter your Supabase Postgres connection string',
 			placeholder:

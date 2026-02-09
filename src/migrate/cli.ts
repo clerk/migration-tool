@@ -29,10 +29,6 @@ type Settings = {
 
 const DEV_USER_LIMIT = 500;
 
-const DASHBOARD_CONFIGURATION = color.bold(
-	color.whiteBright('Dashboard Configuration:\n')
-);
-
 /**
  * Detects whether the Clerk instance is development or production based on the secret key
  *
@@ -285,174 +281,6 @@ export function analyzeFields(users: Record<string, unknown>[]): FieldAnalysis {
 	return { presentOnAll, presentOnSome, identifiers, totalUsers, fieldCounts };
 }
 
-/**
- * Formats a count statistic into a human-readable string
- *
- * @param count - The number of users who have the field
- * @param total - The total number of users
- * @param label - The label for the field
- * @returns A formatted string like "All users have...", "No users have...", or "X of Y users have..."
- */
-export function formatCount(
-	count: number,
-	total: number,
-	label: string
-): string {
-	if (count === total) {
-		return `All users have ${label}`;
-	} else if (count === 0) {
-		return `No users have ${label}`;
-	}
-	return `${count} of ${total} users have ${label}`;
-}
-
-/**
- * Displays identifier analysis and Dashboard configuration guidance
- *
- * Shows:
- * - Count of users with each identifier type (verified emails, verified phones, usernames)
- * - Count of users with unverified identifiers (if any)
- * - Whether all users have at least one valid identifier
- * - Dashboard configuration recommendations (required vs optional identifiers)
- *
- * Uses color coding: green for complete coverage, yellow for partial, red for missing.
- *
- * @param analysis - The field analysis results
- */
-export function displayIdentifierAnalysis(analysis: FieldAnalysis): void {
-	const { identifiers, totalUsers } = analysis;
-
-	let identifierMessage = '';
-
-	// Show counts for each identifier type
-	identifierMessage += color.bold(color.whiteBright('Identifier Analysis:\n'));
-
-	// Helper to get the correct icon based on coverage
-	const getIcon = (count: number, total: number): string => {
-		if (count === total) return color.bold(color.greenBright('●'));
-		if (count > 0) return color.bold(color.yellowBright('○'));
-		return color.red('○');
-	};
-
-	identifierMessage += `  ${getIcon(identifiers.verifiedEmails, totalUsers)} ${color.dim(formatCount(identifiers.verifiedEmails, totalUsers, 'verified emails'))}\n`;
-	identifierMessage += `  ${getIcon(identifiers.verifiedPhones, totalUsers)} ${color.dim(formatCount(identifiers.verifiedPhones, totalUsers, 'verified phone numbers'))}\n`;
-	identifierMessage += `  ${getIcon(identifiers.username, totalUsers)} ${color.dim(formatCount(identifiers.username, totalUsers, 'a username'))}\n`;
-
-	// Show unverified counts if present
-	if (identifiers.unverifiedEmails > 0) {
-		identifierMessage += `  ${getIcon(identifiers.unverifiedEmails, totalUsers)} ${color.dim(formatCount(identifiers.unverifiedEmails, totalUsers, 'unverified emails'))}\n`;
-	}
-	if (identifiers.unverifiedPhones > 0) {
-		identifierMessage += `  ${getIcon(identifiers.unverifiedPhones, totalUsers)} ${color.dim(formatCount(identifiers.unverifiedPhones, totalUsers, 'unverified phone numbers'))}\n`;
-	}
-
-	// Check if all users have at least one identifier
-	identifierMessage += '\n';
-	if (identifiers.hasAnyIdentifier === totalUsers) {
-		identifierMessage += color.green(
-			'All users have at least one identifier (verified email, verified phone, or username).\n'
-		);
-	} else {
-		const missing = totalUsers - identifiers.hasAnyIdentifier;
-		identifierMessage += color.red(
-			`${missing} user${missing === 1 ? ' does' : 's do'} not have a verified email, verified phone, or username.\n`
-		);
-		identifierMessage += color.red('These users cannot be imported.\n');
-	}
-
-	// Dashboard configuration advice
-	identifierMessage += '\n';
-	identifierMessage += DASHBOARD_CONFIGURATION;
-
-	const requiredIdentifiers: string[] = [];
-	const optionalIdentifiers: string[] = [];
-
-	// Only consider users that will actually be imported (have at least one identifier)
-	const importableUsers = identifiers.hasAnyIdentifier;
-
-	if (identifiers.verifiedEmails === importableUsers) {
-		requiredIdentifiers.push('Email');
-	} else if (identifiers.verifiedEmails > 0) {
-		optionalIdentifiers.push('Email');
-	}
-
-	if (identifiers.verifiedPhones === importableUsers) {
-		requiredIdentifiers.push('Phone');
-	} else if (identifiers.verifiedPhones > 0) {
-		optionalIdentifiers.push('Phone');
-	}
-
-	if (identifiers.username === importableUsers) {
-		requiredIdentifiers.push('Username');
-	} else if (identifiers.username > 0) {
-		optionalIdentifiers.push('Username');
-	}
-
-	if (requiredIdentifiers.length > 0) {
-		identifierMessage += `  ${color.green('●')} ${color.bold(color.whiteBright(requiredIdentifiers.join(', ')))}: ${color.dim('Enable and optionally require in the Dashboard')}\n`;
-	}
-	if (optionalIdentifiers.length > 0) {
-		identifierMessage += `  ${color.yellow('○')} ${color.bold(color.whiteBright(optionalIdentifiers.join(', ')))}: Enable in the Dashboard but do not require\n`;
-	}
-
-	p.note(identifierMessage.trim(), 'Identifiers');
-}
-
-/**
- * Displays password analysis and prompts for migration preference
- *
- * Shows how many users have passwords and provides Dashboard configuration guidance.
- * If some users lack passwords, prompts whether to migrate those users anyway.
- * If no users have passwords, returns immediately without displaying anything.
- *
- * @param analysis - The field analysis results
- * @returns true if users without passwords should be migrated (skipPasswordRequirement),
- *          false if all users have passwords,
- *          null if the user cancelled
- */
-export async function displayPasswordAnalysis(
-	analysis: FieldAnalysis
-): Promise<boolean | null> {
-	const { totalUsers, fieldCounts } = analysis;
-	const usersWithPasswords = fieldCounts.password || 0;
-
-	// If no users have passwords, show message and skip password section
-	if (usersWithPasswords === 0) {
-		p.note(`${color.dim('○')} No users have passwords`, 'Password');
-		return true;
-	}
-
-	let passwordMessage = '';
-
-	if (usersWithPasswords === totalUsers) {
-		passwordMessage += `${color.green('●')} All users have passwords\n`;
-	} else {
-		passwordMessage += `${color.yellow('○')} ${usersWithPasswords} of ${totalUsers} users have passwords\n`;
-	}
-
-	passwordMessage += '\n';
-	passwordMessage += DASHBOARD_CONFIGURATION;
-	passwordMessage += `  ${color.green('●')} ${color.bold(color.whiteBright('Password'))}: Enable in Dashboard\n`;
-
-	p.note(passwordMessage.trim(), 'Password');
-
-	// Ask if user wants to migrate users without passwords
-	if (usersWithPasswords < totalUsers) {
-		const migrateWithoutPassword = await p.confirm({
-			message: "Do you want to migrate users who don't have a password?",
-			initialValue: true,
-		});
-
-		if (p.isCancel(migrateWithoutPassword)) {
-			return null; // User cancelled
-		}
-
-		return migrateWithoutPassword;
-	}
-
-	return false; // All users have passwords, no need for skipPasswordRequirement
-}
-
 // Maps Supabase provider keys to human-readable labels
 const OAUTH_PROVIDER_LABELS: Record<string, string> = {
 	google: 'Google',
@@ -524,145 +352,250 @@ export async function fetchSupabaseProviders(
 	}
 }
 
-/**
- * Displays which OAuth providers are enabled on the Supabase project and warns
- * that these need to be configured as social connections in Clerk.
- *
- * Users who signed up via an OAuth provider that isn't enabled in Clerk won't
- * be able to sign back in after their bridged session expires.
- *
- * @param enabledProviders - List of enabled OAuth provider keys from Supabase
- * @returns true if OAuth providers were found and confirmation is needed
- */
-export function displayProviderAnalysis(enabledProviders: string[]): boolean {
-	if (enabledProviders.length === 0) {
-		return false;
-	}
+// --- Clerk Instance Configuration ---
 
-	let message = '';
-
-	message += color.bold(
-		color.whiteBright('Enabled OAuth Providers in Supabase:\n\n')
-	);
-
-	for (const provider of enabledProviders) {
-		const label = OAUTH_PROVIDER_LABELS[provider] || provider;
-		message += `  ${color.yellow('○')} ${color.bold(color.whiteBright(label))}\n`;
-	}
-
-	message += '\n';
-	message += DASHBOARD_CONFIGURATION;
-	message += `  ${color.yellow('⚠')} ${color.whiteBright('Enable these as Social connections in Clerk Dashboard')}\n`;
-	message += color.dim(
-		`    Users who signed up via OAuth won't be able to sign back in\n`
-	);
-	message += color.dim(
-		`    after their session expires unless the provider is enabled.`
-	);
-
-	p.note(message.trim(), 'Social Connections');
-
-	return true;
+interface ClerkConfig {
+	attributes: Record<string, { enabled: boolean; required: boolean }>;
+	social: Record<string, { enabled: boolean }>;
 }
 
 /**
- * Displays user model analysis (first/last name) and Dashboard configuration guidance
+ * Decodes a Clerk publishable key to extract the frontend API hostname.
  *
- * Shows how many users have first and last names and provides recommendations
- * for Dashboard configuration (required vs optional vs disabled).
+ * Format: pk_test_<base64(hostname$)> or pk_live_<base64(hostname$)>
+ * The base64 payload decodes to a hostname ending with '$'.
  *
- * @param analysis - The field analysis results
- * @returns true if users have name data and confirmation is needed, false otherwise
+ * @param key - The Clerk publishable key
+ * @returns The frontend API hostname, or null if decoding fails
  */
-export const displayUserModelAnalysis = (analysis: FieldAnalysis): boolean => {
-	const { totalUsers, fieldCounts } = analysis;
-	const usersWithFirstName = fieldCounts.firstName || 0;
-	const usersWithLastName = fieldCounts.lastName || 0;
-
-	// Count users who have BOTH first and last name
-	const usersWithBothNames = Math.min(usersWithFirstName, usersWithLastName);
-	const someUsersHaveNames = usersWithFirstName > 0 || usersWithLastName > 0;
-	const noUsersHaveNames = usersWithFirstName === 0 && usersWithLastName === 0;
-
-	let nameMessage = '';
-
-	// Show combined first and last name stats
-	if (usersWithBothNames === totalUsers) {
-		nameMessage += `${color.green('●')} All users have first and last names\n`;
-	} else if (someUsersHaveNames && !noUsersHaveNames) {
-		nameMessage += `${color.yellow('○')} Some users have first and last names\n`;
-	} else {
-		nameMessage += `${color.dim('○')} No users have first and last names\n`;
+function decodePublishableKey(key: string): string | null {
+	if (!key.startsWith('pk_test_') && !key.startsWith('pk_live_')) {
+		return null;
 	}
-
-	nameMessage += '\n';
-	nameMessage += DASHBOARD_CONFIGURATION;
-
-	if (usersWithBothNames === totalUsers) {
-		nameMessage += `  ${color.green('●')} ${color.bold(color.whiteBright('First and last name'))}: Must be enabled in the Dashboard and could be required\n`;
-	} else if (someUsersHaveNames) {
-		nameMessage += `  ${color.yellow('○')} ${color.bold(color.whiteBright('First and last name'))}: Must be enabled in the Dashboard but not required\n`;
-	} else {
-		nameMessage += `  ${color.dim('○')} ${color.bold(color.whiteBright('First and last name'))}: Could be enabled or disabled in the Dashboard but cannot be required\n`;
+	try {
+		const base64Part = key.split('_')[2];
+		const decoded = Buffer.from(base64Part, 'base64').toString();
+		if (!decoded.endsWith('$') || !decoded.includes('.')) {
+			return null;
+		}
+		return decoded.slice(0, -1);
+	} catch {
+		return null;
 	}
-
-	p.note(nameMessage.trim(), 'User Model');
-
-	// Return true if confirmation is needed (when users have name data)
-	return someUsersHaveNames;
-};
+}
 
 /**
- * Displays analysis of other fields (excluding identifiers, password, and names)
+ * Fetches the Clerk instance configuration via the Frontend API.
  *
- * Shows fields like TOTP Secret that are present on all or some users,
- * with Dashboard configuration guidance.
+ * Decodes the publishable key to derive the FAPI hostname, then calls
+ * GET /v1/environment to retrieve auth settings, social connections,
+ * and user model configuration.
  *
- * @param analysis - The field analysis results
- * @returns true if there are other fields to display, false otherwise
+ * @param publishableKey - The Clerk publishable key (pk_test_... or pk_live_...)
+ * @returns Clerk configuration with attributes and social connections, or null on failure
  */
-export const displayOtherFieldsAnalysis = (
+export async function fetchClerkConfig(
+	publishableKey: string
+): Promise<ClerkConfig | null> {
+	const frontendApi = decodePublishableKey(publishableKey);
+	if (!frontendApi) return null;
+
+	try {
+		const res = await fetch(`https://${frontendApi}/v1/environment`);
+		if (!res.ok) return null;
+
+		const data = (await res.json()) as {
+			user_settings?: {
+				attributes?: Record<string, { enabled: boolean; required: boolean }>;
+				social?: Record<string, { enabled: boolean }>;
+			};
+		};
+		const userSettings = data?.user_settings;
+		if (!userSettings) return null;
+
+		return {
+			attributes: userSettings.attributes || {},
+			social: userSettings.social || {},
+		};
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Analyzes the raw export data to count users per auth provider.
+ *
+ * Reads raw_app_meta_data.providers from each user record in the JSON file.
+ * This runs on the raw (pre-transformation) data since the transformer
+ * doesn't map raw_app_meta_data.
+ *
+ * @param filePath - Path to the JSON export file
+ * @returns Map of provider name to user count (e.g., { email: 142, discord: 5 })
+ */
+export function analyzeUserProviders(filePath: string): Record<string, number> {
+	try {
+		const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<
+			string,
+			unknown
+		>[];
+		const counts: Record<string, number> = {};
+
+		for (const user of raw) {
+			const appMeta = user.raw_app_meta_data as
+				| Record<string, unknown>
+				| undefined;
+			if (!appMeta?.providers) continue;
+
+			const providers = appMeta.providers as string[];
+			for (const provider of providers) {
+				counts[provider] = (counts[provider] || 0) + 1;
+			}
+		}
+
+		return counts;
+	} catch {
+		return {};
+	}
+}
+
+/**
+ * Finds user IDs that have any of the specified disabled social providers.
+ *
+ * Reads the raw export file and checks each user's raw_app_meta_data.providers.
+ * If a user has any provider in the disabled list, their ID is included in the result.
+ *
+ * @param filePath - Path to the JSON export file
+ * @param disabledProviders - List of provider names not enabled in Clerk (e.g., ['discord'])
+ * @returns Set of user IDs to exclude from import
+ */
+export function findUsersWithDisabledProviders(
+	filePath: string,
+	disabledProviders: string[]
+): Set<string> {
+	if (disabledProviders.length === 0) return new Set();
+
+	try {
+		const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<
+			string,
+			unknown
+		>[];
+		const excluded = new Set<string>();
+		const disabledSet = new Set(disabledProviders);
+
+		for (const user of raw) {
+			const appMeta = user.raw_app_meta_data as
+				| Record<string, unknown>
+				| undefined;
+			if (!appMeta?.providers) continue;
+
+			const providers = appMeta.providers as string[];
+			if (providers.some((p) => disabledSet.has(p))) {
+				excluded.add(user.id as string);
+			}
+		}
+
+		return excluded;
+	} catch {
+		return new Set();
+	}
+}
+
+// --- Cross-Reference Display ---
+
+interface ReadinessItem {
+	label: string;
+	userCount: number;
+	clerkEnabled: boolean | null; // null = Clerk config not available
+	section: 'identifiers' | 'auth' | 'social' | 'model';
+}
+
+/**
+ * Displays a unified migration readiness report.
+ *
+ * Cross-references the Supabase auth config, Clerk instance config, and user
+ * data to show a single report with all configuration items, their status,
+ * and affected user counts.
+ *
+ * Items are grouped by section (Identifiers, Authentication, Social Connections,
+ * User Model) and each shows:
+ * - ✓ enabled in Clerk (green)
+ * - ✗ not enabled in Clerk (red, needs attention)
+ * - ○ status unknown, enable in Dashboard (yellow, no Clerk config available)
+ *
+ * @param items - List of readiness items to display
+ * @param analysis - Field analysis results for total user count and identifier check
+ */
+export function displayCrossReference(
+	items: ReadinessItem[],
 	analysis: FieldAnalysis
-): boolean => {
-	// Filter out password, firstName, and lastName since they have dedicated sections
-	const excludedFields = ['Password', 'First Name', 'Last Name'];
-	const filteredPresentOnAll = analysis.presentOnAll.filter(
-		(f) => !excludedFields.includes(f)
-	);
-	const filteredPresentOnSome = analysis.presentOnSome.filter(
-		(f) => !excludedFields.includes(f)
-	);
+): void {
+	const sections: Record<string, ReadinessItem[]> = {};
+	for (const item of items) {
+		if (!sections[item.section]) sections[item.section] = [];
+		sections[item.section].push(item);
+	}
 
-	let fieldsMessage = '';
+	let message = '';
+	const needsAttention: ReadinessItem[] = [];
 
-	if (filteredPresentOnAll.length > 0) {
-		fieldsMessage += color.bold('Fields present on ALL users:\n');
-		fieldsMessage += color.dim(
-			'These fields must be enabled in the Clerk Dashboard and could be set as required.'
-		);
-		for (const field of filteredPresentOnAll) {
-			fieldsMessage += `\n  ${color.green('●')} ${color.reset(field)}`;
+	const sectionLabels: Record<string, string> = {
+		identifiers: 'Identifiers',
+		auth: 'Authentication',
+		social: 'Social Connections',
+		model: 'User Model',
+	};
+
+	const sectionOrder = ['identifiers', 'auth', 'social', 'model'];
+
+	for (const section of sectionOrder) {
+		const sectionItems = sections[section];
+		if (!sectionItems || sectionItems.length === 0) continue;
+
+		message += color.bold(color.whiteBright(`${sectionLabels[section]}\n`));
+
+		for (const item of sectionItems) {
+			const countStr =
+				item.userCount === analysis.totalUsers
+					? 'all users'
+					: `${item.userCount} user${item.userCount === 1 ? '' : 's'}`;
+
+			if (item.clerkEnabled === true) {
+				message += `  ${color.green('✓')} ${item.label} — ${color.dim(`enabled in Clerk — ${countStr}`)}\n`;
+			} else if (item.clerkEnabled === false) {
+				message += `  ${color.red('✗')} ${item.label} — ${color.red('not enabled in Clerk')} — ${color.dim(countStr)}\n`;
+				needsAttention.push(item);
+			} else {
+				message += `  ${color.yellow('○')} ${item.label} — ${color.dim(`${countStr} — enable in Clerk Dashboard`)}\n`;
+			}
 		}
+
+		message += '\n';
 	}
 
-	if (filteredPresentOnSome.length > 0) {
-		if (fieldsMessage) fieldsMessage += '\n\n';
-		fieldsMessage += color.bold('Fields present on SOME users:\n');
-		fieldsMessage += color.dim(
-			'These fields must be enabled in the Clerk Dashboard but must be set as optional.'
+	// Check for users without any identifier
+	if (analysis.identifiers.hasAnyIdentifier < analysis.totalUsers) {
+		const missing = analysis.totalUsers - analysis.identifiers.hasAnyIdentifier;
+		message += color.red(
+			`⚠ ${missing} user${missing === 1 ? '' : 's'} without any identifier (cannot be imported)\n\n`
 		);
-		for (const field of filteredPresentOnSome) {
-			fieldsMessage += `\n  ${color.yellow('○')} ${color.reset(field)}`;
-		}
 	}
 
-	if (fieldsMessage) {
-		p.note(fieldsMessage.trim(), 'Other Fields');
-		return true;
+	// Summary
+	if (needsAttention.length > 0) {
+		const totalAffected = needsAttention.reduce(
+			(sum, item) => sum + item.userCount,
+			0
+		);
+		message += color.yellow(
+			`⚠ ${needsAttention.length} setting${needsAttention.length === 1 ? '' : 's'} need${needsAttention.length === 1 ? 's' : ''} attention` +
+				(totalAffected > 0 ? ` (up to ${totalAffected} users affected)` : '')
+		);
+	} else if (items.some((i) => i.clerkEnabled !== null)) {
+		message += color.green('All settings are configured in Clerk');
 	}
 
-	return false;
-};
+	p.note(message.trim(), 'Migration Readiness');
+}
 
 /**
  * Handles Firebase hash configuration collection and validation
@@ -992,9 +925,6 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 5: Display and confirm identifier settings
-	displayIdentifierAnalysis(analysis);
-
 	// Exit if no users have valid identifiers
 	if (analysis.identifiers.hasAnyIdentifier === 0) {
 		p.cancel(
@@ -1003,117 +933,197 @@ export async function runCLI() {
 		process.exit(1);
 	}
 
-	const confirmIdentifiers = await p.confirm({
-		message: 'Have you configured the identifier settings in the Dashboard?',
-		initialValue: true,
-	});
+	// Step 5: Fetch configurations for cross-reference
+	const isSupabase = initialArgs.key === 'supabase';
 
-	if (p.isCancel(confirmIdentifiers) || !confirmIdentifiers) {
-		p.cancel(
-			'Migration cancelled. Please configure identifier settings and try again.'
-		);
-		process.exit(0);
+	const publishableKey =
+		process.env.CLERK_PUBLISHABLE_KEY ||
+		process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
+	const supabaseUrl =
+		process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+	const supabaseApiKey =
+		process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+		process.env.SUPABASE_ANON_KEY ||
+		process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+	const configSpinner = p.spinner();
+	configSpinner.start('Checking configuration...');
+
+	const [clerkConfig, supabaseProviders] = await Promise.all([
+		publishableKey ? fetchClerkConfig(publishableKey) : Promise.resolve(null),
+		isSupabase && supabaseUrl && supabaseApiKey
+			? fetchSupabaseProviders(supabaseUrl, supabaseApiKey)
+			: Promise.resolve(null),
+	]);
+
+	// Analyze raw provider counts (Supabase only, from raw export data)
+	let providerCounts: Record<string, number> = {};
+	if (isSupabase) {
+		const filePath = createImportFilePath(initialArgs.file);
+		providerCounts = analyzeUserProviders(filePath);
 	}
 
-	// Step 6: Display password analysis and get migration preference
-	const skipPasswordRequirement = await displayPasswordAnalysis(analysis);
+	configSpinner.stop('Configuration checked');
 
-	if (skipPasswordRequirement === null) {
-		p.cancel('Migration cancelled.');
-		process.exit(0);
-	}
+	// Step 6: Build cross-reference items
+	const items: ReadinessItem[] = [];
 
-	// Only show password confirmation if users have passwords
-	const usersWithPasswords = analysis.fieldCounts.password || 0;
-	if (usersWithPasswords > 0) {
-		const confirmPassword = await p.confirm({
-			message: 'Have you enabled Password in the Dashboard?',
-			initialValue: true,
+	// Identifiers
+	const emailCount =
+		analysis.identifiers.verifiedEmails + analysis.identifiers.unverifiedEmails;
+	if (emailCount > 0) {
+		items.push({
+			label: 'Email',
+			userCount: emailCount,
+			clerkEnabled: clerkConfig?.attributes.email_address?.enabled ?? null,
+			section: 'identifiers',
 		});
-
-		if (p.isCancel(confirmPassword) || !confirmPassword) {
-			p.cancel(
-				'Migration cancelled. Please enable Password in the Dashboard and try again.'
-			);
-			process.exit(0);
-		}
 	}
 
-	// Step 7: Check Supabase OAuth providers (Supabase-specific)
-	if (initialArgs.key === 'supabase') {
-		const supabaseUrl =
-			process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
-		const supabaseApiKey =
-			process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-			process.env.SUPABASE_ANON_KEY ||
-			process.env.SUPABASE_SERVICE_ROLE_KEY;
+	const phoneCount =
+		analysis.identifiers.verifiedPhones + analysis.identifiers.unverifiedPhones;
+	if (phoneCount > 0) {
+		items.push({
+			label: 'Phone',
+			userCount: phoneCount,
+			clerkEnabled: clerkConfig?.attributes.phone_number?.enabled ?? null,
+			section: 'identifiers',
+		});
+	}
 
-		if (supabaseUrl && supabaseApiKey) {
-			const enabledProviders = await fetchSupabaseProviders(
-				supabaseUrl,
-				supabaseApiKey
-			);
+	if (analysis.identifiers.username > 0) {
+		items.push({
+			label: 'Username',
+			userCount: analysis.identifiers.username,
+			clerkEnabled: clerkConfig?.attributes.username?.enabled ?? null,
+			section: 'identifiers',
+		});
+	}
 
-			if (enabledProviders) {
-				const hasOAuthProviders = displayProviderAnalysis(enabledProviders);
+	// Authentication
+	const passwordCount = analysis.fieldCounts.password || 0;
+	if (passwordCount > 0) {
+		items.push({
+			label: 'Password',
+			userCount: passwordCount,
+			clerkEnabled: clerkConfig?.attributes.password?.enabled ?? null,
+			section: 'auth',
+		});
+	}
 
-				if (hasOAuthProviders) {
-					const confirmProviders = await p.confirm({
-						message:
-							'Have you enabled these social connections in the Clerk Dashboard?',
-						initialValue: true,
-					});
+	// Social connections (from Supabase config)
+	const disabledProviders: string[] = [];
+	if (supabaseProviders) {
+		for (const provider of supabaseProviders) {
+			const clerkKey = `oauth_${provider}`;
+			const clerkEnabled = clerkConfig
+				? (clerkConfig.social[clerkKey]?.enabled ?? false)
+				: null;
 
-					if (p.isCancel(confirmProviders) || !confirmProviders) {
-						p.cancel(
-							'Migration cancelled. Please enable the required social connections and try again.'
-						);
-						process.exit(0);
-					}
-				}
+			items.push({
+				label: OAUTH_PROVIDER_LABELS[provider] || provider,
+				userCount: providerCounts[provider] || 0,
+				clerkEnabled,
+				section: 'social',
+			});
+
+			if (clerkEnabled === false) {
+				disabledProviders.push(provider);
 			}
 		}
 	}
 
-	// Step 8: Display user model analysis (first/last name)
-	const needsUserModelConfirmation = displayUserModelAnalysis(analysis);
+	// Find users to exclude (those with disabled social providers)
+	let excludedUserIds = new Set<string>();
+	if (isSupabase && disabledProviders.length > 0) {
+		const filePath = createImportFilePath(initialArgs.file);
+		excludedUserIds = findUsersWithDisabledProviders(
+			filePath,
+			disabledProviders
+		);
+	}
 
-	if (needsUserModelConfirmation) {
-		const confirmUserModel = await p.confirm({
-			message:
-				'Have you configured first and last name settings in the Dashboard?',
-			initialValue: true,
+	// User model
+	const firstNameCount = analysis.fieldCounts.firstName || 0;
+	if (firstNameCount > 0) {
+		items.push({
+			label: 'First Name',
+			userCount: firstNameCount,
+			clerkEnabled: clerkConfig?.attributes.first_name?.enabled ?? null,
+			section: 'model',
 		});
+	}
 
-		if (p.isCancel(confirmUserModel) || !confirmUserModel) {
-			p.cancel(
-				'Migration cancelled. Please configure user model settings and try again.'
+	const lastNameCount = analysis.fieldCounts.lastName || 0;
+	if (lastNameCount > 0) {
+		items.push({
+			label: 'Last Name',
+			userCount: lastNameCount,
+			clerkEnabled: clerkConfig?.attributes.last_name?.enabled ?? null,
+			section: 'model',
+		});
+	}
+
+	// Step 7: Display unified cross-reference report
+	displayCrossReference(items, analysis);
+
+	// Show hint if configs couldn't be loaded
+	if (!clerkConfig && !publishableKey) {
+		p.log.info(
+			color.dim(
+				'Set CLERK_PUBLISHABLE_KEY in .env to enable automatic configuration checking.'
+			)
+		);
+	} else if (!clerkConfig && publishableKey) {
+		p.log.warn(color.yellow('Could not fetch Clerk instance configuration.'));
+	}
+
+	if (isSupabase && !supabaseProviders) {
+		if (supabaseUrl && supabaseApiKey) {
+			p.log.warn(
+				color.yellow(
+					'Could not fetch Supabase auth settings. Social connections not checked.'
+				)
 			);
-			process.exit(0);
+		} else {
+			p.log.info(
+				color.dim(
+					'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env to check social connections.'
+				)
+			);
 		}
 	}
 
-	// Step 9: Display and confirm other field settings (if any)
-	const hasOtherFields = displayOtherFieldsAnalysis(analysis);
-
-	if (hasOtherFields) {
-		const confirmFields = await p.confirm({
-			message: 'Have you configured the other field settings in the Dashboard?',
-			initialValue: true,
-		});
-
-		if (p.isCancel(confirmFields) || !confirmFields) {
-			p.cancel(
-				'Migration cancelled. Please configure field settings and try again.'
-			);
-			process.exit(0);
-		}
+	// Step 8: Show exclusion info and confirm
+	if (excludedUserIds.size > 0) {
+		const providerNames = disabledProviders
+			.map((p) => OAUTH_PROVIDER_LABELS[p] || p)
+			.join(', ');
+		p.log.warn(
+			color.yellow(
+				`${excludedUserIds.size} user${excludedUserIds.size === 1 ? '' : 's'} will be excluded — signed up via disabled social connection${disabledProviders.length === 1 ? '' : 's'} (${providerNames})`
+			)
+		);
 	}
 
-	// Step 10: Final confirmation
+	const importCount = userCount - excludedUserIds.size;
+	const hasIssues = items.some((i) => i.clerkEnabled === false);
+
+	if (importCount <= 0) {
+		p.cancel('No users can be imported after exclusions.');
+		process.exit(0);
+	}
+
+	const confirmMessage =
+		excludedUserIds.size > 0
+			? `Import ${importCount} user${importCount === 1 ? '' : 's'}? (${excludedUserIds.size} excluded)`
+			: hasIssues
+				? 'Some settings need attention. Proceed with migration?'
+				: 'Begin migration?';
+
 	const beginMigration = await p.confirm({
-		message: 'Begin Migration?',
-		initialValue: true,
+		message: confirmMessage,
+		initialValue: !hasIssues || excludedUserIds.size > 0,
 	});
 
 	if (p.isCancel(beginMigration) || !beginMigration) {
@@ -1121,16 +1131,20 @@ export async function runCLI() {
 		process.exit(0);
 	}
 
-	// Save settings for next run (not including instance - always auto-detected)
+	// Save settings for next run
 	saveSettings({
 		key: initialArgs.key,
 		file: initialArgs.file,
 	});
 
+	// Auto-determine skipPasswordRequirement: true if any users lack passwords
+	const skipPasswordRequirement = passwordCount < analysis.totalUsers;
+
 	return {
 		...initialArgs,
 		instance: instanceType,
 		begin: beginMigration,
-		skipPasswordRequirement: skipPasswordRequirement || false,
+		skipPasswordRequirement,
+		excludedUserIds,
 	};
 }
