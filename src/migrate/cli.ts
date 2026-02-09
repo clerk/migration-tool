@@ -453,8 +453,7 @@ export async function displayPasswordAnalysis(
 	return false; // All users have passwords, no need for skipPasswordRequirement
 }
 
-// OAuth providers that need social connections enabled in Clerk
-// Maps Supabase provider names to human-readable Clerk names
+// Maps Supabase provider keys to human-readable labels
 const OAUTH_PROVIDER_LABELS: Record<string, string> = {
 	google: 'Google',
 	apple: 'Apple',
@@ -464,9 +463,10 @@ const OAUTH_PROVIDER_LABELS: Record<string, string> = {
 	discord: 'Discord',
 	spotify: 'Spotify',
 	slack: 'Slack',
+	slack_oidc: 'Slack (OIDC)',
 	twitch: 'Twitch',
 	linkedin: 'LinkedIn',
-	linkedin_oidc: 'LinkedIn',
+	linkedin_oidc: 'LinkedIn (OIDC)',
 	bitbucket: 'Bitbucket',
 	gitlab: 'GitLab',
 	azure: 'Microsoft (Azure)',
@@ -475,103 +475,79 @@ const OAUTH_PROVIDER_LABELS: Record<string, string> = {
 	zoom: 'Zoom',
 	keycloak: 'Keycloak',
 	figma: 'Figma',
-	dropbox: 'Dropbox',
+	fly: 'Fly.io',
+	workos: 'WorkOS',
+	snapchat: 'Snapchat',
 };
 
-type ProviderAnalysis = {
-	providers: Map<string, number>;
-	totalUsersWithProviderData: number;
-};
+// Non-OAuth entries in the Supabase external config to ignore
+const IGNORED_PROVIDERS = new Set(['email', 'phone', 'anonymous_users']);
 
-/**
- * Scans user data for OAuth provider information from Supabase's raw_app_meta_data
- *
- * Supabase stores the authentication provider(s) in raw_app_meta_data:
- *   { "provider": "google", "providers": ["google"] }
- *
- * This data is only available if the export includes raw_app_meta_data
- * (included by default in the auto-export command).
- *
- * @param users - Array of user objects (post-transform but pre-validation)
- * @returns Provider analysis with counts per provider, or empty if no provider data found
- */
-export function analyzeProviders(
-	users: Record<string, unknown>[]
-): ProviderAnalysis {
-	const providers = new Map<string, number>();
-	let totalUsersWithProviderData = 0;
-
-	for (const user of users) {
-		const appMeta = user.raw_app_meta_data as
-			| Record<string, unknown>
-			| undefined;
-		if (!appMeta) continue;
-
-		totalUsersWithProviderData++;
-
-		// Supabase stores providers as an array in raw_app_meta_data.providers
-		const userProviders = appMeta.providers as string[] | undefined;
-		const primaryProvider = appMeta.provider as string | undefined;
-
-		if (Array.isArray(userProviders)) {
-			for (const provider of userProviders) {
-				providers.set(provider, (providers.get(provider) || 0) + 1);
-			}
-		} else if (primaryProvider) {
-			providers.set(primaryProvider, (providers.get(primaryProvider) || 0) + 1);
-		}
-	}
-
-	return { providers, totalUsersWithProviderData };
+interface SupabaseAuthSettings {
+	external: Record<string, boolean>;
 }
 
 /**
- * Displays OAuth provider analysis and Dashboard configuration guidance
+ * Fetches the Supabase project's auth settings to determine which OAuth providers are enabled.
  *
- * Shows which OAuth providers are used by Supabase users and warns that
- * these need to be enabled as social connections in Clerk. Users who signed
- * up via an OAuth provider that isn't enabled in Clerk won't be able to
- * sign back in after their bridged session expires.
+ * Calls GET {supabaseUrl}/auth/v1/settings with the API key. This endpoint returns
+ * the `external` config object with a boolean for each provider (google, apple, etc.).
  *
- * @param analysis - The provider analysis results
- * @param totalUsers - Total number of users being migrated
- * @returns true if OAuth providers were found and confirmation is needed, false otherwise
+ * @param supabaseUrl - The Supabase project URL (e.g., https://xxx.supabase.co)
+ * @param apiKey - Any valid Supabase API key (anon or service role)
+ * @returns List of enabled OAuth provider keys, or null if the fetch failed
  */
-export function displayProviderAnalysis(
-	analysis: ProviderAnalysis,
-	totalUsers: number
-): boolean {
-	const { providers, totalUsersWithProviderData } = analysis;
+export async function fetchSupabaseProviders(
+	supabaseUrl: string,
+	apiKey: string
+): Promise<string[] | null> {
+	try {
+		const url = `${supabaseUrl.replace(/\/$/, '')}/auth/v1/settings`;
+		const res = await fetch(url, {
+			headers: { apikey: apiKey },
+		});
 
-	// No provider data available (export didn't include raw_app_meta_data)
-	if (totalUsersWithProviderData === 0) {
-		return false;
-	}
-
-	// Filter to OAuth providers only (exclude "email" — that's password-based)
-	const oauthProviders = new Map<string, number>();
-	for (const [provider, count] of providers) {
-		if (provider !== 'email') {
-			oauthProviders.set(provider, count);
+		if (!res.ok) {
+			return null;
 		}
-	}
 
-	// No OAuth providers found
-	if (oauthProviders.size === 0) {
+		const settings = (await res.json()) as SupabaseAuthSettings;
+		if (!settings.external) {
+			return null;
+		}
+
+		return Object.entries(settings.external)
+			.filter(([key, enabled]) => enabled && !IGNORED_PROVIDERS.has(key))
+			.map(([key]) => key);
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Displays which OAuth providers are enabled on the Supabase project and warns
+ * that these need to be configured as social connections in Clerk.
+ *
+ * Users who signed up via an OAuth provider that isn't enabled in Clerk won't
+ * be able to sign back in after their bridged session expires.
+ *
+ * @param enabledProviders - List of enabled OAuth provider keys from Supabase
+ * @returns true if OAuth providers were found and confirmation is needed
+ */
+export function displayProviderAnalysis(enabledProviders: string[]): boolean {
+	if (enabledProviders.length === 0) {
 		return false;
 	}
 
 	let message = '';
 
-	message += color.bold(color.whiteBright('OAuth Provider Analysis:\n\n'));
+	message += color.bold(
+		color.whiteBright('Enabled OAuth Providers in Supabase:\n\n')
+	);
 
-	// Sort by count descending
-	const sorted = [...oauthProviders.entries()].sort((a, b) => b[1] - a[1]);
-
-	for (const [provider, count] of sorted) {
+	for (const provider of enabledProviders) {
 		const label = OAUTH_PROVIDER_LABELS[provider] || provider;
-		const percentage = Math.round((count / totalUsers) * 100);
-		message += `  ${color.yellow('○')} ${color.bold(color.whiteBright(label))}: ${color.dim(`${count} user${count === 1 ? '' : 's'} (${percentage}%)`)}\n`;
+		message += `  ${color.yellow('○')} ${color.bold(color.whiteBright(label))}\n`;
 	}
 
 	message += '\n';
@@ -1063,25 +1039,39 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 7: Display OAuth provider analysis (Supabase-specific)
-	const providerAnalysis = analyzeProviders(filteredUsers);
-	const hasOAuthProviders = displayProviderAnalysis(
-		providerAnalysis,
-		analysis.totalUsers
-	);
+	// Step 7: Check Supabase OAuth providers (Supabase-specific)
+	if (initialArgs.key === 'supabase') {
+		const supabaseUrl =
+			process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL;
+		const supabaseApiKey =
+			process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+			process.env.SUPABASE_ANON_KEY ||
+			process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-	if (hasOAuthProviders) {
-		const confirmProviders = await p.confirm({
-			message:
-				'Have you enabled these social connections in the Clerk Dashboard?',
-			initialValue: true,
-		});
-
-		if (p.isCancel(confirmProviders) || !confirmProviders) {
-			p.cancel(
-				'Migration cancelled. Please enable the required social connections and try again.'
+		if (supabaseUrl && supabaseApiKey) {
+			const enabledProviders = await fetchSupabaseProviders(
+				supabaseUrl,
+				supabaseApiKey
 			);
-			process.exit(0);
+
+			if (enabledProviders) {
+				const hasOAuthProviders = displayProviderAnalysis(enabledProviders);
+
+				if (hasOAuthProviders) {
+					const confirmProviders = await p.confirm({
+						message:
+							'Have you enabled these social connections in the Clerk Dashboard?',
+						initialValue: true,
+					});
+
+					if (p.isCancel(confirmProviders) || !confirmProviders) {
+						p.cancel(
+							'Migration cancelled. Please enable the required social connections and try again.'
+						);
+						process.exit(0);
+					}
+				}
+			}
 		}
 	}
 
