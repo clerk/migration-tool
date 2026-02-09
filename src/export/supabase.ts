@@ -36,6 +36,7 @@ const EXPORT_QUERY = `
     ) as first_name,
     raw_user_meta_data->>'last_name' as last_name,
     raw_user_meta_data,
+    raw_app_meta_data,
     created_at
   FROM auth.users
   ORDER BY created_at

@@ -453,6 +453,142 @@ export async function displayPasswordAnalysis(
 	return false; // All users have passwords, no need for skipPasswordRequirement
 }
 
+// OAuth providers that need social connections enabled in Clerk
+// Maps Supabase provider names to human-readable Clerk names
+const OAUTH_PROVIDER_LABELS: Record<string, string> = {
+	google: 'Google',
+	apple: 'Apple',
+	github: 'GitHub',
+	facebook: 'Facebook',
+	twitter: 'Twitter (X)',
+	discord: 'Discord',
+	spotify: 'Spotify',
+	slack: 'Slack',
+	twitch: 'Twitch',
+	linkedin: 'LinkedIn',
+	linkedin_oidc: 'LinkedIn',
+	bitbucket: 'Bitbucket',
+	gitlab: 'GitLab',
+	azure: 'Microsoft (Azure)',
+	kakao: 'Kakao',
+	notion: 'Notion',
+	zoom: 'Zoom',
+	keycloak: 'Keycloak',
+	figma: 'Figma',
+	dropbox: 'Dropbox',
+};
+
+type ProviderAnalysis = {
+	providers: Map<string, number>;
+	totalUsersWithProviderData: number;
+};
+
+/**
+ * Scans user data for OAuth provider information from Supabase's raw_app_meta_data
+ *
+ * Supabase stores the authentication provider(s) in raw_app_meta_data:
+ *   { "provider": "google", "providers": ["google"] }
+ *
+ * This data is only available if the export includes raw_app_meta_data
+ * (included by default in the auto-export command).
+ *
+ * @param users - Array of user objects (post-transform but pre-validation)
+ * @returns Provider analysis with counts per provider, or empty if no provider data found
+ */
+export function analyzeProviders(
+	users: Record<string, unknown>[]
+): ProviderAnalysis {
+	const providers = new Map<string, number>();
+	let totalUsersWithProviderData = 0;
+
+	for (const user of users) {
+		const appMeta = user.raw_app_meta_data as
+			| Record<string, unknown>
+			| undefined;
+		if (!appMeta) continue;
+
+		totalUsersWithProviderData++;
+
+		// Supabase stores providers as an array in raw_app_meta_data.providers
+		const userProviders = appMeta.providers as string[] | undefined;
+		const primaryProvider = appMeta.provider as string | undefined;
+
+		if (Array.isArray(userProviders)) {
+			for (const provider of userProviders) {
+				providers.set(provider, (providers.get(provider) || 0) + 1);
+			}
+		} else if (primaryProvider) {
+			providers.set(primaryProvider, (providers.get(primaryProvider) || 0) + 1);
+		}
+	}
+
+	return { providers, totalUsersWithProviderData };
+}
+
+/**
+ * Displays OAuth provider analysis and Dashboard configuration guidance
+ *
+ * Shows which OAuth providers are used by Supabase users and warns that
+ * these need to be enabled as social connections in Clerk. Users who signed
+ * up via an OAuth provider that isn't enabled in Clerk won't be able to
+ * sign back in after their bridged session expires.
+ *
+ * @param analysis - The provider analysis results
+ * @param totalUsers - Total number of users being migrated
+ * @returns true if OAuth providers were found and confirmation is needed, false otherwise
+ */
+export function displayProviderAnalysis(
+	analysis: ProviderAnalysis,
+	totalUsers: number
+): boolean {
+	const { providers, totalUsersWithProviderData } = analysis;
+
+	// No provider data available (export didn't include raw_app_meta_data)
+	if (totalUsersWithProviderData === 0) {
+		return false;
+	}
+
+	// Filter to OAuth providers only (exclude "email" — that's password-based)
+	const oauthProviders = new Map<string, number>();
+	for (const [provider, count] of providers) {
+		if (provider !== 'email') {
+			oauthProviders.set(provider, count);
+		}
+	}
+
+	// No OAuth providers found
+	if (oauthProviders.size === 0) {
+		return false;
+	}
+
+	let message = '';
+
+	message += color.bold(color.whiteBright('OAuth Provider Analysis:\n\n'));
+
+	// Sort by count descending
+	const sorted = [...oauthProviders.entries()].sort((a, b) => b[1] - a[1]);
+
+	for (const [provider, count] of sorted) {
+		const label = OAUTH_PROVIDER_LABELS[provider] || provider;
+		const percentage = Math.round((count / totalUsers) * 100);
+		message += `  ${color.yellow('○')} ${color.bold(color.whiteBright(label))}: ${color.dim(`${count} user${count === 1 ? '' : 's'} (${percentage}%)`)}\n`;
+	}
+
+	message += '\n';
+	message += DASHBOARD_CONFIGURATION;
+	message += `  ${color.yellow('⚠')} ${color.whiteBright('Enable these as Social connections in Clerk Dashboard')}\n`;
+	message += color.dim(
+		`    Users who signed up via OAuth won't be able to sign back in\n`
+	);
+	message += color.dim(
+		`    after their session expires unless the provider is enabled.`
+	);
+
+	p.note(message.trim(), 'Social Connections');
+
+	return true;
+}
+
 /**
  * Displays user model analysis (first/last name) and Dashboard configuration guidance
  *
@@ -927,7 +1063,29 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 7: Display user model analysis
+	// Step 7: Display OAuth provider analysis (Supabase-specific)
+	const providerAnalysis = analyzeProviders(filteredUsers);
+	const hasOAuthProviders = displayProviderAnalysis(
+		providerAnalysis,
+		analysis.totalUsers
+	);
+
+	if (hasOAuthProviders) {
+		const confirmProviders = await p.confirm({
+			message:
+				'Have you enabled these social connections in the Clerk Dashboard?',
+			initialValue: true,
+		});
+
+		if (p.isCancel(confirmProviders) || !confirmProviders) {
+			p.cancel(
+				'Migration cancelled. Please enable the required social connections and try again.'
+			);
+			process.exit(0);
+		}
+	}
+
+	// Step 8: Display user model analysis (first/last name)
 	const needsUserModelConfirmation = displayUserModelAnalysis(analysis);
 
 	if (needsUserModelConfirmation) {
@@ -945,7 +1103,7 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 8: Display and confirm other field settings (if any)
+	// Step 9: Display and confirm other field settings (if any)
 	const hasOtherFields = displayOtherFieldsAnalysis(analysis);
 
 	if (hasOtherFields) {
@@ -962,7 +1120,7 @@ export async function runCLI() {
 		}
 	}
 
-	// Step 9: Final confirmation
+	// Step 10: Final confirmation
 	const beginMigration = await p.confirm({
 		message: 'Begin Migration?',
 		initialValue: true,
