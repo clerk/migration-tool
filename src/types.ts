@@ -1,5 +1,5 @@
 import type { ClerkAPIError } from '@clerk/types';
-import type { transformers } from './migrate/transformers';
+import type { transformers } from './transformers';
 import type { userSchema } from './migrate/validator';
 import * as z from 'zod';
 
@@ -144,3 +144,84 @@ export type DeleteLogEntry = {
 export const passwordHasherEnum = z.enum(
 	PASSWORD_HASHERS as unknown as [string, ...string[]]
 );
+
+/**
+ * Result of a preTransform operation
+ *
+ * @property filePath - The file path to use (may be modified, e.g., temp file with headers)
+ * @property data - Pre-extracted user data (e.g., extracted from JSON wrapper)
+ */
+export type PreTransformResult = {
+	filePath: string;
+	data?: User[];
+};
+
+/**
+ * Firebase scrypt hash configuration
+ *
+ * These values are required to verify Firebase passwords in Clerk.
+ * You can find them in Firebase Console:
+ * Authentication → Users → (⋮ menu) → Password hash parameters
+ *
+ * They can be set directly in the transformer, or via the CLI
+ * which will save them to the .settings file.
+ */
+export type FirebaseHashConfig = {
+	base64_signer_key: string | undefined;
+	base64_salt_separator: string | undefined;
+	rounds: number | undefined;
+	mem_cost: number | undefined;
+};
+
+/**
+ * CLI settings persisted to .settings file
+ *
+ * @property key - Transformer key for the source platform
+ * @property file - Path to the user data file
+ * @property firebaseHashConfig - Firebase hash parameters (if using Firebase transformer)
+ */
+export type Settings = {
+	key?: string;
+	file?: string;
+	firebaseHashConfig?: FirebaseHashConfig;
+};
+
+/**
+ * Counts of users with each identifier type
+ */
+export type IdentifierCounts = {
+	verifiedEmails: number;
+	unverifiedEmails: number;
+	verifiedPhones: number;
+	unverifiedPhones: number;
+	username: number;
+	hasAnyIdentifier: number;
+};
+
+/**
+ * Analysis of user data fields for CLI display
+ *
+ * @property presentOnAll - Fields present on all users
+ * @property presentOnSome - Fields present on some but not all users
+ * @property identifiers - Counts of identifier types
+ * @property totalUsers - Total number of users analyzed
+ * @property fieldCounts - Count of users with each field
+ */
+export type FieldAnalysis = {
+	presentOnAll: string[];
+	presentOnSome: string[];
+	identifiers: IdentifierCounts;
+	totalUsers: number;
+	fieldCounts: Record<string, number>;
+};
+
+/**
+ * Settings result from reading .settings file for deletion
+ *
+ * @property file - Path to the migration file
+ * @property key - Transformer key (optional)
+ */
+export type SettingsResult = {
+	file: string;
+	key?: string;
+};

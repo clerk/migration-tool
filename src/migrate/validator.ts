@@ -54,6 +54,7 @@ export const userSchema = z
 		publicMetadata: z.any().optional(),
 		privateMetadata: z.any().optional(),
 		// Additional Clerk API fields
+		banned: z.boolean().optional(),
 		bypassClientTrust: z.boolean().optional(),
 		createOrganizationEnabled: z.boolean().optional(),
 		createOrganizationsLimit: z.number().int().optional(),

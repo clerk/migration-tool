@@ -1,7 +1,9 @@
 import fs from 'fs';
 import path from 'path';
-import type { PreTransformResult } from '../functions';
-import type { User } from '../../types';
+import type { FirebaseHashConfig, PreTransformResult, User } from '../types';
+
+// Re-export for backwards compatibility
+export type { FirebaseHashConfig } from '../types';
 
 /**
  * Transformer for migrating users from Firebase
@@ -19,23 +21,6 @@ import type { User } from '../../types';
  * - Handles email verification status
  * - Splits displayName into firstName and lastName
  */
-
-/**
- * Firebase scrypt hash configuration
- *
- * These values are required to verify Firebase passwords in Clerk.
- * You can find them in Firebase Console:
- * Authentication → Users → (⋮ menu) → Password hash parameters
- *
- * They can be set directly here in the transformer, or via the CLI
- * which will save them to the .settings file.
- */
-export type FirebaseHashConfig = {
-	base64_signer_key: string | undefined;
-	base64_salt_separator: string | undefined;
-	rounds: number | undefined;
-	mem_cost: number | undefined;
-};
 
 /**
  * Hash configuration - can be set directly or via CLI

@@ -7,4 +7,5 @@ pnpm-lock.yaml
 logs
 tmp/
 testing/
-.claude
+.claude/settings.local.json
+.claude/*.md

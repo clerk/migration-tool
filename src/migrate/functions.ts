@@ -2,7 +2,7 @@ import fs from 'fs';
 import csvParser from 'csv-parser';
 import * as p from '@clack/prompts';
 import { validationLogger } from '../logger';
-import { transformers } from './transformers';
+import { transformers } from '../transformers';
 import { userSchema } from './validator';
 import type { TransformerMapKeys, User } from '../types';
 import { PASSWORD_HASHERS } from '../types';
@@ -13,16 +13,8 @@ import {
 	transformKeys,
 } from '../utils';
 
-/**
- * Result of a preTransform operation
- *
- * @property filePath - The file path to use (may be modified, e.g., temp file with headers)
- * @property data - Pre-extracted user data (e.g., extracted from JSON wrapper)
- */
-export type PreTransformResult = {
-	filePath: string;
-	data?: User[];
-};
+// Re-export for backwards compatibility
+export type { PreTransformResult } from '../types';
 
 const s = p.spinner();
 
