@@ -3,11 +3,10 @@ import fs from 'fs';
 import path from 'path';
 import {
 	analyzeFields,
-	detectInstanceType,
-	fetchClerkConfig,
 	analyzeUserProviders,
-	findUsersWithDisabledProviders,
+	detectInstanceType,
 	displayCrossReference,
+	findUsersWithDisabledProviders,
 	hasValue,
 	loadRawUsers,
 	loadSettings,

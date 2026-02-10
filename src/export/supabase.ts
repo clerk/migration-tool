@@ -80,7 +80,17 @@ export async function exportSupabaseUsers(
 	}
 
 	try {
-		const { rows } = await client.query(EXPORT_QUERY);
+		interface SupabaseUserRow {
+			email: string | null;
+			email_confirmed_at: string | null;
+			encrypted_password: string | null;
+			phone: string | null;
+			first_name: string | null;
+			last_name: string | null;
+			[key: string]: unknown;
+		}
+
+		const { rows } = await client.query<SupabaseUserRow>(EXPORT_QUERY);
 
 		// Calculate field coverage
 		const coverage = {

@@ -408,6 +408,7 @@ export async function runNonInteractive(args: CLIArgs): Promise<{
 	instance: 'dev' | 'prod';
 	begin: boolean;
 	skipPasswordRequirement: boolean;
+	excludedUserIds: Set<string>;
 }> {
 	// Handle help flag
 	if (args.help) {
@@ -558,6 +559,7 @@ export async function runNonInteractive(args: CLIArgs): Promise<{
 		instance: instanceType,
 		begin: true,
 		skipPasswordRequirement,
+		excludedUserIds: new Set<string>(),
 	};
 }
 
@@ -827,7 +829,7 @@ const OAUTH_PROVIDER_LABELS: Record<string, string> = {
 const IGNORED_PROVIDERS = new Set(['email', 'phone', 'anonymous_users']);
 
 interface SupabaseAuthSettings {
-	external: Record<string, boolean>;
+	external?: Record<string, boolean>;
 }
 
 /**
@@ -870,8 +872,8 @@ export async function fetchSupabaseProviders(
 // --- Clerk Instance Configuration ---
 
 interface ClerkConfig {
-	attributes: Record<string, { enabled: boolean; required: boolean }>;
-	social: Record<string, { enabled: boolean }>;
+	attributes: Partial<Record<string, { enabled: boolean; required: boolean }>>;
+	social: Partial<Record<string, { enabled: boolean }>>;
 }
 
 /**
@@ -925,7 +927,7 @@ export async function fetchClerkConfig(
 				social?: Record<string, { enabled: boolean }>;
 			};
 		};
-		const userSettings = data?.user_settings;
+		const userSettings = data.user_settings;
 		if (!userSettings) return null;
 
 		return {
@@ -1044,7 +1046,7 @@ export function displayCrossReference(
 	items: ReadinessItem[],
 	analysis: FieldAnalysis
 ): void {
-	const sections: Record<string, ReadinessItem[]> = {};
+	const sections: Partial<Record<string, ReadinessItem[]>> = {};
 	for (const item of items) {
 		if (!sections[item.section]) sections[item.section] = [];
 		sections[item.section].push(item);
@@ -1102,8 +1104,7 @@ export function displayCrossReference(
 			0
 		);
 		message += color.yellow(
-			`⚠ ${needsAttention.length} setting${needsAttention.length === 1 ? '' : 's'} need${needsAttention.length === 1 ? 's' : ''} attention` +
-				(totalAffected > 0 ? ` (up to ${totalAffected} users affected)` : '')
+			`⚠ ${needsAttention.length} setting${needsAttention.length === 1 ? '' : 's'} need${needsAttention.length === 1 ? 's' : ''} attention${totalAffected > 0 ? ` (up to ${totalAffected} users affected)` : ''}`
 		);
 	} else if (items.some((i) => i.clerkEnabled !== null)) {
 		message += color.green('All settings are configured in Clerk');
@@ -1649,12 +1650,14 @@ export async function runCLI(cliArgs?: CLIArgs) {
 		process.exit(0);
 	}
 
-	const confirmMessage =
-		excludedUserIds.size > 0
-			? `Import ${importCount} user${importCount === 1 ? '' : 's'}? (${excludedUserIds.size} excluded)`
-			: hasIssues
-				? 'Some settings need attention. Proceed with migration?'
-				: 'Begin migration?';
+	let confirmMessage: string;
+	if (excludedUserIds.size > 0) {
+		confirmMessage = `Import ${importCount} user${importCount === 1 ? '' : 's'}? (${excludedUserIds.size} excluded)`;
+	} else if (hasIssues) {
+		confirmMessage = 'Some settings need attention. Proceed with migration?';
+	} else {
+		confirmMessage = 'Begin migration?';
+	}
 
 	const beginMigration = await p.confirm({
 		message: confirmMessage,

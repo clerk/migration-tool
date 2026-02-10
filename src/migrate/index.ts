@@ -51,7 +51,7 @@ async function main() {
 	}
 
 	// Exclude users with disabled social providers
-	if (args.excludedUserIds && args.excludedUserIds.size > 0) {
+	if (args.excludedUserIds.size > 0) {
 		const before = usersToImport.length;
 		usersToImport = usersToImport.filter(
 			(u) => !args.excludedUserIds.has(u.userId)
