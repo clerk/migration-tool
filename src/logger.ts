@@ -14,9 +14,7 @@ import type {
  */
 const confirmOrCreateFolder = (folderPath: string) => {
 	try {
-		if (!fs.existsSync(folderPath)) {
-			fs.mkdirSync(folderPath);
-		}
+		fs.mkdirSync(folderPath, { recursive: true });
 	} catch (err) {
 		// Logger infrastructure error - fallback when file system fails
 		// eslint-disable-next-line no-console

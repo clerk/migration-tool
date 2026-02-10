@@ -1,0 +1,21 @@
+{
+	"permissions": {
+		"allow": [
+			"Bash(bun run test)",
+			"Bash(bun run test:*)",
+			"Bash(bun format:test:debug:*)",
+			"Bash(bun lint:*)",
+			"Bash(bun lint:fix:*)",
+			"Bash(bun test-normalization.ts:*)",
+			"Bash(bun type-check:*)",
+			"Bash(awk:*)",
+			"Bash(ls:*)",
+			"WebSearch",
+			"Bash(tree:*)",
+			"Bash(bun format:*)",
+			"Bash(npx tsc:*)",
+			"Bash(node --check:*)",
+			"Bash(bun run:*)"
+		]
+	}
+}

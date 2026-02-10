@@ -40,7 +40,7 @@ vi.mock('picocolors', () => ({
 }));
 
 // Mock utils
-vi.mock('../../src/utils', () => ({
+vi.mock('../src/utils', () => ({
 	getDateTimeStamp: vi.fn(() => '2024-01-01T12:00:00'),
 	createImportFilePath: vi.fn((file: string) => file),
 	getFileType: vi.fn(() => 'application/json'),
@@ -66,7 +66,7 @@ vi.mock('../../src/utils', () => ({
 }));
 
 // Mock env constants
-vi.mock('../../src/envs-constants', () => ({
+vi.mock('../src/envs-constants', () => ({
 	env: {
 		CLERK_SECRET_KEY: 'test_secret_key',
 		RATE_LIMIT: 10,
@@ -76,14 +76,28 @@ vi.mock('../../src/envs-constants', () => ({
 	RETRY_DELAY_MS: 10000,
 }));
 
-// Mock fs module
-vi.mock('fs', () => ({
-	existsSync: vi.fn(),
-	readFileSync: vi.fn(),
-}));
+// Mock fs module - need both named exports and default export
+vi.mock('fs', () => {
+	const existsSync = vi.fn();
+	const readFileSync = vi.fn();
+	const appendFileSync = vi.fn();
+	const mkdirSync = vi.fn();
+	return {
+		existsSync,
+		readFileSync,
+		appendFileSync,
+		mkdirSync,
+		default: {
+			existsSync,
+			readFileSync,
+			appendFileSync,
+			mkdirSync,
+		},
+	};
+});
 
 // Mock logger module
-vi.mock('../../src/logger', () => ({
+vi.mock('../src/logger', () => ({
 	errorLogger: vi.fn(),
 	importLogger: vi.fn(),
 	deleteErrorLogger: vi.fn(),
@@ -92,9 +106,12 @@ vi.mock('../../src/logger', () => ({
 }));
 
 // Import after mocks are set up
-import { deleteErrorLogger, deleteLogger } from '../../src/logger';
+import { deleteErrorLogger, deleteLogger } from '../src/logger';
 import * as fs from 'fs';
-import { normalizeErrorMessage } from '../../src/delete/index';
+import {
+	getSourceUserIdField,
+	normalizeErrorMessage,
+} from '../src/delete/index';
 
 // Get reference to mocked functions - cast to mock type since vi.mocked is not available
 const _mockDeleteErrorLogger = deleteErrorLogger as ReturnType<typeof vi.fn>;
@@ -107,6 +124,7 @@ describe('delete-users', () => {
 	let readMigrationFile: any;
 	let findIntersection: any;
 
+	// Get references to the mocked fs functions
 	const mockExistsSync = fs.existsSync as ReturnType<typeof vi.fn>;
 	const mockReadFileSync = fs.readFileSync as ReturnType<typeof vi.fn>;
 
@@ -128,7 +146,7 @@ describe('delete-users', () => {
 		});
 
 		// Import the module to get functions - note: vi.resetModules() is not available in Bun's Vitest
-		const deleteUsersModule = await import('../../src/delete/index');
+		const deleteUsersModule = await import('../src/delete/index');
 		fetchUsers = deleteUsersModule.fetchUsers;
 		deleteUsers = deleteUsersModule.deleteUsers;
 		readSettings = deleteUsersModule.readSettings;
@@ -518,6 +536,92 @@ describe('delete-users', () => {
 			expect(result.size).toBe(2);
 			expect(result.has('1')).toBe(true);
 			expect(result.has('3')).toBe(true);
+		});
+
+		test('reads Auth0 JSON file using transformer-mapped user_id field', async () => {
+			const mockUsers = [
+				{
+					user_id: 'auth0|abc123',
+					email: 'user1@example.com',
+				},
+				{
+					user_id: 'google-oauth2|def456',
+					email: 'user2@example.com',
+				},
+			];
+
+			mockExistsSync.mockReturnValue(true);
+			mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
+
+			const result = await readMigrationFile('samples/auth0.json', 'auth0');
+
+			expect(result.size).toBe(2);
+			expect(result.has('auth0|abc123')).toBe(true);
+			expect(result.has('google-oauth2|def456')).toBe(true);
+		});
+
+		test('falls back to userId/id when transformer key is not provided', async () => {
+			const mockUsers = [{ userId: 'fallback_1' }, { id: 'fallback_2' }];
+
+			mockExistsSync.mockReturnValue(true);
+			mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
+
+			const result = await readMigrationFile('samples/users.json');
+
+			expect(result.size).toBe(2);
+			expect(result.has('fallback_1')).toBe(true);
+			expect(result.has('fallback_2')).toBe(true);
+		});
+
+		test('user_id takes precedence over id but not userId in fallback chain', async () => {
+			const mockUsers = [
+				{ userId: 'primary', user_id: 'secondary', id: 'tertiary' },
+				{ user_id: 'secondary_only', id: 'tertiary' },
+				{ id: 'tertiary_only' },
+			];
+
+			mockExistsSync.mockReturnValue(true);
+			mockReadFileSync.mockReturnValue(JSON.stringify(mockUsers));
+
+			const result = await readMigrationFile('samples/users.json');
+
+			expect(result.size).toBe(3);
+			// userId takes precedence
+			expect(result.has('primary')).toBe(true);
+			// user_id is used when no userId
+			expect(result.has('secondary_only')).toBe(true);
+			// id is used as last resort
+			expect(result.has('tertiary_only')).toBe(true);
+		});
+	});
+
+	describe('getSourceUserIdField', () => {
+		test('returns user_id for auth0 transformer', () => {
+			expect(getSourceUserIdField('auth0')).toBe('user_id');
+		});
+
+		test('returns id for clerk transformer', () => {
+			expect(getSourceUserIdField('clerk')).toBe('id');
+		});
+
+		test('returns id for supabase transformer', () => {
+			expect(getSourceUserIdField('supabase')).toBe('id');
+		});
+
+		test('returns id for authjs transformer', () => {
+			expect(getSourceUserIdField('authjs')).toBe('id');
+		});
+
+		test('returns localId for firebase transformer', () => {
+			expect(getSourceUserIdField('firebase')).toBe('localId');
+		});
+
+		test('returns undefined when no transformer key is provided', () => {
+			expect(getSourceUserIdField()).toBeUndefined();
+		});
+
+		test('returns undefined for unknown transformer key', () => {
+			expect(getSourceUserIdField('nonexistent')).toBeUndefined();
 		});
 	});
 
