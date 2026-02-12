@@ -13,10 +13,13 @@ I need to create a custom transformer for the Clerk user migration script. Pleas
 
 ## Environment Setup
 
+Before proceeding, check if dependencies are installed. If not:
+1. Use `bun install` to install dependencies.
+
 Before generating the transformer, check if a `.env` file exists with `CLERK_SECRET_KEY`. If not:
 1. Ask the user to provide their CLERK_SECRET_KEY (found in Clerk Dashboard → API Keys → Secret keys)
-2. Create the `.env` file with the provided key
-3. Continue with the transformer generation without stopping
+1. Create the `.env` file with the provided key
+1. Continue with the transformer generation without stopping
 
 Do not ask "would you like me to create one?" - just ask for the key directly and create the file.
 
@@ -31,7 +34,7 @@ Do not ask "would you like me to create one?" - just ask for the key directly an
    - If not, ask me for the key (found in Clerk Dashboard → API Keys → Secret keys, or https://dashboard.clerk.com/~/api-keys)
    - Create/update the `.env` file with the key
 
-2. Analyze the JSON/CSV structure to identify:
+1. Analyze the JSON/CSV structure to identify:
    - User ID field (maps to `userId`)
    - Email field(s) and verification status
    - Phone field(s) and verification status
@@ -39,7 +42,7 @@ Do not ask "would you like me to create one?" - just ask for the key directly an
    - Password field and hash algorithm
    - Any metadata fields
 
-3. Generate a complete transformer file following this structure:
+1. Generate a complete transformer file following this structure:
 
 ```typescript
 // src/transformers/[platform-name].ts
@@ -61,7 +64,7 @@ const [platformName]Transformer = {
 export default [platformName]Transformer;
 ```
 
-4. **CRITICAL - Register the transformer**: After creating the transformer file, you MUST register it in `src/transformers/index.ts`. This is NOT optional. The migration and delete commands will fail silently if the transformer is not registered.
+1. **CRITICAL - Register the transformer**: After creating the transformer file, you MUST register it in `src/transformers/index.ts`. This is NOT optional. The migration and delete commands will fail silently if the transformer is not registered.
 
    Add both an import and include it in the exports array:
 
@@ -80,6 +83,17 @@ export default [platformName]Transformer;
    - The transformer will NOT appear in the CLI's platform selection
    - The `bun delete` command will NOT be able to find migrated users
    - Users will see "Found 0 migrated users to delete" even after successful migration
+
+   **THIS STEP IS NOT OPTIONAL.** If you skip registration:
+   - The transformer will NOT appear in the CLI's platform selection
+   - The `bun delete` command will NOT find migrated users
+   - Users will see "Found 0 migrated users to delete" after migration
+
+1. **Run tests**: Execute `bun run test` to verify the transformer is properly registered
+1. Use `displayCrossReference()` and related code to display a mnigration readiness table to the user. Always display this after any field mapping summary.
+1. **Run the migration**: After tests pass, run the migration command
+
+
 ````
 
 ## Questions to Answer
@@ -194,14 +208,14 @@ After generating your transformer, verify these steps were completed:
 
 ### 1. Transformer File Created
 
-- [ ] File exists at `src/transformers/[platform-name].ts`
-- [ ] Has a default export with `key`, `value`, `label`, `description`, and `transformer` fields
-- [ ] The `transformer` object maps source fields to Clerk fields (including a field that maps to `userId`)
+- \[ ] File exists at `src/transformers/[platform-name].ts`
+- \[ ] Has a default export with `key`, `value`, `label`, `description`, and `transformer` fields
+- \[ ] The `transformer` object maps source fields to Clerk fields (including a field that maps to `userId`)
 
 ### 2. Transformer Registered (CRITICAL)
 
-- [ ] Import added to `src/transformers/index.ts`
-- [ ] Transformer added to the `transformers` array export
+- \[ ] Import added to `src/transformers/index.ts`
+- \[ ] Transformer added to the `transformers` array export
 
 **If you skip registration, the delete command will fail to find migrated users!**
 
