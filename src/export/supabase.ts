@@ -129,24 +129,32 @@ export async function exportSupabaseUsers(
 }
 
 /**
- * Displays a summary of the export results with field coverage stats.
+ * Displays the export results as a field coverage report and success message.
+ *
+ * Shows each field with an icon indicating coverage level:
+ * - ● green — all users have this field
+ * - ○ yellow — some users have this field
+ * - ○ dim — no users have this field
+ *
+ * @param result - Export result containing user count, output path, and per-field coverage stats
  */
 export function displayExportSummary(result: ExportResult): void {
 	const { userCount, outputPath, fieldCoverage } = result;
 
-	const getIcon = (count: number, total: number): string => {
+	/** Returns a colored icon based on how many users have a given field. */
+	const getCoverageIcon = (count: number, total: number): string => {
 		if (count === total) return color.green('●');
 		if (count > 0) return color.yellow('○');
 		return color.dim('○');
 	};
 
 	let summary = '';
-	summary += `${getIcon(fieldCoverage.email, userCount)} ${color.dim(`${fieldCoverage.email}/${userCount} have email`)}\n`;
-	summary += `${getIcon(fieldCoverage.emailConfirmed, userCount)} ${color.dim(`${fieldCoverage.emailConfirmed}/${userCount} email confirmed`)}\n`;
-	summary += `${getIcon(fieldCoverage.password, userCount)} ${color.dim(`${fieldCoverage.password}/${userCount} have password hash`)}\n`;
-	summary += `${getIcon(fieldCoverage.phone, userCount)} ${color.dim(`${fieldCoverage.phone}/${userCount} have phone`)}\n`;
-	summary += `${getIcon(fieldCoverage.firstName, userCount)} ${color.dim(`${fieldCoverage.firstName}/${userCount} have first name`)}\n`;
-	summary += `${getIcon(fieldCoverage.lastName, userCount)} ${color.dim(`${fieldCoverage.lastName}/${userCount} have last name`)}`;
+	summary += `${getCoverageIcon(fieldCoverage.email, userCount)} ${color.dim(`${fieldCoverage.email}/${userCount} have email`)}\n`;
+	summary += `${getCoverageIcon(fieldCoverage.emailConfirmed, userCount)} ${color.dim(`${fieldCoverage.emailConfirmed}/${userCount} email confirmed`)}\n`;
+	summary += `${getCoverageIcon(fieldCoverage.password, userCount)} ${color.dim(`${fieldCoverage.password}/${userCount} have password hash`)}\n`;
+	summary += `${getCoverageIcon(fieldCoverage.phone, userCount)} ${color.dim(`${fieldCoverage.phone}/${userCount} have phone`)}\n`;
+	summary += `${getCoverageIcon(fieldCoverage.firstName, userCount)} ${color.dim(`${fieldCoverage.firstName}/${userCount} have first name`)}\n`;
+	summary += `${getCoverageIcon(fieldCoverage.lastName, userCount)} ${color.dim(`${fieldCoverage.lastName}/${userCount} have last name`)}`;
 
 	p.note(summary, 'Field Coverage');
 	p.log.success(

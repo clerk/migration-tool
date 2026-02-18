@@ -11,6 +11,7 @@ import {
 	loadRawUsers,
 	loadSettings,
 	saveSettings,
+	validateUsers,
 } from '../../src/migrate/cli';
 
 // Mock modules
@@ -53,6 +54,10 @@ vi.mock('picocolors', () => ({
 		bgCyan: vi.fn((s) => s),
 		black: vi.fn((s) => s),
 	},
+}));
+
+vi.mock('../../src/logger', () => ({
+	validationLogger: vi.fn(),
 }));
 
 // Import the mocked module to get access to the mock
@@ -713,6 +718,7 @@ describe('displayCrossReference', () => {
 				label: 'Email',
 				userCount: 10,
 				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
 				section: 'identifiers' as const,
 			},
 		];
@@ -745,6 +751,7 @@ describe('displayCrossReference', () => {
 				label: 'Email',
 				userCount: 10,
 				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
 				section: 'identifiers' as const,
 			},
 		];
@@ -777,6 +784,7 @@ describe('displayCrossReference', () => {
 				label: 'Discord',
 				userCount: 5,
 				clerkEnabled: false as boolean | null,
+				clerkRequired: null as boolean | null,
 				section: 'social' as const,
 			},
 		];
@@ -813,6 +821,7 @@ describe('displayCrossReference', () => {
 				label: 'Email',
 				userCount: 10,
 				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
 				section: 'identifiers' as const,
 			},
 		];
@@ -836,6 +845,395 @@ describe('displayCrossReference', () => {
 		expect(p.note).toHaveBeenCalledWith(
 			expect.stringContaining('enable in Clerk Dashboard'),
 			'Migration Readiness'
+		);
+	});
+
+	test('shows "can be required" hint for identifiers when all users have it and no Clerk config', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('can be required'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows "do not require" hint for identifiers when not all users have it and no Clerk config', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 7,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 7,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('do not require'),
+			'Migration Readiness'
+		);
+	});
+
+	test('warns when identifier is required in Clerk but not all users have it', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 7,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: true as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 7,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('required in Clerk'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('3 will fail without email'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('1 setting'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows green check when identifier is required and all users have it', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: true as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('enabled in Clerk'),
+			'Migration Readiness'
+		);
+		expect(p.note).not.toHaveBeenCalledWith(
+			expect.stringContaining('will fail'),
+			'Migration Readiness'
+		);
+	});
+
+	test('does not show require hints for non-identifier sections', () => {
+		const items = [
+			{
+				label: 'Password',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'auth' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		const noteCall = vi.mocked(p.note).mock.calls[0][0] as string;
+		expect(noteCall).not.toContain('can be required');
+		expect(noteCall).not.toContain('do not require');
+	});
+
+	test('shows total user count', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('10 users in file'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows count/total format for partial coverage', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 15,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 15,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 30,
+			},
+			totalUsers: 30,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('15/30 users'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows validation failure count and log file reference', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, {
+			validationFailed: 3,
+			logFile: 'migration-2025-01-01-120000.log',
+		});
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('3 users failed validation'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('migration-2025-01-01-120000.log'),
+			'Migration Readiness'
+		);
+	});
+
+	test('does not show validation section when no failures', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, {
+			validationFailed: 0,
+			logFile: '',
+		});
+
+		const noteCall = vi.mocked(p.note).mock.calls[0][0] as string;
+		expect(noteCall).not.toContain('failed validation');
+	});
+});
+
+// ============================================================================
+// validateUsers tests
+// ============================================================================
+
+describe('validateUsers', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	test('returns 0 failures for valid users', () => {
+		const users = [
+			{ userId: 'user_1', email: 'a@test.com' },
+			{ userId: 'user_2', email: 'b@test.com' },
+		];
+
+		const result = validateUsers(users, 'clerk');
+
+		expect(result.validationFailed).toBe(0);
+		expect(result.logFile).toMatch(/^migration-.*\.log$/);
+	});
+
+	test('counts validation failures for users missing identifiers', () => {
+		const users = [
+			{ userId: 'user_1', email: 'a@test.com' },
+			{ userId: 'user_2' }, // no identifier
+			{ userId: 'user_3' }, // no identifier
+		];
+
+		const result = validateUsers(users, 'clerk');
+
+		expect(result.validationFailed).toBe(2);
+	});
+
+	test('applies transformer defaults before validating', () => {
+		// Supabase transformer adds passwordHasher: "bcrypt" as default
+		// Without defaults, users with password but no hasher would fail
+		const users = [
+			{ userId: 'user_1', email: 'a@test.com', password: '$2a$10$hash' },
+		];
+
+		const result = validateUsers(users, 'supabase');
+
+		expect(result.validationFailed).toBe(0);
+	});
+
+	test('fails validation for users with password but no hasher when no defaults', () => {
+		const users = [
+			{ userId: 'user_1', email: 'a@test.com', password: 'somepassword' },
+		];
+
+		const result = validateUsers(users, 'clerk');
+
+		expect(result.validationFailed).toBe(1);
+	});
+
+	test('logs validation errors via validationLogger', async () => {
+		const { validationLogger } = await import('../../src/logger');
+		const users = [
+			{ userId: 'user_1' }, // no identifier
+		];
+
+		validateUsers(users, 'clerk');
+
+		expect(validationLogger).toHaveBeenCalledWith(
+			expect.objectContaining({
+				userId: 'user_1',
+				row: 0,
+			}),
+			expect.any(String)
 		);
 	});
 });

@@ -12,6 +12,7 @@ import {
 import {
 	checkIfFileExists,
 	createImportFilePath,
+	getDateTimeStamp,
 	getFileType,
 	transformKeys as transformKeysFromFunctions,
 	tryCatch,
@@ -28,6 +29,8 @@ import type {
 	IdentifierCounts,
 	Settings,
 } from '../types';
+import { userSchema } from './validator';
+import { validationLogger } from '../logger';
 
 /**
  * Parsed command-line arguments for the migration tool
@@ -798,6 +801,54 @@ export function analyzeFields(users: Record<string, unknown>[]): FieldAnalysis {
 	return { presentOnAll, presentOnSome, identifiers, totalUsers, fieldCounts };
 }
 
+/**
+ * Validates users against the schema and logs validation errors.
+ *
+ * Runs before the readiness display so users can see the validation failure
+ * count and review the log file before confirming the migration.
+ *
+ * Applies transformer default fields (e.g., Supabase passwordHasher: "bcrypt")
+ * before validation to match the behavior of the full import pipeline.
+ *
+ * @param users - Array of transformed user objects from loadRawUsers()
+ * @param transformerKey - Transformer key to look up default fields
+ * @returns Object with validation failure count and log file path
+ */
+export function validateUsers(
+	users: Record<string, unknown>[],
+	transformerKey: string
+): { validationFailed: number; logFile: string } {
+	const dateTime = getDateTimeStamp();
+	const logFile = `migration-${dateTime}.log`;
+	let validationFailed = 0;
+
+	// Look up transformer defaults (e.g., Supabase adds passwordHasher: "bcrypt")
+	const transformer = transformers.find((obj) => obj.key === transformerKey);
+	const defaultFields =
+		transformer && 'defaults' in transformer ? transformer.defaults : null;
+
+	for (let i = 0; i < users.length; i++) {
+		const user = defaultFields ? { ...users[i], ...defaultFields } : users[i];
+		const result = userSchema.safeParse(user);
+
+		if (!result.success) {
+			validationFailed++;
+			const firstIssue = result.error.issues[0];
+			validationLogger(
+				{
+					error: firstIssue.message,
+					path: firstIssue.path as (string | number)[],
+					userId: (user.userId as string) || `row-${i}`,
+					row: i,
+				},
+				dateTime
+			);
+		}
+	}
+
+	return { validationFailed, logFile };
+}
+
 // Maps Supabase provider keys to human-readable labels
 const OAUTH_PROVIDER_LABELS: Record<string, string> = {
 	google: 'Google',
@@ -1023,6 +1074,7 @@ interface ReadinessItem {
 	label: string;
 	userCount: number;
 	clerkEnabled: boolean | null; // null = Clerk config not available
+	clerkRequired: boolean | null; // null = Clerk config not available
 	section: 'identifiers' | 'auth' | 'social' | 'model';
 }
 
@@ -1037,14 +1089,26 @@ interface ReadinessItem {
  * User Model) and each shows:
  * - ✓ enabled in Clerk (green)
  * - ✗ not enabled in Clerk (red, needs attention)
+ * - ⚠ required in Clerk but not all users have it (yellow, will cause failures)
  * - ○ status unknown, enable in Dashboard (yellow, no Clerk config available)
+ *
+ * For identifiers (email, phone, username), provides actionable guidance on
+ * whether the field can safely be required based on user coverage.
+ *
+ * Also displays total user count and validation failure summary (with log file
+ * reference) so users can review errors before confirming the migration.
  *
  * @param items - List of readiness items to display
  * @param analysis - Field analysis results for total user count and identifier check
+ * @param validation - Validation results: failure count and log file path (0 failures hides the section)
  */
 export function displayCrossReference(
 	items: ReadinessItem[],
-	analysis: FieldAnalysis
+	analysis: FieldAnalysis,
+	validation: { validationFailed: number; logFile: string } = {
+		validationFailed: 0,
+		logFile: '',
+	}
 ): void {
 	const sections: Partial<Record<string, ReadinessItem[]>> = {};
 	for (const item of items) {
@@ -1052,7 +1116,20 @@ export function displayCrossReference(
 		sections[item.section].push(item);
 	}
 
+	const total = analysis.totalUsers;
+
 	let message = '';
+	message += `${color.dim(`${total} user${total === 1 ? '' : 's'} in file`)}\n`;
+
+	// Show validation failures if any
+	if (validation.validationFailed > 0) {
+		message += color.yellow(
+			`${validation.validationFailed} user${validation.validationFailed === 1 ? '' : 's'} failed validation and will be skipped — see ${color.dim(`logs/${validation.logFile}`)}`
+		);
+		message += '\n';
+	}
+	message += '\n';
+
 	const needsAttention: ReadinessItem[] = [];
 
 	const sectionLabels: Record<string, string> = {
@@ -1071,17 +1148,32 @@ export function displayCrossReference(
 		message += color.bold(color.whiteBright(`${sectionLabels[section]}\n`));
 
 		for (const item of sectionItems) {
-			const countStr =
-				item.userCount === analysis.totalUsers
-					? 'all users'
-					: `${item.userCount} user${item.userCount === 1 ? '' : 's'}`;
+			const allUsers = item.userCount === total;
+			const countStr = allUsers
+				? 'all users'
+				: `${item.userCount}/${total} users`;
+			const isIdentifier = item.section === 'identifiers';
 
 			if (item.clerkEnabled === true) {
-				message += `  ${color.green('✓')} ${item.label} — ${color.dim(`enabled in Clerk — ${countStr}`)}\n`;
+				// Enabled + required but not all users have it → will cause import failures
+				if (isIdentifier && item.clerkRequired === true && !allUsers) {
+					const missing = total - item.userCount;
+					message += `  ${color.yellow('⚠')} ${item.label} — ${color.yellow('required in Clerk')} — ${color.dim(`${countStr} (${missing} will fail without ${item.label.toLowerCase()})`)}\n`;
+					needsAttention.push(item);
+				} else {
+					message += `  ${color.green('✓')} ${item.label} — ${color.dim(`enabled in Clerk — ${countStr}`)}\n`;
+				}
 			} else if (item.clerkEnabled === false) {
 				message += `  ${color.red('✗')} ${item.label} — ${color.red('not enabled in Clerk')} — ${color.dim(countStr)}\n`;
 				needsAttention.push(item);
+			} else if (isIdentifier && allUsers) {
+				// No Clerk config — all users have this identifier, safe to require
+				message += `  ${color.yellow('○')} ${item.label} — ${color.dim(`${countStr} — enable in Clerk Dashboard (can be required)`)}\n`;
+			} else if (isIdentifier) {
+				// No Clerk config — not all users have this identifier, requiring would cause failures
+				message += `  ${color.yellow('○')} ${item.label} — ${color.dim(`${countStr} — enable in Clerk Dashboard (do not require)`)}\n`;
 			} else {
+				// No Clerk config — non-identifier item
 				message += `  ${color.yellow('○')} ${item.label} — ${color.dim(`${countStr} — enable in Clerk Dashboard`)}\n`;
 			}
 		}
@@ -1090,8 +1182,8 @@ export function displayCrossReference(
 	}
 
 	// Check for users without any identifier
-	if (analysis.identifiers.hasAnyIdentifier < analysis.totalUsers) {
-		const missing = analysis.totalUsers - analysis.identifiers.hasAnyIdentifier;
+	if (analysis.identifiers.hasAnyIdentifier < total) {
+		const missing = total - analysis.identifiers.hasAnyIdentifier;
 		message += color.red(
 			`⚠ ${missing} user${missing === 1 ? '' : 's'} without any identifier (cannot be imported)\n\n`
 		);
@@ -1426,6 +1518,10 @@ export async function runCLI(cliArgs?: CLIArgs) {
 
 	const analysis = analyzeFields(filteredUsers);
 
+	// Validate users and log errors so they're available before the readiness display.
+	// Users can cancel after seeing the results and review the log file.
+	const validation = validateUsers(filteredUsers, initialArgs.key);
+
 	// Step 4: Check instance type and validate
 	const instanceType = detectInstanceType();
 
@@ -1513,6 +1609,7 @@ export async function runCLI(cliArgs?: CLIArgs) {
 			label: 'Email',
 			userCount: emailCount,
 			clerkEnabled: clerkConfig?.attributes.email_address?.enabled ?? null,
+			clerkRequired: clerkConfig?.attributes.email_address?.required ?? null,
 			section: 'identifiers',
 		});
 	}
@@ -1524,6 +1621,7 @@ export async function runCLI(cliArgs?: CLIArgs) {
 			label: 'Phone',
 			userCount: phoneCount,
 			clerkEnabled: clerkConfig?.attributes.phone_number?.enabled ?? null,
+			clerkRequired: clerkConfig?.attributes.phone_number?.required ?? null,
 			section: 'identifiers',
 		});
 	}
@@ -1533,6 +1631,7 @@ export async function runCLI(cliArgs?: CLIArgs) {
 			label: 'Username',
 			userCount: analysis.identifiers.username,
 			clerkEnabled: clerkConfig?.attributes.username?.enabled ?? null,
+			clerkRequired: clerkConfig?.attributes.username?.required ?? null,
 			section: 'identifiers',
 		});
 	}
@@ -1544,6 +1643,7 @@ export async function runCLI(cliArgs?: CLIArgs) {
 			label: 'Password',
 			userCount: passwordCount,
 			clerkEnabled: clerkConfig?.attributes.password?.enabled ?? null,
+			clerkRequired: null,
 			section: 'auth',
 		});
 	}
@@ -1561,6 +1661,7 @@ export async function runCLI(cliArgs?: CLIArgs) {
 				label: OAUTH_PROVIDER_LABELS[provider] || provider,
 				userCount: providerCounts[provider] || 0,
 				clerkEnabled,
+				clerkRequired: null,
 				section: 'social',
 			});
 
@@ -1587,6 +1688,7 @@ export async function runCLI(cliArgs?: CLIArgs) {
 			label: 'First Name',
 			userCount: firstNameCount,
 			clerkEnabled: clerkConfig?.attributes.first_name?.enabled ?? null,
+			clerkRequired: null,
 			section: 'model',
 		});
 	}
@@ -1597,12 +1699,13 @@ export async function runCLI(cliArgs?: CLIArgs) {
 			label: 'Last Name',
 			userCount: lastNameCount,
 			clerkEnabled: clerkConfig?.attributes.last_name?.enabled ?? null,
+			clerkRequired: null,
 			section: 'model',
 		});
 	}
 
 	// Step 7: Display unified cross-reference report
-	displayCrossReference(items, analysis);
+	displayCrossReference(items, analysis, validation);
 
 	// Show hint if configs couldn't be loaded
 	if (!clerkConfig && !publishableKey) {
