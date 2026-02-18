@@ -1285,7 +1285,8 @@ export async function runCLI(cliArgs?: CLIArgs) {
 	// Use CLI args as initial values if provided
 	const initialTransformer =
 		cliArgs?.transformer || savedSettings.key || transformers[0].key;
-	const initialFile = cliArgs?.file || savedSettings.file || 'users.json';
+	const initialFile =
+		cliArgs?.file || savedSettings.file || 'samples/clerk.csv';
 	const initialResumeAfter = cliArgs?.resumeAfter || '';
 
 	const initialArgs = await p.group(
