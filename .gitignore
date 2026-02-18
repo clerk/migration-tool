@@ -5,6 +5,7 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 logs
+test-convert-logs
 tmp/
 testing/
 .claude/settings.local.json

@@ -38,6 +38,10 @@ function appendToLogFile(filePath: string, entry: unknown) {
 	try {
 		const logPath = getLogPath();
 		confirmOrCreateFolder(logPath);
+
+		// Sanitize file name for Windows compatibility
+		filePath = filePath.replace(/:/g, '-');
+
 		const fullPath = `${logPath}/${filePath}`;
 
 		// Use synchronous append to ensure immediate write

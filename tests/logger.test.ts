@@ -7,7 +7,7 @@ import {
 	importLogger,
 	validationLogger,
 } from '../src/logger';
-import { existsSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 
 // Helper to clean up logs directory
 const cleanupLogs = () => {
@@ -591,5 +591,29 @@ describe('mixed logging', () => {
 		expect(migrationLog[1].status).toBe('error');
 		expect(migrationLog[2].status).toBe('success');
 		expect(migrationLog[2].clerkUserId).toBe('clerk_2');
+	});
+});
+
+describe('filename sanitization', () => {
+	beforeEach(cleanupLogs);
+	afterEach(cleanupLogs);
+
+	test('replaces colons with hyphens in log filenames for Windows compatibility', () => {
+		const dateTime = '2026-01-20T14:30:45';
+
+		importLogger(
+			{ userId: 'user_1', status: 'success', clerkUserId: 'clerk_1' },
+			dateTime
+		);
+
+		const sanitizedFileName = 'migration-2026-01-20T14-30-45.log';
+		const log = readNDJSON(`logs/${sanitizedFileName}`);
+		expect(log).toHaveLength(1);
+		expect(log[0].userId).toBe('user_1');
+
+		// Verify no file with colons was created
+		const logFiles = readdirSync('logs');
+		expect(logFiles).not.toContain('migration-2026-01-20T14:30:45.log');
+		expect(logFiles).toContain(sanitizedFileName);
 	});
 });
