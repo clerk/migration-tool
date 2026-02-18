@@ -9,7 +9,7 @@ Use this prompt with an AI assistant to analyze your user data file and run the 
 Copy and paste the following prompt, replacing `[YOUR FILE PATH]` with the path to your user data file:
 
 ````
-I want to migrate users to Clerk using the migration script. Please help me import the following file:
+I want to migrate users to Clerk using the migration tool. Please help me import the following file:
 
 [YOUR FILE PATH]
 
@@ -78,7 +78,7 @@ After migration completes:
 - **Development instances** (`sk_test_*`): 10 requests/second
 - **Production instances** (`sk_live_*`): 100 requests/second
 
-The script handles rate limiting and retries automatically. All operations are logged to `./logs/`.
+The tool handles rate limiting and retries automatically. All operations are logged to `./logs/`.
 ````
 
 ---

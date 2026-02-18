@@ -8,7 +8,8 @@ import {
 } from 'node:fs';
 import path from 'node:path';
 
-const LOGS_DIR = path.join(process.cwd(), 'logs');
+// Use a unique directory to avoid conflicts with logger.test.ts which also uses 'logs/'
+const LOGS_DIR = path.join(process.cwd(), 'test-convert-logs');
 
 // Helper to clean up logs directory
 const cleanupLogs = () => {

@@ -9,7 +9,7 @@ Use this prompt with an AI assistant to generate a custom transformer from your 
 Copy and paste the following prompt, replacing `[YOUR SAMPLE DATA]` with a sample of your user JSON or CSV data:
 
 ````
-I need to create a custom transformer for the Clerk user migration script. Please analyze my sample user data and generate a transformer file.
+I need to create a custom transformer for the Clerk user migration tool. Please analyze my sample user data and generate a transformer file.
 
 ## Environment Setup
 

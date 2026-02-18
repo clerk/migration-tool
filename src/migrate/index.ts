@@ -7,7 +7,7 @@ import * as p from '@clack/prompts';
 import color from 'picocolors';
 
 /**
- * Main entry point for the user migration script
+ * Main entry point for the user migration tool
  *
  * Workflow:
  * 1. Parses CLI arguments to determine mode (interactive vs non-interactive)
