@@ -30,7 +30,7 @@ import type {
 } from '../types';
 
 /**
- * Parsed command-line arguments for the migration script
+ * Parsed command-line arguments for the migration tool
  */
 export type CLIArgs = {
 	transformer?: string;
@@ -111,7 +111,7 @@ ENVIRONMENT VARIABLES:
 NOTES:
   - In non-interactive mode (-y), --transformer and --file are required
   - Firebase migrations require all four --firebase-* options
-  - The script auto-detects dev/prod instance from CLERK_SECRET_KEY
+  - The tool auto-detects dev/prod instance from CLERK_SECRET_KEY
 `);
 }
 
@@ -257,7 +257,7 @@ async function ensureClerkSecretKey(
 /**
  * Parses command-line arguments into a CLIArgs object
  *
- * @param argv - Array of command-line arguments (without node/bun and script path)
+ * @param argv - Array of command-line arguments (without node/bun and tool path)
  * @returns Parsed CLI arguments
  */
 export function parseArgs(argv: string[]): CLIArgs {

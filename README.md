@@ -1,8 +1,8 @@
-# Clerk User Migration Script
+# Clerk User Migration Tool
 
 ## Description
 
-This repository contains a script that takes a JSON file as input, containing a list of users, and creates a user in Clerk using Clerk's backend API. The script respects rate limits and handles errors.
+This repository contains a tool that takes a JSON file as input, containing a list of users, and creates a user in Clerk using Clerk's backend API. The tool respects rate limits and handles errors.
 
 ## Table of Contents
 
@@ -25,18 +25,18 @@ This repository contains a script that takes a JSON file as input, containing a 
 Clone the repository and install the dependencies.
 
 ```bash
-git clone git@github.com:clerk/migration-script
+git clone git@github.com:clerk/migration-tool
 
-cd migration-script
+cd migration-tool
 
 bun install
 ```
 
 ### Users file
 
-The script is designed to import from multiple sources, including moving users from one Clerk instance to another. You may need to edit the transformer for your source. Please see below for more information on that.
+The tool is designed to import from multiple sources, including moving users from one Clerk instance to another. You may need to edit the transformer for your source. Please see below for more information on that.
 
-The script will import from a CSV or JSON. It accounts for empty fields in a CSV and will remove them when converting from CSV to a javascript object.
+The tool will import from a CSV or JSON. It accounts for empty fields in a CSV and will remove them when converting from CSV to a javascript object.
 
 The only required fields are `userId` and an identifier (one of `email`, `phone` or `username`).
 
@@ -75,17 +75,17 @@ If no key is found, the interactive CLI will prompt you to enter one and optiona
 
 You can find your secret key in the [Clerk Dashboard](https://dashboard.clerk.dev/) under **API Keys**.
 
-### Run the script
+### Run the tool
 
 ```bash
 bun migrate
 ```
 
-The script will begin processing users and attempting to import them into Clerk. The script respects rate limits for the Clerk Backend API. If the script hits a rate limit, it will wait 10 seconds and retry (up to 5 times). Any errors will be logged to timestamped log files in the `./logs` folder.
+The tool will begin processing users and attempting to import them into Clerk. The tool respects rate limits for the Clerk Backend API. If the tool hits a rate limit, it will wait 10 seconds and retry (up to 5 times). Any errors will be logged to timestamped log files in the `./logs` folder.
 
-The script can be run on the same data multiple times. Clerk automatically uses the email as a unique key so users won't be created again.
+The tool can be run on the same data multiple times. Clerk automatically uses the email as a unique key so users won't be created again.
 
-**Error Handling & Resuming**: If the migration stops for any reason (error, interruption, etc.), the script will display the last processed user ID. You can resume the migration from that point by providing the user ID when prompted, or by using:
+**Error Handling & Resuming**: If the migration stops for any reason (error, interruption, etc.), the tool will display the last processed user ID. You can resume the migration from that point by providing the user ID when prompted, or by using:
 
 ```bash
 bun migrate --resume-after="user_xxx"
@@ -93,7 +93,7 @@ bun migrate --resume-after="user_xxx"
 
 ## CLI Reference
 
-The migration script supports both interactive and non-interactive modes.
+The migration tool supports both interactive and non-interactive modes.
 
 ### Usage
 
@@ -218,7 +218,7 @@ You could add a column in your user table inside of your database called `ClerkI
 
 ## Configuration
 
-The script can be configured through the following environment variables:
+The tool can be configured through the following environment variables:
 
 | Variable            | Description                                                               |
 | ------------------- | ------------------------------------------------------------------------- |
@@ -226,7 +226,7 @@ The script can be configured through the following environment variables:
 | `RATE_LIMIT`        | Rate limit in requests/second (auto-configured: 100 for prod, 10 for dev) |
 | `CONCURRENCY_LIMIT` | Number of concurrent requests (auto-configured: ~9 for prod, ~1 for dev)  |
 
-The script automatically detects production vs development instances from your `CLERK_SECRET_KEY` and sets appropriate rate limits and concurrency:
+The tool automatically detects production vs development instances from your `CLERK_SECRET_KEY` and sets appropriate rate limits and concurrency:
 
 - **Production** (`sk_live_*`):
   - Rate limit: 100 requests/second (Clerk's limit: 1000 requests per 10 seconds)
