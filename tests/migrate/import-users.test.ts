@@ -1,6 +1,4 @@
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { existsSync, rmSync } from 'node:fs';
-
+import { beforeEach, describe, expect, test, vi } from 'vitest';
 // Mock @clerk/backend before importing the module
 const mockCreateUser = vi.fn();
 const mockCreateEmailAddress = vi.fn();
@@ -100,21 +98,9 @@ import {
 } from '../../src/migrate/import-users';
 import * as logger from '../../src/logger';
 
-// Helper to clean up logs directory
-const cleanupLogs = () => {
-	if (existsSync('logs')) {
-		rmSync('logs', { recursive: true, force: true, maxRetries: 3 });
-	}
-};
-
 describe('importUsers', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
-		cleanupLogs();
-	});
-
-	afterEach(() => {
-		cleanupLogs();
 	});
 
 	describe('createUser API calls', () => {
@@ -405,11 +391,6 @@ describe('importUsers edge cases', () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		mockCreatePhoneNumber.mockReset();
-		cleanupLogs();
-	});
-
-	afterEach(() => {
-		cleanupLogs();
 	});
 
 	test('handles empty user array', async () => {

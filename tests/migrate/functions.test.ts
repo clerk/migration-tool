@@ -1,7 +1,31 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { loadUsersFromFile } from '../../src/migrate/functions';
 import { transformKeys } from '../../src/utils';
 import { transformers } from '../../src/transformers';
+
+// Snapshot of files in logs/ before each test so we only clean up test-created files
+let existingLogFiles: Set<string> = new Set();
+
+const snapshotExistingLogs = () => {
+	if (existsSync('logs')) {
+		existingLogFiles = new Set(readdirSync('logs'));
+	} else {
+		existingLogFiles = new Set();
+	}
+};
+
+const cleanupTestLogs = () => {
+	if (!existsSync('logs')) return;
+	for (const file of readdirSync('logs')) {
+		if (!existingLogFiles.has(file)) {
+			unlinkSync(`logs/${file}`);
+		}
+	}
+};
+
+beforeEach(snapshotExistingLogs);
+afterEach(cleanupTestLogs);
 
 test('Clerk - loadUsersFromFile - JSON', async () => {
 	const { users: usersFromClerk } = await loadUsersFromFile(

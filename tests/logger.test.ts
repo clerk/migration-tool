@@ -7,13 +7,29 @@ import {
 	importLogger,
 	validationLogger,
 } from '../src/logger';
-import { existsSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, unlinkSync } from 'node:fs';
 
-// Helper to clean up logs directory
-const cleanupLogs = () => {
-	closeAllStreams(); // Close streams before cleanup
+// Snapshot of files in logs/ before each test so we only clean up test-created files
+let existingLogFiles: Set<string> = new Set();
+
+// Capture which files already exist before a test runs
+const snapshotExistingLogs = () => {
+	closeAllStreams();
 	if (existsSync('logs')) {
-		rmSync('logs', { recursive: true });
+		existingLogFiles = new Set(readdirSync('logs'));
+	} else {
+		existingLogFiles = new Set();
+	}
+};
+
+// Only remove files created by the test, never delete the logs/ directory
+const cleanupTestLogs = () => {
+	closeAllStreams();
+	if (!existsSync('logs')) return;
+	for (const file of readdirSync('logs')) {
+		if (!existingLogFiles.has(file)) {
+			unlinkSync(`logs/${file}`);
+		}
 	}
 };
 
@@ -28,8 +44,8 @@ const readNDJSON = (filePath: string): Record<string, unknown>[] => {
 };
 
 describe('errorLogger', () => {
-	beforeEach(cleanupLogs);
-	afterEach(cleanupLogs);
+	beforeEach(snapshotExistingLogs);
+	afterEach(cleanupTestLogs);
 
 	test('logs a single error to migration log', () => {
 		const dateTime = 'error-single-test';
@@ -169,8 +185,8 @@ describe('errorLogger', () => {
 });
 
 describe('validationLogger', () => {
-	beforeEach(cleanupLogs);
-	afterEach(cleanupLogs);
+	beforeEach(snapshotExistingLogs);
+	afterEach(cleanupTestLogs);
 
 	test('logs a validation error to migration log', () => {
 		const dateTime = 'validation-basic-test';
@@ -279,8 +295,8 @@ describe('validationLogger', () => {
 });
 
 describe('importLogger', () => {
-	beforeEach(cleanupLogs);
-	afterEach(cleanupLogs);
+	beforeEach(snapshotExistingLogs);
+	afterEach(cleanupTestLogs);
 
 	test('logs a successful import', () => {
 		const dateTime = 'import-success-test';
@@ -351,8 +367,8 @@ describe('importLogger', () => {
 });
 
 describe('deleteErrorLogger', () => {
-	beforeEach(cleanupLogs);
-	afterEach(cleanupLogs);
+	beforeEach(snapshotExistingLogs);
+	afterEach(cleanupTestLogs);
 
 	test('logs a single error to user deletion log', () => {
 		const dateTime = 'delete-error-single-test';
@@ -468,8 +484,8 @@ describe('deleteErrorLogger', () => {
 });
 
 describe('deleteLogger', () => {
-	beforeEach(cleanupLogs);
-	afterEach(cleanupLogs);
+	beforeEach(snapshotExistingLogs);
+	afterEach(cleanupTestLogs);
 
 	test('logs a successful deletion', () => {
 		const dateTime = 'delete-success-test';
@@ -524,8 +540,8 @@ describe('deleteLogger', () => {
 });
 
 describe('mixed logging', () => {
-	beforeEach(cleanupLogs);
-	afterEach(cleanupLogs);
+	beforeEach(snapshotExistingLogs);
+	afterEach(cleanupTestLogs);
 
 	test('error and validation logs go to same migration log file', () => {
 		const dateTime = 'mixed-errors-test';
@@ -595,8 +611,8 @@ describe('mixed logging', () => {
 });
 
 describe('filename sanitization', () => {
-	beforeEach(cleanupLogs);
-	afterEach(cleanupLogs);
+	beforeEach(snapshotExistingLogs);
+	afterEach(cleanupTestLogs);
 
 	test('replaces colons with hyphens in log filenames for Windows compatibility', () => {
 		const dateTime = '2026-01-20T14:30:45';
