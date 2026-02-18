@@ -142,7 +142,7 @@ Configuration in `src/envs-constants.ts`:
 - `CONCURRENCY_LIMIT` - Number of concurrent requests (defaults to ~95% of rate limit)
 - Override defaults via `.env` file with `RATE_LIMIT` or `CONCURRENCY_LIMIT`
 
-The script uses **p-limit for concurrency control** across all API calls.
+The tool uses **p-limit for concurrency control** across all API calls.
 
 **Retry logic**:
 
@@ -205,7 +205,7 @@ This is necessary because Clerk's API only accepts one primary identifier per cr
 
 ### Environment Variable Detection
 
-The script auto-detects instance type from `CLERK_SECRET_KEY`:
+The tool auto-detects instance type from `CLERK_SECRET_KEY`:
 
 - Checks if key contains `"live"` → production
 - Otherwise → development

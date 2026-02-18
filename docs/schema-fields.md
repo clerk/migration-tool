@@ -1,6 +1,6 @@
 # Supported Schema Fields
 
-The migration script validates all user data against a Zod schema defined in `src/migrate/validator.ts`. Below is a complete list of supported fields.
+The migration tool validates all user data against a Zod schema defined in `src/migrate/validator.ts`. Below is a complete list of supported fields.
 
 ## Required Fields
 

@@ -1,5 +1,5 @@
 {
-  "name": "clerk-user-migration",
+  "name": "clerk-user-migration-tool",
   "version": "0.0.1",
   "description": "## Description",
   "main": "index.ts",
