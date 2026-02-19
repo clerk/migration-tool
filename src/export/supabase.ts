@@ -72,10 +72,28 @@ export async function exportSupabaseUsers(
 		await client.connect();
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
+		let hint: string;
+		if (message.includes('ENOTFOUND')) {
+			hint =
+				'The hostname could not be resolved. Check the project ref in your connection string.';
+		} else if (
+			message.includes('ETIMEDOUT') ||
+			message.includes('ENETUNREACH')
+		) {
+			hint =
+				'Direct connections require the IPv4 add-on. Use a pooler connection instead,\n' +
+				'or enable IPv4 in Supabase Dashboard → Settings → Add-Ons.';
+		} else if (
+			message.includes('authentication failed') ||
+			message.includes('password')
+		) {
+			hint = 'Check the password in your connection string.';
+		} else {
+			hint =
+				'Verify your connection string and ensure your Supabase project is accessible.';
+		}
 		throw new Error(
-			`Failed to connect to Supabase database: ${message}\n\n` +
-				`Connection string format: postgresql://postgres:[PASSWORD]@db.[PROJECT_REF].supabase.co:5432/postgres\n` +
-				`Find this in Supabase Dashboard → Settings → Database → Connection string`
+			`Failed to connect to Supabase database: ${message}\n\n${hint}`
 		);
 	}
 
@@ -90,7 +108,24 @@ export async function exportSupabaseUsers(
 			[key: string]: unknown;
 		}
 
-		const { rows } = await client.query<SupabaseUserRow>(EXPORT_QUERY);
+		let rows: SupabaseUserRow[];
+		try {
+			({ rows } = await client.query<SupabaseUserRow>(EXPORT_QUERY));
+		} catch (err) {
+			const message = err instanceof Error ? err.message : String(err);
+			if (
+				message.includes('does not exist') ||
+				message.includes('permission denied')
+			) {
+				throw new Error(
+					`Could not read from auth.users: ${message}\n\n` +
+						'The auth.users table is created automatically when Supabase Auth is enabled.\n' +
+						'Ensure Auth is enabled in Supabase Dashboard → Authentication, and that\n' +
+						'you are connecting with the postgres role (not an application-level role).'
+				);
+			}
+			throw err;
+		}
 
 		// Calculate field coverage
 		const coverage = {

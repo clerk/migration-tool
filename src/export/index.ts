@@ -9,35 +9,38 @@
  *   bun run export:supabase --db-url postgresql://... --output users.json
  *
  * Environment variables:
- *   SUPABASE_DB_URL - Postgres connection string (alternative to --db-url flag)
+ *   SUPABASE_DB_URL - Postgres connection string
+ *
+ * Priority: --db-url flag > SUPABASE_DB_URL env var > interactive prompt
  */
 import 'dotenv/config';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 import { displayExportSummary, exportSupabaseUsers } from './supabase';
+import { isValidConnectionString, resolveConnectionString } from '../utils';
 
 async function main() {
 	p.intro(color.bgCyan(color.black('Supabase User Export')));
 
-	// Parse CLI flags
-	const args = process.argv.slice(2);
-	let dbUrl = process.env.SUPABASE_DB_URL;
-	let outputFile = 'supabase-export.json';
+	const {
+		dbUrl: resolvedUrl,
+		outputFile,
+		warning,
+	} = resolveConnectionString(
+		process.argv.slice(2),
+		process.env as Record<string, string | undefined>
+	);
 
-	for (let i = 0; i < args.length; i++) {
-		if (args[i] === '--db-url' && args[i + 1]) {
-			dbUrl = args[i + 1];
-			i++;
-		} else if (args[i] === '--output' && args[i + 1]) {
-			outputFile = args[i + 1];
-			i++;
-		}
+	let dbUrl = resolvedUrl;
+
+	if (warning) {
+		p.log.warn(color.yellow(warning));
 	}
 
-	// Prompt for DB URL if not provided
+	// Prompt for connection string if not resolved from flag or env
 	if (!dbUrl) {
 		p.note(
-			`Find this in the Supabase Dashboard by clicking the ${color.bold('Connect')} button.\n\n${color.bold('Direct connection')} (requires IPv6):\n  ${color.dim('postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres')}\n\n${color.bold('Pooler connection')} (works on IPv4 — use this if direct fails):\n  ${color.dim('postgres://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres')}\n\n${color.dim('Alternatively, run the export SQL in the Supabase SQL Editor and save the result as JSON.')}`,
+			`Find this in the Supabase Dashboard by clicking the ${color.bold('Connect')} button.\n\n${color.bold('Direct connection')} (requires IPv4 add-on):\n  ${color.dim('postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres')}\n\n${color.bold('Pooler connection')} (works without IPv4 add-on):\n  ${color.dim('postgres://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres')}`,
 			'Connection String'
 		);
 
@@ -49,10 +52,7 @@ async function main() {
 				if (!value || value.trim() === '') {
 					return 'Connection string is required';
 				}
-				if (
-					!value.startsWith('postgresql://') &&
-					!value.startsWith('postgres://')
-				) {
+				if (!isValidConnectionString(value)) {
 					return 'Must be a valid Postgres connection string (postgresql://...)';
 				}
 			},

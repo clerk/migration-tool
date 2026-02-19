@@ -190,3 +190,74 @@ export function getRetryDelay(
 	const delaySeconds = retryAfterSeconds || defaultDelayMs / 1000;
 	return { delayMs, delaySeconds };
 }
+
+/**
+ * Checks if a string is a valid Postgres connection string.
+ *
+ * Verifies the value starts with postgresql:// or postgres:// and is
+ * parseable as a URL. Passwords with special characters (like @, #, %)
+ * must be URL-encoded for the string to be valid.
+ *
+ * @param value - The string to check
+ * @returns true if the value is a parseable Postgres URL
+ */
+export const isValidConnectionString = (value: string): boolean => {
+	if (!value.startsWith('postgresql://') && !value.startsWith('postgres://')) {
+		return false;
+	}
+	try {
+		new URL(value);
+		return true;
+	} catch {
+		return false;
+	}
+};
+
+/**
+ * Resolves the database connection string from CLI args and environment variables.
+ *
+ * Priority: --db-url flag > SUPABASE_DB_URL env var > interactive prompt
+ *
+ * Returns the resolved URL and an optional warning if an env var was present
+ * but had an invalid format.
+ *
+ * @param cliArgs - Raw CLI arguments (process.argv.slice(2))
+ * @param env - Environment variables to check
+ * @returns Object with resolved dbUrl (undefined if not found) and optional warning
+ */
+export function resolveConnectionString(
+	cliArgs: string[],
+	env: Record<string, string | undefined>
+): {
+	dbUrl: string | undefined;
+	outputFile: string;
+	warning: string | undefined;
+} {
+	let dbUrl: string | undefined;
+	let outputFile = 'supabase-export.json';
+	let warning: string | undefined;
+
+	// Parse CLI flags
+	for (let i = 0; i < cliArgs.length; i++) {
+		if (cliArgs[i] === '--db-url' && cliArgs[i + 1]) {
+			dbUrl = cliArgs[i + 1];
+			i++;
+		} else if (cliArgs[i] === '--output' && cliArgs[i + 1]) {
+			outputFile = cliArgs[i + 1];
+			i++;
+		}
+	}
+
+	// Fall back to env vars if no --db-url flag, validating format
+	if (!dbUrl) {
+		const envUrl = env.SUPABASE_DB_URL;
+		if (envUrl && isValidConnectionString(envUrl)) {
+			dbUrl = envUrl;
+		} else if (envUrl) {
+			warning =
+				'Connection string from environment is not a valid Postgres URL — prompting instead.';
+		}
+	}
+
+	return { dbUrl, outputFile, warning };
+}

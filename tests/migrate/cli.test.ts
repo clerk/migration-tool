@@ -1115,10 +1115,15 @@ describe('displayCrossReference', () => {
 			fieldCounts: {},
 		};
 
-		displayCrossReference(items, analysis, {
-			validationFailed: 3,
-			logFile: 'migration-2025-01-01-120000.log',
-		});
+		displayCrossReference(
+			items,
+			analysis,
+			{ clerk: 'loaded' },
+			{
+				validationFailed: 3,
+				logFile: 'migration-2025-01-01-120000.log',
+			}
+		);
 
 		expect(p.note).toHaveBeenCalledWith(
 			expect.stringContaining('3 users failed validation'),
@@ -1155,13 +1160,221 @@ describe('displayCrossReference', () => {
 			fieldCounts: {},
 		};
 
-		displayCrossReference(items, analysis, {
-			validationFailed: 0,
-			logFile: '',
-		});
+		displayCrossReference(
+			items,
+			analysis,
+			{ clerk: 'loaded' },
+			{
+				validationFailed: 0,
+				logFile: '',
+			}
+		);
 
 		const noteCall = vi.mocked(p.note).mock.calls[0][0] as string;
 		expect(noteCall).not.toContain('failed validation');
+	});
+
+	test('shows Clerk Configuration loaded when config succeeded', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'loaded' });
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Configuration loaded from Clerk'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows Clerk Configuration error guidance when config failed', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'failed' });
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Could not fetch Clerk configuration'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Verify your Clerk Dashboard settings'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows Clerk Configuration skipped guidance when no publishable key', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'skipped' });
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('CLERK_PUBLISHABLE_KEY'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows Supabase Configuration section only for supabase migrations', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, {
+			clerk: 'loaded',
+			supabase: 'loaded',
+		});
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Supabase Configuration'),
+			'Migration Readiness'
+		);
+	});
+
+	test('does not show Supabase section for non-supabase migrations', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'loaded' });
+
+		const noteCall = vi.mocked(p.note).mock.calls[0][0] as string;
+		expect(noteCall).not.toContain('Supabase Configuration');
+	});
+
+	test('shows Import File section with total users', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'loaded' });
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Import File'),
+			'Migration Readiness'
+		);
 	});
 });
 

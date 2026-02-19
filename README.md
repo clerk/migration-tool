@@ -7,6 +7,7 @@ This repository contains a tool that takes a JSON file as input, containing a li
 ## Table of Contents
 
 - [Getting Started](#getting-started)
+- [Exporting Users](#exporting-users)
 - [Migrating OAuth Connections](#migrating-oauth-connections)
 - [Handle Existing User IDs and Foreign Key Constraints](#handle-existing-user-ids-and-foreign-key-constraints)
 - [Configuration](#configuration)
@@ -15,6 +16,7 @@ This repository contains a tool that takes a JSON file as input, containing a li
 
 ### Documentation
 
+- [Exporting Users](docs/exporting-users.md)
 - [Schema Fields Reference](docs/schema-fields.md)
 - [Creating Custom Transformers](docs/creating-transformers.md)
 - [AI Migration Prompt](prompts/migration-prompt.md)
@@ -168,6 +170,14 @@ bun migrate -y \
 - `--transformer` (or `-t`)
 - `--file` (or `-f`)
 - `CLERK_SECRET_KEY` (via `--clerk-secret-key`, environment variable, or `.env` file)
+
+## Exporting Users
+
+Some platforms require exporting users directly from their database before migrating. See the [Exporting Users](docs/exporting-users.md) guide for setup, CLI options, and troubleshooting.
+
+```bash
+bun export:supabase
+```
 
 ## Migrating OAuth Connections
 

@@ -1078,57 +1078,89 @@ interface ReadinessItem {
 	section: 'identifiers' | 'auth' | 'social' | 'model';
 }
 
+interface ConfigStatus {
+	clerk: 'loaded' | 'failed' | 'skipped';
+	supabase?: 'loaded' | 'failed' | 'skipped'; // undefined = not a supabase migration
+}
+
 /**
  * Displays a unified migration readiness report.
  *
- * Cross-references the Supabase auth config, Clerk instance config, and user
- * data to show a single report with all configuration items, their status,
- * and affected user counts.
+ * Combines configuration check status, validation results, and user data
+ * analysis into a single report. Sections:
  *
- * Items are grouped by section (Identifiers, Authentication, Social Connections,
- * User Model) and each shows:
- * - ✓ enabled in Clerk (green)
- * - ✗ not enabled in Clerk (red, needs attention)
- * - ⚠ required in Clerk but not all users have it (yellow, will cause failures)
- * - ○ status unknown, enable in Dashboard (yellow, no Clerk config available)
+ * 1. **Clerk Configuration** — whether the config was loaded, failed, or skipped,
+ *    with actionable guidance for non-success cases
+ * 2. **Supabase Configuration** (Supabase migrations only) — same pattern
+ * 3. **Import File** — total users, validation failures, and per-field readiness:
+ *    - ✓ enabled in Clerk (green)
+ *    - ✗ not enabled in Clerk (red, needs attention)
+ *    - ⚠ required in Clerk but not all users have it (yellow, will cause failures)
+ *    - ○ status unknown, enable in Dashboard (yellow, no Clerk config available)
  *
  * For identifiers (email, phone, username), provides actionable guidance on
  * whether the field can safely be required based on user coverage.
  *
- * Also displays total user count and validation failure summary (with log file
- * reference) so users can review errors before confirming the migration.
- *
  * @param items - List of readiness items to display
  * @param analysis - Field analysis results for total user count and identifier check
- * @param validation - Validation results: failure count and log file path (0 failures hides the section)
+ * @param configStatus - Whether Clerk/Supabase config checks succeeded, failed, or were skipped
+ * @param validation - Validation results: failure count and log file path (0 failures hides the line)
  */
 export function displayCrossReference(
 	items: ReadinessItem[],
 	analysis: FieldAnalysis,
+	configStatus: ConfigStatus = { clerk: 'skipped' },
 	validation: { validationFailed: number; logFile: string } = {
 		validationFailed: 0,
 		logFile: '',
 	}
 ): void {
+	let message = '';
+
+	// --- Clerk Configuration section ---
+	message += color.bold(color.whiteBright('Clerk Configuration\n'));
+	if (configStatus.clerk === 'loaded') {
+		message += `  ${color.green('✓')} ${color.dim('Configuration loaded from Clerk')}\n`;
+	} else if (configStatus.clerk === 'failed') {
+		message += `  ${color.yellow('⚠')} ${color.yellow('Could not fetch Clerk configuration')}\n`;
+		message += `  ${color.dim('  Verify your Clerk Dashboard settings match the report below')}\n`;
+	} else {
+		message += `  ${color.yellow('○')} ${color.dim('Add CLERK_PUBLISHABLE_KEY to .env and restart to enable automatic checking,')}\n`;
+		message += `  ${color.dim('  or verify your Clerk Dashboard settings match the report below')}\n`;
+	}
+	message += '\n';
+
+	// --- Supabase Configuration section (only for Supabase migrations) ---
+	if (configStatus.supabase !== undefined) {
+		message += color.bold(color.whiteBright('Supabase Configuration\n'));
+		if (configStatus.supabase === 'loaded') {
+			message += `  ${color.green('✓')} ${color.dim('Auth settings loaded from Supabase')}\n`;
+		} else if (configStatus.supabase === 'failed') {
+			message += `  ${color.yellow('⚠')} ${color.yellow('Could not fetch Supabase auth settings')}\n`;
+			message += `  ${color.dim('  Social connections were not checked')}\n`;
+		} else {
+			message += `  ${color.yellow('○')} ${color.dim('Add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to .env')}\n`;
+			message += `  ${color.dim('  and restart to check social connections')}\n`;
+		}
+		message += '\n';
+	}
+
+	// --- Import File section ---
+	const total = analysis.totalUsers;
+	message += color.bold(color.whiteBright('Import File\n'));
+	message += `  ${color.dim(`${total} user${total === 1 ? '' : 's'} in file`)}\n`;
+
+	if (validation.validationFailed > 0) {
+		message += `  ${color.yellow(`${validation.validationFailed} user${validation.validationFailed === 1 ? '' : 's'} failed validation and will be skipped`)} — ${color.dim(`see logs/${validation.logFile}`)}\n`;
+	}
+	message += '\n';
+
+	// --- Field readiness sections ---
 	const sections: Partial<Record<string, ReadinessItem[]>> = {};
 	for (const item of items) {
 		if (!sections[item.section]) sections[item.section] = [];
 		sections[item.section].push(item);
 	}
-
-	const total = analysis.totalUsers;
-
-	let message = '';
-	message += `${color.dim(`${total} user${total === 1 ? '' : 's'} in file`)}\n`;
-
-	// Show validation failures if any
-	if (validation.validationFailed > 0) {
-		message += color.yellow(
-			`${validation.validationFailed} user${validation.validationFailed === 1 ? '' : 's'} failed validation and will be skipped — see ${color.dim(`logs/${validation.logFile}`)}`
-		);
-		message += '\n';
-	}
-	message += '\n';
 
 	const needsAttention: ReadinessItem[] = [];
 
@@ -1596,6 +1628,21 @@ export async function runCLI(cliArgs?: CLIArgs) {
 		providerCounts = analyzeUserProviders(filePath);
 	}
 
+	// Determine config check outcomes for the readiness report
+	let clerkStatus: ConfigStatus['clerk'] = 'skipped';
+	if (publishableKey) {
+		clerkStatus = clerkConfig ? 'loaded' : 'failed';
+	}
+	const configStatus: ConfigStatus = { clerk: clerkStatus };
+
+	if (isSupabase) {
+		if (supabaseUrl && supabaseApiKey) {
+			configStatus.supabase = supabaseProviders ? 'loaded' : 'failed';
+		} else {
+			configStatus.supabase = 'skipped';
+		}
+	}
+
 	configSpinner.stop('Configuration checked');
 
 	// Step 6: Build cross-reference items
@@ -1705,34 +1752,7 @@ export async function runCLI(cliArgs?: CLIArgs) {
 	}
 
 	// Step 7: Display unified cross-reference report
-	displayCrossReference(items, analysis, validation);
-
-	// Show hint if configs couldn't be loaded
-	if (!clerkConfig && !publishableKey) {
-		p.log.info(
-			color.dim(
-				'Set CLERK_PUBLISHABLE_KEY in .env to enable automatic configuration checking.'
-			)
-		);
-	} else if (!clerkConfig && publishableKey) {
-		p.log.warn(color.yellow('Could not fetch Clerk instance configuration.'));
-	}
-
-	if (isSupabase && !supabaseProviders) {
-		if (supabaseUrl && supabaseApiKey) {
-			p.log.warn(
-				color.yellow(
-					'Could not fetch Supabase auth settings. Social connections not checked.'
-				)
-			);
-		} else {
-			p.log.info(
-				color.dim(
-					'Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env to check social connections.'
-				)
-			);
-		}
-	}
+	displayCrossReference(items, analysis, configStatus, validation);
 
 	// Step 8: Show exclusion info and confirm
 	if (excludedUserIds.size > 0) {
