@@ -184,6 +184,7 @@ export type Settings = {
 	key?: string;
 	file?: string;
 	firebaseHashConfig?: FirebaseHashConfig;
+	skipUnsupportedProviders?: boolean;
 };
 
 /**

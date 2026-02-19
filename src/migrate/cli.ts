@@ -40,6 +40,7 @@ export type CLIArgs = {
 	file?: string;
 	resumeAfter?: string;
 	skipPasswordRequirement: boolean;
+	skipUnsupportedProviders?: boolean;
 	nonInteractive: boolean;
 	help: boolean;
 	// Authentication
@@ -73,6 +74,7 @@ OPTIONS:
   -f, --file <path>                 Path to the user data file (JSON or CSV)
   -r, --resume-after <userId>       Resume migration after this user ID
   --require-password                Only migrate users who have passwords (default: false)
+  --skip-unsupported-providers      Skip users who only have unsupported providers (no prompt)
   -y, --yes                         Non-interactive mode (skip all confirmations)
   -h, --help                        Show this help message
 
@@ -304,6 +306,9 @@ export function parseArgs(argv: string[]): CLIArgs {
 				break;
 			case '--require-password':
 				args.skipPasswordRequirement = false;
+				break;
+			case '--skip-unsupported-providers':
+				args.skipUnsupportedProviders = true;
 				break;
 			case '--clerk-secret-key':
 				args.clerkSecretKey = nextArg;
@@ -1027,27 +1032,31 @@ export function analyzeUserProviders(filePath: string): Record<string, number> {
 }
 
 /**
- * Finds user IDs that have any of the specified disabled social providers.
+ * Finds user IDs whose only providers are disabled social providers.
  *
  * Reads the raw export file and checks each user's raw_app_meta_data.providers.
- * If a user has any provider in the disabled list, their ID is included in the result.
+ * A user is excluded only if ALL of their providers are disabled social providers —
+ * users with at least one supported provider (email, phone, or an enabled social
+ * provider) are never excluded.
  *
  * @param filePath - Path to the JSON export file
  * @param disabledProviders - List of provider names not enabled in Clerk (e.g., ['discord'])
- * @returns Set of user IDs to exclude from import
+ * @returns Object with excluded user IDs and per-provider counts of exclusively-affected users
  */
 export function findUsersWithDisabledProviders(
 	filePath: string,
 	disabledProviders: string[]
-): Set<string> {
-	if (disabledProviders.length === 0) return new Set();
+): { excludedIds: Set<string>; exclusionsByProvider: Record<string, number> } {
+	if (disabledProviders.length === 0)
+		return { excludedIds: new Set(), exclusionsByProvider: {} };
 
 	try {
 		const raw = JSON.parse(fs.readFileSync(filePath, 'utf-8')) as Record<
 			string,
 			unknown
 		>[];
-		const excluded = new Set<string>();
+		const excludedIds = new Set<string>();
+		const exclusionsByProvider: Record<string, number> = {};
 		const disabledSet = new Set(disabledProviders);
 
 		for (const user of raw) {
@@ -1057,14 +1066,23 @@ export function findUsersWithDisabledProviders(
 			if (!appMeta?.providers) continue;
 
 			const providers = appMeta.providers as string[];
-			if (providers.some((p) => disabledSet.has(p))) {
-				excluded.add(user.id as string);
+			const hasSupportedProvider = providers.some(
+				(p) => IGNORED_PROVIDERS.has(p) || !disabledSet.has(p)
+			);
+
+			if (!hasSupportedProvider) {
+				excludedIds.add(user.id as string);
+				const disabledForUser = providers.filter((p) => disabledSet.has(p));
+				for (const provider of disabledForUser) {
+					exclusionsByProvider[provider] =
+						(exclusionsByProvider[provider] || 0) + 1;
+				}
 			}
 		}
 
-		return excluded;
+		return { excludedIds, exclusionsByProvider };
 	} catch {
-		return new Set();
+		return { excludedIds: new Set(), exclusionsByProvider: {} };
 	}
 }
 
@@ -1718,14 +1736,14 @@ export async function runCLI(cliArgs?: CLIArgs) {
 		}
 	}
 
-	// Find users to exclude (those with disabled social providers)
+	// Find users to exclude (those whose only providers are disabled)
 	let excludedUserIds = new Set<string>();
+	let exclusionsByProvider: Record<string, number> = {};
 	if (isSupabase && disabledProviders.length > 0) {
 		const filePath = createImportFilePath(initialArgs.file);
-		excludedUserIds = findUsersWithDisabledProviders(
-			filePath,
-			disabledProviders
-		);
+		const result = findUsersWithDisabledProviders(filePath, disabledProviders);
+		excludedUserIds = result.excludedIds;
+		exclusionsByProvider = result.exclusionsByProvider;
 	}
 
 	// User model
@@ -1754,16 +1772,43 @@ export async function runCLI(cliArgs?: CLIArgs) {
 	// Step 7: Display unified cross-reference report
 	displayCrossReference(items, analysis, configStatus, validation);
 
-	// Step 8: Show exclusion info and confirm
+	// Step 8: Show disabled providers and handle exclusion
+	let skipUnsupportedProviders: boolean | undefined;
 	if (excludedUserIds.size > 0) {
-		const providerNames = disabledProviders
-			.map((p) => OAUTH_PROVIDER_LABELS[p] || p)
-			.join(', ');
-		p.log.warn(
-			color.yellow(
-				`${excludedUserIds.size} user${excludedUserIds.size === 1 ? '' : 's'} will be excluded — signed up via disabled social connection${disabledProviders.length === 1 ? '' : 's'} (${providerNames})`
-			)
-		);
+		let providerInfo = '';
+		for (const provider of disabledProviders) {
+			const label = OAUTH_PROVIDER_LABELS[provider] || provider;
+			const count = exclusionsByProvider[provider] || 0;
+			if (count > 0) {
+				providerInfo += `  ${color.yellow('•')} ${label} — ${count} user${count === 1 ? '' : 's'}\n`;
+			}
+		}
+		providerInfo += `\n  ${excludedUserIds.size} user${excludedUserIds.size === 1 ? '' : 's'} only signed up via disabled provider${excludedUserIds.size === 1 ? '' : 's'}`;
+
+		p.note(providerInfo.trim(), 'Disabled Social Providers');
+
+		if (cliArgs?.skipUnsupportedProviders) {
+			p.log.info(
+				`Skipping ${excludedUserIds.size} user${excludedUserIds.size === 1 ? '' : 's'} (--skip-unsupported-providers)`
+			);
+		} else {
+			const savedSkip = savedSettings.skipUnsupportedProviders;
+			const shouldSkip = await p.confirm({
+				message: `Skip ${excludedUserIds.size} user${excludedUserIds.size === 1 ? '' : 's'} who only signed up via disabled providers?`,
+				initialValue: savedSkip ?? true,
+			});
+
+			if (p.isCancel(shouldSkip)) {
+				p.cancel('Migration cancelled.');
+				process.exit(0);
+			}
+
+			skipUnsupportedProviders = shouldSkip;
+
+			if (!shouldSkip) {
+				excludedUserIds = new Set<string>();
+			}
+		}
 	}
 
 	const importCount = userCount - excludedUserIds.size;
@@ -1797,6 +1842,9 @@ export async function runCLI(cliArgs?: CLIArgs) {
 	saveSettings({
 		key: initialArgs.key,
 		file: initialArgs.file,
+		...(skipUnsupportedProviders !== undefined && {
+			skipUnsupportedProviders,
+		}),
 	});
 
 	// Auto-determine skipPasswordRequirement: true if any users lack passwords

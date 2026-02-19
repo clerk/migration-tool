@@ -636,7 +636,7 @@ describe('findUsersWithDisabledProviders', () => {
 		vi.clearAllMocks();
 	});
 
-	test('returns user IDs that have disabled providers', () => {
+	test('does not exclude users who have a supported provider alongside a disabled one', () => {
 		const mockData = [
 			{ id: 'user-1', raw_app_meta_data: { providers: ['email'] } },
 			{ id: 'user-2', raw_app_meta_data: { providers: ['discord'] } },
@@ -650,24 +650,28 @@ describe('findUsersWithDisabledProviders', () => {
 
 		const result = findUsersWithDisabledProviders('test.json', ['discord']);
 
-		expect(result).toEqual(new Set(['user-2', 'user-3']));
+		// user-3 has email (supported) + discord (disabled) → NOT excluded
+		expect(result.excludedIds).toEqual(new Set(['user-2']));
+		expect(result.exclusionsByProvider).toEqual({ discord: 1 });
 	});
 
-	test('returns empty set when no disabled providers specified', () => {
+	test('returns empty result when no disabled providers specified', () => {
 		const result = findUsersWithDisabledProviders('test.json', []);
 
-		expect(result).toEqual(new Set());
+		expect(result.excludedIds).toEqual(new Set());
+		expect(result.exclusionsByProvider).toEqual({});
 		expect(fs.readFileSync).not.toHaveBeenCalled();
 	});
 
-	test('returns empty set for invalid file', () => {
+	test('returns empty result for invalid file', () => {
 		vi.mocked(fs.readFileSync).mockImplementation(() => {
 			throw new Error('File not found');
 		});
 
 		const result = findUsersWithDisabledProviders('missing.json', ['discord']);
 
-		expect(result).toEqual(new Set());
+		expect(result.excludedIds).toEqual(new Set());
+		expect(result.exclusionsByProvider).toEqual({});
 	});
 
 	test('handles multiple disabled providers', () => {
@@ -687,7 +691,8 @@ describe('findUsersWithDisabledProviders', () => {
 			'twitter',
 		]);
 
-		expect(result).toEqual(new Set(['user-2', 'user-3']));
+		expect(result.excludedIds).toEqual(new Set(['user-2', 'user-3']));
+		expect(result.exclusionsByProvider).toEqual({ discord: 1, twitter: 1 });
 	});
 
 	test('skips users without raw_app_meta_data', () => {
@@ -699,7 +704,70 @@ describe('findUsersWithDisabledProviders', () => {
 
 		const result = findUsersWithDisabledProviders('test.json', ['discord']);
 
-		expect(result).toEqual(new Set(['user-2']));
+		expect(result.excludedIds).toEqual(new Set(['user-2']));
+		expect(result.exclusionsByProvider).toEqual({ discord: 1 });
+	});
+
+	test('excludes users with only disabled providers', () => {
+		const mockData = [
+			{ id: 'user-1', raw_app_meta_data: { providers: ['github'] } },
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', ['github']);
+
+		expect(result.excludedIds).toEqual(new Set(['user-1']));
+		expect(result.exclusionsByProvider).toEqual({ github: 1 });
+	});
+
+	test('excludes users when all providers are disabled', () => {
+		const mockData = [
+			{
+				id: 'user-1',
+				raw_app_meta_data: { providers: ['github', 'discord'] },
+			},
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', [
+			'github',
+			'discord',
+		]);
+
+		expect(result.excludedIds).toEqual(new Set(['user-1']));
+		expect(result.exclusionsByProvider).toEqual({ github: 1, discord: 1 });
+	});
+
+	test('does not exclude users when one social provider is enabled', () => {
+		const mockData = [
+			{
+				id: 'user-1',
+				raw_app_meta_data: { providers: ['github', 'google'] },
+			},
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', ['github']);
+
+		// google is not in the disabled list → user has a supported provider
+		expect(result.excludedIds).toEqual(new Set());
+		expect(result.exclusionsByProvider).toEqual({});
+	});
+
+	test('does not exclude users with phone provider alongside disabled social', () => {
+		const mockData = [
+			{
+				id: 'user-1',
+				raw_app_meta_data: { providers: ['phone', 'discord'] },
+			},
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', ['discord']);
+
+		// phone is an ignored provider (always supported)
+		expect(result.excludedIds).toEqual(new Set());
+		expect(result.exclusionsByProvider).toEqual({});
 	});
 });
 
