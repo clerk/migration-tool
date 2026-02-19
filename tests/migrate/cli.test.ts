@@ -3,14 +3,15 @@ import fs from 'fs';
 import path from 'path';
 import {
 	analyzeFields,
+	analyzeUserProviders,
 	detectInstanceType,
-	displayIdentifierAnalysis,
-	displayOtherFieldsAnalysis,
-	formatCount,
+	displayCrossReference,
+	findUsersWithDisabledProviders,
 	hasValue,
 	loadRawUsers,
 	loadSettings,
 	saveSettings,
+	validateUsers,
 } from '../../src/migrate/cli';
 
 // Mock modules
@@ -53,6 +54,10 @@ vi.mock('picocolors', () => ({
 		bgCyan: vi.fn((s) => s),
 		black: vi.fn((s) => s),
 	},
+}));
+
+vi.mock('../../src/logger', () => ({
+	validationLogger: vi.fn(),
 }));
 
 // Import the mocked module to get access to the mock
@@ -577,38 +582,940 @@ describe('analyzeFields', () => {
 });
 
 // ============================================================================
-// formatCount tests
+// analyzeUserProviders tests
 // ============================================================================
 
-describe('formatCount', () => {
-	test('returns "All users have {label}" when count equals total', () => {
-		const result = formatCount(10, 10, 'email');
-		expect(result).toBe('All users have email');
+describe('analyzeUserProviders', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
 	});
 
-	test('returns "No users have {label}" when count is 0', () => {
-		const result = formatCount(0, 10, 'email');
-		expect(result).toBe('No users have email');
+	test('counts users per provider from raw_app_meta_data', () => {
+		const mockData = [
+			{ raw_app_meta_data: { providers: ['email'] } },
+			{ raw_app_meta_data: { providers: ['email'] } },
+			{ raw_app_meta_data: { providers: ['discord'] } },
+			{ raw_app_meta_data: { providers: ['email', 'google'] } },
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = analyzeUserProviders('test.json');
+
+		expect(result).toEqual({ email: 3, discord: 1, google: 1 });
 	});
 
-	test('returns "{count} of {total} users have {label}" for partial counts', () => {
-		const result = formatCount(5, 10, 'email');
-		expect(result).toBe('5 of 10 users have email');
+	test('returns empty object for invalid file', () => {
+		vi.mocked(fs.readFileSync).mockImplementation(() => {
+			throw new Error('File not found');
+		});
+
+		const result = analyzeUserProviders('missing.json');
+
+		expect(result).toEqual({});
 	});
 
-	test('handles count of 1 out of many', () => {
-		const result = formatCount(1, 100, 'a username');
-		expect(result).toBe('1 of 100 users have a username');
+	test('skips users without raw_app_meta_data', () => {
+		const mockData = [
+			{ raw_app_meta_data: { providers: ['email'] } },
+			{ email: 'test@example.com' }, // no raw_app_meta_data
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = analyzeUserProviders('test.json');
+
+		expect(result).toEqual({ email: 1 });
+	});
+});
+
+// ============================================================================
+// findUsersWithDisabledProviders tests
+// ============================================================================
+
+describe('findUsersWithDisabledProviders', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
 	});
 
-	test('handles large numbers', () => {
-		const result = formatCount(1234, 5678, 'verified emails');
-		expect(result).toBe('1234 of 5678 users have verified emails');
+	test('does not exclude users who have a supported provider alongside a disabled one', () => {
+		const mockData = [
+			{ id: 'user-1', raw_app_meta_data: { providers: ['email'] } },
+			{ id: 'user-2', raw_app_meta_data: { providers: ['discord'] } },
+			{
+				id: 'user-3',
+				raw_app_meta_data: { providers: ['email', 'discord'] },
+			},
+			{ id: 'user-4', raw_app_meta_data: { providers: ['google'] } },
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', ['discord']);
+
+		// user-3 has email (supported) + discord (disabled) → NOT excluded
+		expect(result.excludedIds).toEqual(new Set(['user-2']));
+		expect(result.exclusionsByProvider).toEqual({ discord: 1 });
 	});
 
-	test('handles count equal to total of 1', () => {
-		const result = formatCount(1, 1, 'phone number');
-		expect(result).toBe('All users have phone number');
+	test('returns empty result when no disabled providers specified', () => {
+		const result = findUsersWithDisabledProviders('test.json', []);
+
+		expect(result.excludedIds).toEqual(new Set());
+		expect(result.exclusionsByProvider).toEqual({});
+		expect(fs.readFileSync).not.toHaveBeenCalled();
+	});
+
+	test('returns empty result for invalid file', () => {
+		vi.mocked(fs.readFileSync).mockImplementation(() => {
+			throw new Error('File not found');
+		});
+
+		const result = findUsersWithDisabledProviders('missing.json', ['discord']);
+
+		expect(result.excludedIds).toEqual(new Set());
+		expect(result.exclusionsByProvider).toEqual({});
+	});
+
+	test('handles multiple disabled providers', () => {
+		const mockData = [
+			{ id: 'user-1', raw_app_meta_data: { providers: ['email'] } },
+			{ id: 'user-2', raw_app_meta_data: { providers: ['discord'] } },
+			{ id: 'user-3', raw_app_meta_data: { providers: ['twitter'] } },
+			{
+				id: 'user-4',
+				raw_app_meta_data: { providers: ['email', 'google'] },
+			},
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', [
+			'discord',
+			'twitter',
+		]);
+
+		expect(result.excludedIds).toEqual(new Set(['user-2', 'user-3']));
+		expect(result.exclusionsByProvider).toEqual({ discord: 1, twitter: 1 });
+	});
+
+	test('skips users without raw_app_meta_data', () => {
+		const mockData = [
+			{ id: 'user-1', email: 'test@example.com' },
+			{ id: 'user-2', raw_app_meta_data: { providers: ['discord'] } },
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', ['discord']);
+
+		expect(result.excludedIds).toEqual(new Set(['user-2']));
+		expect(result.exclusionsByProvider).toEqual({ discord: 1 });
+	});
+
+	test('excludes users with only disabled providers', () => {
+		const mockData = [
+			{ id: 'user-1', raw_app_meta_data: { providers: ['github'] } },
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', ['github']);
+
+		expect(result.excludedIds).toEqual(new Set(['user-1']));
+		expect(result.exclusionsByProvider).toEqual({ github: 1 });
+	});
+
+	test('excludes users when all providers are disabled', () => {
+		const mockData = [
+			{
+				id: 'user-1',
+				raw_app_meta_data: { providers: ['github', 'discord'] },
+			},
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', [
+			'github',
+			'discord',
+		]);
+
+		expect(result.excludedIds).toEqual(new Set(['user-1']));
+		expect(result.exclusionsByProvider).toEqual({ github: 1, discord: 1 });
+	});
+
+	test('does not exclude users when one social provider is enabled', () => {
+		const mockData = [
+			{
+				id: 'user-1',
+				raw_app_meta_data: { providers: ['github', 'google'] },
+			},
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', ['github']);
+
+		// google is not in the disabled list → user has a supported provider
+		expect(result.excludedIds).toEqual(new Set());
+		expect(result.exclusionsByProvider).toEqual({});
+	});
+
+	test('does not exclude users with phone provider alongside disabled social', () => {
+		const mockData = [
+			{
+				id: 'user-1',
+				raw_app_meta_data: { providers: ['phone', 'discord'] },
+			},
+		];
+		vi.mocked(fs.readFileSync).mockReturnValue(JSON.stringify(mockData));
+
+		const result = findUsersWithDisabledProviders('test.json', ['discord']);
+
+		// phone is an ignored provider (always supported)
+		expect(result.excludedIds).toEqual(new Set());
+		expect(result.exclusionsByProvider).toEqual({});
+	});
+});
+
+// ============================================================================
+// displayCrossReference tests
+// ============================================================================
+
+describe('displayCrossReference', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	test('calls p.note with Migration Readiness title', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.any(String),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows enabled items with green check', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('enabled in Clerk'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows disabled items with red cross', () => {
+		const items = [
+			{
+				label: 'Discord',
+				userCount: 5,
+				clerkEnabled: false as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'social' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('not enabled in Clerk'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('1 setting'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows unknown items with yellow circle when no Clerk config', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('enable in Clerk Dashboard'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows "can be required" hint for identifiers when all users have it and no Clerk config', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('can be required'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows "do not require" hint for identifiers when not all users have it and no Clerk config', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 7,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 7,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('do not require'),
+			'Migration Readiness'
+		);
+	});
+
+	test('warns when identifier is required in Clerk but not all users have it', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 7,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: true as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 7,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('required in Clerk'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('3 will fail without email'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('1 setting'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows green check when identifier is required and all users have it', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: true as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('enabled in Clerk'),
+			'Migration Readiness'
+		);
+		expect(p.note).not.toHaveBeenCalledWith(
+			expect.stringContaining('will fail'),
+			'Migration Readiness'
+		);
+	});
+
+	test('does not show require hints for non-identifier sections', () => {
+		const items = [
+			{
+				label: 'Password',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'auth' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		const noteCall = vi.mocked(p.note).mock.calls[0][0] as string;
+		expect(noteCall).not.toContain('can be required');
+		expect(noteCall).not.toContain('do not require');
+	});
+
+	test('shows total user count', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('10 users in file'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows count/total format for partial coverage', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 15,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 15,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 30,
+			},
+			totalUsers: 30,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('15/30 users'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows validation failure count and log file reference', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(
+			items,
+			analysis,
+			{ clerk: 'loaded' },
+			{
+				validationFailed: 3,
+				logFile: 'migration-2025-01-01-120000.log',
+			}
+		);
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('3 users failed validation'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('migration-2025-01-01-120000.log'),
+			'Migration Readiness'
+		);
+	});
+
+	test('does not show validation section when no failures', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(
+			items,
+			analysis,
+			{ clerk: 'loaded' },
+			{
+				validationFailed: 0,
+				logFile: '',
+			}
+		);
+
+		const noteCall = vi.mocked(p.note).mock.calls[0][0] as string;
+		expect(noteCall).not.toContain('failed validation');
+	});
+
+	test('shows Clerk Configuration loaded when config succeeded', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'loaded' });
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Configuration loaded from Clerk'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows Clerk Configuration error guidance when config failed', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'failed' });
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Could not fetch Clerk configuration'),
+			'Migration Readiness'
+		);
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Verify your Clerk Dashboard settings'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows Clerk Configuration skipped guidance when no publishable key', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: null as boolean | null,
+				clerkRequired: null as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'skipped' });
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('CLERK_PUBLISHABLE_KEY'),
+			'Migration Readiness'
+		);
+	});
+
+	test('shows Supabase Configuration section only for supabase migrations', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, {
+			clerk: 'loaded',
+			supabase: 'loaded',
+		});
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Supabase Configuration'),
+			'Migration Readiness'
+		);
+	});
+
+	test('does not show Supabase section for non-supabase migrations', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'loaded' });
+
+		const noteCall = vi.mocked(p.note).mock.calls[0][0] as string;
+		expect(noteCall).not.toContain('Supabase Configuration');
+	});
+
+	test('shows Import File section with total users', () => {
+		const items = [
+			{
+				label: 'Email',
+				userCount: 10,
+				clerkEnabled: true as boolean | null,
+				clerkRequired: false as boolean | null,
+				section: 'identifiers' as const,
+			},
+		];
+		const analysis = {
+			presentOnAll: [],
+			presentOnSome: [],
+			identifiers: {
+				verifiedEmails: 10,
+				unverifiedEmails: 0,
+				verifiedPhones: 0,
+				unverifiedPhones: 0,
+				username: 0,
+				hasAnyIdentifier: 10,
+			},
+			totalUsers: 10,
+			fieldCounts: {},
+		};
+
+		displayCrossReference(items, analysis, { clerk: 'loaded' });
+
+		expect(p.note).toHaveBeenCalledWith(
+			expect.stringContaining('Import File'),
+			'Migration Readiness'
+		);
+	});
+});
+
+// ============================================================================
+// validateUsers tests
+// ============================================================================
+
+describe('validateUsers', () => {
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	test('returns 0 failures for valid users', () => {
+		const users = [
+			{ userId: 'user_1', email: 'a@test.com' },
+			{ userId: 'user_2', email: 'b@test.com' },
+		];
+
+		const result = validateUsers(users, 'clerk');
+
+		expect(result.validationFailed).toBe(0);
+		expect(result.logFile).toMatch(/^migration-.*\.log$/);
+	});
+
+	test('counts validation failures for users missing identifiers', () => {
+		const users = [
+			{ userId: 'user_1', email: 'a@test.com' },
+			{ userId: 'user_2' }, // no identifier
+			{ userId: 'user_3' }, // no identifier
+		];
+
+		const result = validateUsers(users, 'clerk');
+
+		expect(result.validationFailed).toBe(2);
+	});
+
+	test('applies transformer defaults before validating', () => {
+		// Supabase transformer adds passwordHasher: "bcrypt" as default
+		// Without defaults, users with password but no hasher would fail
+		const users = [
+			{ userId: 'user_1', email: 'a@test.com', password: '$2a$10$hash' },
+		];
+
+		const result = validateUsers(users, 'supabase');
+
+		expect(result.validationFailed).toBe(0);
+	});
+
+	test('fails validation for users with password but no hasher when no defaults', () => {
+		const users = [
+			{ userId: 'user_1', email: 'a@test.com', password: 'somepassword' },
+		];
+
+		const result = validateUsers(users, 'clerk');
+
+		expect(result.validationFailed).toBe(1);
+	});
+
+	test('logs validation errors via validationLogger', async () => {
+		const { validationLogger } = await import('../../src/logger');
+		const users = [
+			{ userId: 'user_1' }, // no identifier
+		];
+
+		validateUsers(users, 'clerk');
+
+		expect(validationLogger).toHaveBeenCalledWith(
+			expect.objectContaining({
+				userId: 'user_1',
+				row: 0,
+			}),
+			expect.any(String)
+		);
 	});
 });
 
@@ -867,251 +1774,5 @@ describe('loadRawUsers', () => {
 			customField: 'custom value',
 			email: 'john@example.com',
 		});
-	});
-});
-
-// ============================================================================
-// displayIdentifierAnalysis tests
-// ============================================================================
-
-describe('displayIdentifierAnalysis', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	test('calls p.note with analysis message', () => {
-		const analysis = {
-			presentOnAll: [],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 10,
-				unverifiedEmails: 0,
-				verifiedPhones: 10,
-				unverifiedPhones: 0,
-				username: 10,
-				hasAnyIdentifier: 10,
-			},
-			totalUsers: 10,
-			fieldCounts: {},
-		};
-
-		displayIdentifierAnalysis(analysis);
-
-		expect(p.note).toHaveBeenCalledWith(expect.any(String), 'Identifiers');
-	});
-
-	test('handles analysis with all users having identifiers', () => {
-		const analysis = {
-			presentOnAll: [],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 5,
-				unverifiedEmails: 0,
-				verifiedPhones: 5,
-				unverifiedPhones: 0,
-				username: 5,
-				hasAnyIdentifier: 5,
-			},
-			totalUsers: 5,
-			fieldCounts: {},
-		};
-
-		// Should not throw
-		expect(() => displayIdentifierAnalysis(analysis)).not.toThrow();
-	});
-
-	test('handles analysis with missing identifiers', () => {
-		const analysis = {
-			presentOnAll: [],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 3,
-				unverifiedEmails: 0,
-				verifiedPhones: 2,
-				unverifiedPhones: 0,
-				username: 1,
-				hasAnyIdentifier: 8,
-			},
-			totalUsers: 10,
-			fieldCounts: {},
-		};
-
-		// Should not throw
-		expect(() => displayIdentifierAnalysis(analysis)).not.toThrow();
-	});
-
-	test('handles analysis with unverified identifiers', () => {
-		const analysis = {
-			presentOnAll: [],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 5,
-				unverifiedEmails: 3,
-				verifiedPhones: 5,
-				unverifiedPhones: 2,
-				username: 5,
-				hasAnyIdentifier: 5,
-			},
-			totalUsers: 5,
-			fieldCounts: {},
-		};
-
-		// Should not throw
-		expect(() => displayIdentifierAnalysis(analysis)).not.toThrow();
-	});
-
-	test('recommends email as required when all importable users have email (even if some users lack identifiers)', () => {
-		// Scenario: 3309 users have email, 259 users have no identifier (will fail validation)
-		// All importable users (3309) have email, so email should be required
-		const analysis = {
-			presentOnAll: [],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 3309,
-				unverifiedEmails: 259,
-				verifiedPhones: 0,
-				unverifiedPhones: 0,
-				username: 0,
-				hasAnyIdentifier: 3309, // Only users with verified email can be imported
-			},
-			totalUsers: 3568, // Total includes users who will fail validation
-			fieldCounts: {},
-		};
-
-		displayIdentifierAnalysis(analysis);
-
-		// Verify p.note was called with a message that includes email as required
-		expect(p.note).toHaveBeenCalledWith(
-			expect.stringContaining('Enable and optionally require'),
-			'Identifiers'
-		);
-		expect(p.note).toHaveBeenCalledWith(
-			expect.stringContaining('email'),
-			'Identifiers'
-		);
-	});
-
-	test('recommends identifiers as optional when not all importable users have them', () => {
-		// Scenario: 50 users have email, 50 users have phone, 100 total importable
-		const analysis = {
-			presentOnAll: [],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 50,
-				unverifiedEmails: 0,
-				verifiedPhones: 50,
-				unverifiedPhones: 0,
-				username: 0,
-				hasAnyIdentifier: 100, // 50 with email + 50 with phone = 100 importable
-			},
-			totalUsers: 100,
-			fieldCounts: {},
-		};
-
-		displayIdentifierAnalysis(analysis);
-
-		// Both should be optional since not all importable users have each identifier
-		expect(p.note).toHaveBeenCalledWith(
-			expect.stringContaining('Enable in the Dashboard but do not require'),
-			'Identifiers'
-		);
-	});
-});
-
-// ============================================================================
-// displayOtherFieldsAnalysis tests
-// ============================================================================
-
-describe('displayOtherFieldsAnalysis', () => {
-	beforeEach(() => {
-		vi.clearAllMocks();
-	});
-
-	test('returns false when no fields are analyzed', () => {
-		const analysis = {
-			presentOnAll: [],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 0,
-				unverifiedEmails: 0,
-				verifiedPhones: 0,
-				unverifiedPhones: 0,
-				username: 0,
-				hasAnyIdentifier: 0,
-			},
-			totalUsers: 0,
-			fieldCounts: {},
-		};
-
-		const result = displayOtherFieldsAnalysis(analysis);
-
-		expect(result).toBe(false);
-		expect(p.note).not.toHaveBeenCalled();
-	});
-
-	test('returns true when fields are present on all users', () => {
-		const analysis = {
-			presentOnAll: ['TOTP Secret'],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 10,
-				unverifiedEmails: 0,
-				verifiedPhones: 0,
-				unverifiedPhones: 0,
-				username: 0,
-				hasAnyIdentifier: 10,
-			},
-			totalUsers: 10,
-			fieldCounts: {},
-		};
-
-		const result = displayOtherFieldsAnalysis(analysis);
-
-		expect(result).toBe(true);
-		expect(p.note).toHaveBeenCalledWith(expect.any(String), 'Other Fields');
-	});
-
-	test('returns true when fields are present on some users', () => {
-		const analysis = {
-			presentOnAll: [],
-			presentOnSome: ['TOTP Secret'],
-			identifiers: {
-				verifiedEmails: 10,
-				unverifiedEmails: 0,
-				verifiedPhones: 0,
-				unverifiedPhones: 0,
-				username: 0,
-				hasAnyIdentifier: 10,
-			},
-			totalUsers: 10,
-			fieldCounts: {},
-		};
-
-		const result = displayOtherFieldsAnalysis(analysis);
-
-		expect(result).toBe(true);
-		expect(p.note).toHaveBeenCalledWith(expect.any(String), 'Other Fields');
-	});
-
-	test('returns true when both presentOnAll and presentOnSome have fields', () => {
-		const analysis = {
-			presentOnAll: ['TOTP Secret'],
-			presentOnSome: [],
-			identifiers: {
-				verifiedEmails: 10,
-				unverifiedEmails: 0,
-				verifiedPhones: 0,
-				unverifiedPhones: 0,
-				username: 0,
-				hasAnyIdentifier: 10,
-			},
-			totalUsers: 10,
-			fieldCounts: {},
-		};
-
-		const result = displayOtherFieldsAnalysis(analysis);
-
-		expect(result).toBe(true);
-		expect(p.note).toHaveBeenCalledWith(expect.any(String), 'Other Fields');
 	});
 });

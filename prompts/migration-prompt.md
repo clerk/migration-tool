@@ -19,11 +19,18 @@ Follow these steps EXACTLY in order. Do NOT skip any steps.
 
 ### Step 1: Verify Environment
 
-Before doing ANYTHING else:
+Before proceeding, check if dependencies are installed. If not:
+1. Use `bun install` to install dependencies.
+
+After confirming dependencies are installed and before doing ANYTHING else:
+1. Check if dependencies are installed, and if not use `bun install` to install dependencies.
 1. Check if `.env` file exists with `CLERK_SECRET_KEY`
-2. If missing, IMMEDIATELY ask for the key (Clerk Dashboard → API Keys → Secret keys, or https://dashboard.clerk.com/~/api-keys)
-3. Create/update the `.env` file with the provided key
-4. Do NOT proceed until the key is configured
+1. If missing, IMMEDIATELY ask for the key (Clerk Dashboard → API Keys → Secret keys, or https://dashboard.clerk.com/~/api-keys)
+1. Create/update the `.env` file with the provided key
+1. Do NOT proceed until the key is configured
+
+
+**DO NOT** move to step 1 until the dependenices are installed and the `CLERK_SECRET_KEY` is present in the `.env` file
 
 ### Step 2: Analyze the Data File
 
@@ -40,9 +47,10 @@ Read a sample of the file to understand its structure. Look for signature fields
 ### Step 3A: If a Transformer Matches
 
 1. Tell me which transformer will be used
-2. Summarize the field mappings that will be applied
-3. Ask if I want to proceed with the migration
-4. If confirmed, run:
+1. Summarize the field mappings that will be applied
+1. Use `displayCrossReference()` and related code to display a mnigration readiness table to the user.
+1. Ask if I want to proceed with the migration
+1. If confirmed, run:
    ```bash
    bun migrate -y --transformer [transformer-key] --file [file-path]
    ```
@@ -52,19 +60,11 @@ Read a sample of the file to understand its structure. Look for signature fields
 If the data doesn't match any existing transformer, you MUST:
 
 1. **Inform the user**: Explain that no existing transformer matches their data format
-2. **List the fields found**: Show all fields discovered in their data file
-3. **Create a custom transformer**: Generate a transformer file at `src/transformers/[platform-name].ts` using the 'transformer' skill or the `prompts/transformer-prompt.md`
-4. **MANDATORY - Register the transformer**:
-   - Add an import to `src/transformers/index.ts`
-   - Add the transformer to the `transformers` array
-
-   **THIS STEP IS NOT OPTIONAL.** If you skip registration:
-   - The transformer will NOT appear in the CLI's platform selection
-   - The `bun delete` command will NOT find migrated users
-   - Users will see "Found 0 migrated users to delete" after migration
-
-5. **Run tests**: Execute `bun run test` to verify the transformer is properly registered
-6. **Run the migration**: After tests pass, run the migration command
+1. **List the fields found**: Show all fields discovered in their data file
+1. **Create a custom transformer**: Use the `transformer` skill. If the `transformer` skill is not available use `.claude/skills/transformer/SKILL.md` or `prompts/transformer-prompt.md`. Do not try and create a transformer without using the skill or prompt.
+1. **Run tests**: Execute `bun run test` to verify the transformer is properly registered
+1. Use `displayCrossReference()` and related code to display a mnigration readiness table to the user.  Always display this after any field mapping summary.
+1. **Run the migration**: After tests pass, run the migration command
 
 ### Step 4: Post-Migration Verification
 

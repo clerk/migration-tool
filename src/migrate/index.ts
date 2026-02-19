@@ -50,6 +50,22 @@ async function main() {
 		}
 	}
 
+	// Exclude users with disabled social providers
+	if (args.excludedUserIds.size > 0) {
+		const before = usersToImport.length;
+		usersToImport = usersToImport.filter(
+			(u) => !args.excludedUserIds.has(u.userId)
+		);
+		const excluded = before - usersToImport.length;
+		if (excluded > 0) {
+			p.log.info(
+				color.dim(
+					`Excluded ${excluded} user${excluded === 1 ? '' : 's'} with disabled social connections`
+				)
+			);
+		}
+	}
+
 	await importUsers(
 		usersToImport,
 		args.skipPasswordRequirement,

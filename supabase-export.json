@@ -1,0 +1,55 @@
+[
+  {
+    "id": "aa16f470-9851-48d5-8a5e-a617fd7c70a3",
+    "email": "royanger@gmail.com",
+    "email_confirmed_at": "2026-02-19T00:39:45.479Z",
+    "encrypted_password": "$2a$10$ijb754iZs7gepAKgZYBVjeW7Gr/rGxmudhLR9vlX1Kr.zTA/YoTDO",
+    "phone": null,
+    "phone_confirmed_at": null,
+    "first_name": null,
+    "last_name": null,
+    "raw_user_meta_data": {
+      "sub": "aa16f470-9851-48d5-8a5e-a617fd7c70a3",
+      "email": "royanger@gmail.com",
+      "email_verified": true,
+      "phone_verified": false
+    },
+    "raw_app_meta_data": {
+      "provider": "email",
+      "providers": [
+        "email"
+      ]
+    },
+    "created_at": "2026-02-19T00:39:06.023Z"
+  },
+  {
+    "id": "c5675a4c-b42f-445a-81c8-d158dec7f2c5",
+    "email": "roy@clerk.dev",
+    "email_confirmed_at": "2026-02-19T02:29:54.946Z",
+    "encrypted_password": "$2a$10$pkx6GxQIMMRC0XN4sAt.lus7u15pctzCfkRXP.WlDoMD6XeYA0OCy",
+    "phone": null,
+    "phone_confirmed_at": null,
+    "first_name": "Roy Anger",
+    "last_name": null,
+    "raw_user_meta_data": {
+      "iss": "https://api.github.com",
+      "sub": "24333362",
+      "name": "Roy Anger",
+      "email": "roy@royanger.com",
+      "full_name": "Roy Anger",
+      "user_name": "royanger",
+      "avatar_url": "https://avatars.githubusercontent.com/u/24333362?v=4",
+      "provider_id": "24333362",
+      "email_verified": true,
+      "phone_verified": false,
+      "preferred_username": "royanger"
+    },
+    "raw_app_meta_data": {
+      "provider": "email",
+      "providers": [
+        "github"
+      ]
+    },
+    "created_at": "2026-02-19T02:29:38.771Z"
+  }
+]
