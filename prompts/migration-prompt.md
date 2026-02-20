@@ -42,6 +42,7 @@ Read a sample of the file to understand its structure. Look for signature fields
 | **Auth0** | `user_id` (format: "provider\|id"), `email_verified` (boolean), `phone_number`, `phone_verified`, `user_metadata`, `app_metadata`, `given_name`, `family_name` |
 | **Firebase** | `localId`, `passwordHash`, `passwordSalt`, `displayName`, `phoneNumber`, `disabled` |
 | **Clerk** | `primary_email_address`, `verified_email_addresses`, `password_digest`, `password_hasher`, `primary_phone_number` |
+| **Better Auth** | `user_id` (UUID), `email_verified` (boolean), `password_hash` (bcrypt `$2` prefix), `phone_number`, `phone_number_verified`, `display_username` |
 | **AuthJS** | `email_verified`, `name`, `id`, `email` (minimal - may need customization) |
 
 ### Step 3A: If a Transformer Matches
@@ -152,6 +153,23 @@ public_metadata           → publicMetadata
 unsafe_metadata           → unsafeMetadata
 private_metadata          → privateMetadata
 ```
+
+### Better Auth
+
+```
+user_id         → userId
+email           → email (routed by email_verified)
+password_hash   → password
+username        → username
+phone_number    → phone (routed by phone_number_verified)
+name            → firstName + lastName (split)
+created_at      → createdAt
+updated_at      → updatedAt
+```
+
+Default: `passwordHasher: "bcrypt"`
+
+**Note:** Better Auth plugin fields (username, phone, admin, two-factor) are automatically detected during export and included when present.
 
 ### AuthJS (Next-Auth)
 

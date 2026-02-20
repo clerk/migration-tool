@@ -1,0 +1,112 @@
+[
+  {
+    "user_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "email": "james.smith@gmail.com",
+    "email_verified": true,
+    "name": "James Smith",
+    "password_hash": "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy",
+    "created_at": "2025-02-09T16:34:22.611Z",
+    "updated_at": "2025-09-14T20:29:42.043Z"
+  },
+  {
+    "user_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "email": "emma.johnson@yahoo.com",
+    "email_verified": true,
+    "name": "Emma Johnson",
+    "password_hash": "$2a$10$K7L8M9N0O1P2Q3R4S5T6U7V8W9X0Y1Z2A3B4C5D6E7F8G9H0I1J2",
+    "username": "emmaj",
+    "phone_number": "+14155551234",
+    "phone_number_verified": true,
+    "created_at": "2025-03-15T10:22:38.831Z",
+    "updated_at": "2025-08-20T14:30:00.000Z"
+  },
+  {
+    "user_id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+    "email": "liam.williams@outlook.com",
+    "email_verified": false,
+    "name": "Liam Williams",
+    "password_hash": null,
+    "created_at": "2025-04-10T21:22:55.401Z",
+    "updated_at": "2025-10-13T00:07:47.153Z"
+  },
+  {
+    "user_id": "d4e5f6a7-b8c9-0123-defa-234567890123",
+    "email": "olivia.brown@hotmail.com",
+    "email_verified": true,
+    "name": "Olivia Brown",
+    "password_hash": "$2a$10$A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6",
+    "username": "oliviab",
+    "created_at": "2025-05-14T01:30:14.070Z",
+    "updated_at": "2025-08-31T12:56:44.123Z"
+  },
+  {
+    "user_id": "e5f6a7b8-c9d0-1234-efab-345678901234",
+    "email": "noah.jones@proton.me",
+    "email_verified": true,
+    "name": "Noah",
+    "password_hash": "$2a$10$Q1W2E3R4T5Y6U7I8O9P0A1S2D3F4G5H6J7K8L9Z0X1C2V3B4N5M6",
+    "phone_number": "+13784711532",
+    "phone_number_verified": false,
+    "created_at": "2025-06-27T18:37:43.579Z",
+    "updated_at": "2025-10-10T17:22:51.902Z"
+  },
+  {
+    "user_id": "f6a7b8c9-d0e1-2345-fabc-456789012345",
+    "email": "ava.garcia@icloud.com",
+    "email_verified": true,
+    "name": null,
+    "password_hash": "$2a$10$R2T3Y4U5I6O7P8A9S0D1F2G3H4J5K6L7Z8X9C0V1B2N3M4Q5W6E7",
+    "banned": true,
+    "ban_reason": "Spam",
+    "ban_expires": "2026-12-31T23:59:59.000Z",
+    "role": "user",
+    "created_at": "2025-07-10T00:36:12.411Z",
+    "updated_at": "2025-12-01T02:40:50.743Z"
+  },
+  {
+    "user_id": "a7b8c9d0-e1f2-3456-abcd-567890123456",
+    "email": "william.miller@company.io",
+    "email_verified": true,
+    "name": "William James Miller",
+    "password_hash": "$2a$10$X1Y2Z3A4B5C6D7E8F9G0H1I2J3K4L5M6N7O8P9Q0R1S2T3U4V5W6",
+    "username": "willm",
+    "phone_number": "+19863500676",
+    "phone_number_verified": true,
+    "role": "admin",
+    "two_factor_enabled": true,
+    "created_at": "2025-08-04T06:45:01.073Z",
+    "updated_at": "2025-12-25T02:15:55.651Z"
+  },
+  {
+    "user_id": "b8c9d0e1-f2a3-4567-bcde-678901234567",
+    "email": "sophia.davis@startup.co",
+    "email_verified": false,
+    "name": "Sophia Davis",
+    "password_hash": null,
+    "username": "sophiad",
+    "display_username": "SophiaD",
+    "created_at": "2025-09-01T22:42:49.974Z",
+    "updated_at": "2025-09-30T21:35:29.082Z"
+  },
+  {
+    "user_id": "c9d0e1f2-a3b4-5678-cdef-789012345678",
+    "email": "oliver.rodriguez@gmail.com",
+    "email_verified": true,
+    "name": "Oliver Rodriguez",
+    "password_hash": "$2a$10$M1N2O3P4Q5R6S7T8U9V0W1X2Y3Z4A5B6C7D8E9F0G1H2I3J4K5L6",
+    "created_at": "2025-10-04T04:49:46.871Z",
+    "updated_at": "2025-11-25T20:19:24.261Z"
+  },
+  {
+    "user_id": "d0e1f2a3-b4c5-6789-defa-890123456789",
+    "email": "isabella.martinez@yahoo.com",
+    "email_verified": true,
+    "name": "Isabella Martinez",
+    "password_hash": "$2a$10$F1G2H3I4J5K6L7M8N9O0P1Q2R3S4T5U6V7W8X9Y0Z1A2B3C4D5E6",
+    "username": "isabellam",
+    "phone_number": "+15148469027",
+    "phone_number_verified": false,
+    "created_at": "2025-11-01T14:11:24.525Z",
+    "updated_at": "2025-12-15T23:42:14.332Z"
+  }
+]
