@@ -76,7 +76,7 @@ bun migrate
 
 If no key is found, the interactive CLI will prompt you to enter one and optionally save it to a `.env` file.
 
-You can find your secret key in the [Clerk Dashboard](https://dashboard.clerk.dev/) under **API Keys**.
+You can find your secret key in the [Clerk Dashboard](https://dashboard.clerk.com/~/api-keys) under **API Keys**.
 
 ### Run the tool
 

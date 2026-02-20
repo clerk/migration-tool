@@ -165,7 +165,7 @@ async function ensureClerkSecretKey(
 		);
 		// eslint-disable-next-line no-console
 		console.error(
-			'You can find your secret key in the Clerk Dashboard under API Keys.'
+			'You can find your secret key in the Clerk Dashboard under API Keys: https://dashboard.clerk.com/~/api-keys'
 		);
 		return false;
 	}
@@ -174,7 +174,8 @@ async function ensureClerkSecretKey(
 	p.note(
 		`${color.yellow('CLERK_SECRET_KEY is not set.')}\n\n` +
 			`You can find your secret key in the Clerk Dashboard:\n` +
-			`${color.cyan('Dashboard → API Keys → Secret keys')}\n\n` +
+			`${color.cyan('Dashboard → API Keys → Secret keys')}\n` +
+			`${color.dim('https://dashboard.clerk.com/~/api-keys')}\n\n` +
 			`Alternatively, create a ${color.bold('.env')} file with:\n` +
 			`${color.dim('CLERK_SECRET_KEY=sk_test_...')}`,
 		'Missing API Key'
@@ -698,9 +699,11 @@ export function displayCrossReference(
 	} else if (configStatus.clerk === 'failed') {
 		message += `  ${color.yellow('⚠')} ${color.yellow('Could not fetch Clerk configuration')}\n`;
 		message += `  ${color.dim('  Verify your Clerk Dashboard settings match the report below')}\n`;
+		message += `  ${color.dim('  https://dashboard.clerk.com/~/api-keys')}\n`;
 	} else {
 		message += `  ${color.yellow('○')} ${color.dim('Add CLERK_PUBLISHABLE_KEY to .env and restart to enable automatic checking,')}\n`;
 		message += `  ${color.dim('  or verify your Clerk Dashboard settings match the report below')}\n`;
+		message += `  ${color.dim('  https://dashboard.clerk.com/~/api-keys')}\n`;
 	}
 	message += '\n';
 
@@ -765,22 +768,27 @@ export function displayCrossReference(
 				if (isIdentifier && item.clerkRequired === true && !allUsers) {
 					const missing = total - item.userCount;
 					message += `  ${color.yellow('⚠')} ${item.label} — ${color.yellow('required in Clerk')} — ${color.dim(`${countStr} (${missing} will fail without ${item.label.toLowerCase()})`)}\n`;
+					message += `  ${color.dim('    https://dashboard.clerk.com/~/user-authentication')}\n`;
 					needsAttention.push(item);
 				} else {
 					message += `  ${color.green('✓')} ${item.label} — ${color.dim(`enabled in Clerk — ${countStr}`)}\n`;
 				}
 			} else if (item.clerkEnabled === false) {
 				message += `  ${color.red('✗')} ${item.label} — ${color.red('not enabled in Clerk')} — ${color.dim(countStr)}\n`;
+				message += `  ${color.dim('    https://dashboard.clerk.com/~/user-authentication')}\n`;
 				needsAttention.push(item);
 			} else if (isIdentifier && allUsers) {
 				// No Clerk config — all users have this identifier, safe to require
 				message += `  ${color.yellow('○')} ${item.label} — ${color.dim(`${countStr} — enable in Clerk Dashboard (can be required)`)}\n`;
+				message += `  ${color.dim('    https://dashboard.clerk.com/~/user-authentication')}\n`;
 			} else if (isIdentifier) {
 				// No Clerk config — not all users have this identifier, requiring would cause failures
 				message += `  ${color.yellow('○')} ${item.label} — ${color.dim(`${countStr} — enable in Clerk Dashboard (do not require)`)}\n`;
+				message += `  ${color.dim('    https://dashboard.clerk.com/~/user-authentication')}\n`;
 			} else {
 				// No Clerk config — non-identifier item
 				message += `  ${color.yellow('○')} ${item.label} — ${color.dim(`${countStr} — enable in Clerk Dashboard`)}\n`;
+				message += `  ${color.dim('    https://dashboard.clerk.com/~/user-authentication')}\n`;
 			}
 		}
 

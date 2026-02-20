@@ -32,7 +32,7 @@ Based on the platform, verify the required configuration:
 | **Auth0** | Auth0 domain, client ID, client secret (`AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET` in `.env` or `--domain`, `--client-id`, `--client-secret` flags) |
 | **AuthJS** | Database connection string (`AUTHJS_DB_URL` in `.env` or `--db-url` flag). Supports PostgreSQL, MySQL, and SQLite. |
 | **Better Auth** | Database connection string (`BETTER_AUTH_DB_URL` in `.env` or `--db-url` flag). Supports PostgreSQL, MySQL, and SQLite. |
-| **Clerk** | `CLERK_SECRET_KEY` in `.env` (Clerk Dashboard → API Keys → Secret keys) |
+| **Clerk** | `CLERK_SECRET_KEY` in `.env` (Clerk Dashboard → API Keys → Secret keys, or https://dashboard.clerk.com/~/api-keys) |
 | **Firebase** | Firebase service account JSON key file (`GOOGLE_APPLICATION_CREDENTIALS` in `.env` or `--service-account` flag) |
 | **Supabase** | PostgreSQL connection string (`SUPABASE_DB_URL` in `.env` or `--db-url` flag) |
 
