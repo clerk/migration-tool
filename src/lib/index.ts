@@ -2,6 +2,13 @@ import path from 'path';
 import mime from 'mime-types';
 import fs from 'fs';
 
+export {
+	getCoverageIcon,
+	writeExportOutput,
+	displayFieldCoverage,
+	getDbConnectionErrorHint,
+} from './export';
+
 /**
  * Gets the current date and time in ISO format without milliseconds
  * @returns A string in the format YYYY-MM-DDTHH:mm:ss
@@ -192,49 +199,89 @@ export function getRetryDelay(
 }
 
 /**
- * Checks if a string is a valid Postgres connection string.
+ * Checks if a string is a valid database connection string.
  *
- * Verifies the value starts with postgresql:// or postgres:// and is
- * parseable as a URL. Passwords with special characters (like @, #, %)
- * must be URL-encoded for the string to be valid.
+ * Accepts PostgreSQL, MySQL, and SQLite connection strings:
+ * - `postgresql://` or `postgres://` — validated as URL
+ * - `mysql://` or `mysql2://` — validated as URL
+ * - File paths (for SQLite) — `.sqlite`, `.db`, `.sqlite3` extensions, or `file:` prefix
+ *
+ * Passwords with special characters (like @, #, %) must be URL-encoded
+ * for URL-based connection strings.
  *
  * @param value - The string to check
- * @returns true if the value is a parseable Postgres URL
+ * @returns true if the value is a valid database connection string
  */
 export const isValidConnectionString = (value: string): boolean => {
-	if (!value.startsWith('postgresql://') && !value.startsWith('postgres://')) {
-		return false;
+	const lower = value.toLowerCase();
+
+	// PostgreSQL
+	if (lower.startsWith('postgresql://') || lower.startsWith('postgres://')) {
+		try {
+			new URL(value);
+			return true;
+		} catch {
+			return false;
+		}
 	}
-	try {
-		new URL(value);
+
+	// MySQL
+	if (lower.startsWith('mysql://') || lower.startsWith('mysql2://')) {
+		try {
+			new URL(value);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	// SQLite — file: prefix or file path with known extension
+	if (lower.startsWith('file:')) {
 		return true;
-	} catch {
-		return false;
 	}
+	if (
+		lower.endsWith('.sqlite') ||
+		lower.endsWith('.sqlite3') ||
+		lower.endsWith('.db')
+	) {
+		return true;
+	}
+
+	return false;
 };
 
 /**
- * Resolves the database connection string from CLI args and environment variables.
+ * Resolves a database connection string from CLI args and environment variables.
  *
- * Priority: --db-url flag > SUPABASE_DB_URL env var > interactive prompt
+ * Priority: --db-url flag > environment variable > interactive prompt
  *
  * Returns the resolved URL and an optional warning if an env var was present
  * but had an invalid format.
  *
  * @param cliArgs - Raw CLI arguments (process.argv.slice(2))
  * @param env - Environment variables to check
+ * @param options - Optional configuration for env var name and default output file
  * @returns Object with resolved dbUrl (undefined if not found) and optional warning
  */
 export function resolveConnectionString(
 	cliArgs: string[],
-	env: Record<string, string | undefined>
+	env: Record<string, string | undefined>,
+	options: {
+		envVarName?: string;
+		defaultOutputFile?: string;
+	} = {}
 ): {
 	dbUrl: string | undefined;
 	outputFile: string;
 	warning: string | undefined;
 } {
+	const {
+		envVarName = 'SUPABASE_DB_URL',
+		defaultOutputFile = 'supabase-export.json',
+	} = options;
+
 	let dbUrl: string | undefined;
-	let outputFile = 'supabase-export.json';
+	let outputFile = defaultOutputFile;
 	let warning: string | undefined;
 
 	// Parse CLI flags
@@ -250,12 +297,11 @@ export function resolveConnectionString(
 
 	// Fall back to env vars if no --db-url flag, validating format
 	if (!dbUrl) {
-		const envUrl = env.SUPABASE_DB_URL;
+		const envUrl = env[envVarName];
 		if (envUrl && isValidConnectionString(envUrl)) {
 			dbUrl = envUrl;
 		} else if (envUrl) {
-			warning =
-				'Connection string from environment is not a valid Postgres URL — prompting instead.';
+			warning = `Connection string from ${envVarName} is not a valid database connection string — prompting instead.`;
 		}
 	}
 

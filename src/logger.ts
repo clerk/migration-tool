@@ -4,6 +4,7 @@ import type {
 	DeleteLogEntry,
 	ErrorLog,
 	ErrorPayload,
+	ExportLogEntry,
 	ImportLogEntry,
 	ValidationErrorPayload,
 } from './types';
@@ -93,7 +94,7 @@ function logErrorPayload(
  * @param logFile - The log file name (e.g., 'migration' or 'user-deletion')
  */
 function logEntry(
-	entry: ImportLogEntry | DeleteLogEntry,
+	entry: ImportLogEntry | DeleteLogEntry | ExportLogEntry,
 	dateTime: string,
 	logFile: string
 ) {
@@ -153,4 +154,13 @@ export const deleteErrorLogger = (payload: ErrorPayload, dateTime: string) => {
  */
 export const deleteLogger = (entry: DeleteLogEntry, dateTime: string) => {
 	logEntry(entry, dateTime, 'user-deletion');
+};
+
+/**
+ * Logs user export attempts
+ * @param entry - The export log entry containing user ID and status
+ * @param dateTime - The timestamp for the log file name (format: YYYY-MM-DDTHH:mm:ss)
+ */
+export const exportLogger = (entry: ExportLogEntry, dateTime: string) => {
+	logEntry(entry, dateTime, 'export');
 };

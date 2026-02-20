@@ -124,6 +124,19 @@ export type ImportSummary = {
 };
 
 /**
+ * Log entry for a user export attempt
+ *
+ * @property userId - The user ID that was exported
+ * @property status - Whether the export succeeded or failed
+ * @property error - Error message if export failed
+ */
+export type ExportLogEntry = {
+	userId: string;
+	status: 'success' | 'error';
+	error?: string;
+};
+
+/**
  * Log entry for a user deletion attempt
  *
  * @property userId - The user ID
@@ -225,4 +238,32 @@ export type FieldAnalysis = {
 export type SettingsResult = {
 	file: string;
 	key?: string;
+};
+
+/**
+ * Common fields returned by all export functions
+ *
+ * @property userCount - Number of users exported
+ * @property outputPath - Absolute path to the output file
+ * @property fieldCoverage - Map of field names to counts of users with that field
+ */
+export type BaseExportResult = {
+	userCount: number;
+	outputPath: string;
+	fieldCoverage: Record<string, number>;
+};
+
+/**
+ * Registry entry for the export dispatcher
+ *
+ * @property key - Unique key used for CLI --platform flag
+ * @property label - Display name shown in the interactive picker
+ * @property description - Short description shown below the label
+ * @property run - Function that executes the export
+ */
+export type ExportRegistryEntry = {
+	key: string;
+	label: string;
+	description: string;
+	run: () => Promise<void>;
 };

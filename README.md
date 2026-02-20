@@ -21,6 +21,7 @@ This repository contains a tool that takes a JSON file as input, containing a li
 - [Creating Custom Transformers](docs/creating-transformers.md)
 - [AI Migration Prompt](prompts/migration-prompt.md)
 - [AI Transformer Generation Prompt](prompts/transformer-prompt.md)
+- [AI Export Prompt](prompts/export-prompt.md)
 
 ## Getting Started
 
@@ -174,11 +175,111 @@ bun migrate -y \
 
 ## Exporting Users
 
-Some platforms require exporting users directly from their database before migrating. See the [Exporting Users](docs/exporting-users.md) guide for setup, CLI options, and troubleshooting.
+The tool supports exporting users from multiple platforms. Exported files are saved to the `exports/` directory.
+
+```bash
+# Interactive platform picker
+bun export
+
+# Export directly from a specific platform
+bun export:auth0
+bun export:authjs
+bun export:betterauth
+bun export:clerk
+bun export:firebase
+bun export:supabase
+```
+
+### Auth0 Export
+
+Exports all users from your Auth0 tenant via the Management API. Requires a Machine-to-Machine application with the `read:users` scope.
+
+```bash
+bun export:auth0
+bun export:auth0 -- --domain my-tenant.us.auth0.com --client-id xxx --client-secret xxx
+bun export:auth0 -- --output my-users.json
+```
+
+You can set `AUTH0_DOMAIN`, `AUTH0_CLIENT_ID`, and `AUTH0_CLIENT_SECRET` in your `.env` file to avoid being prompted.
+
+**Note:** Password hashes are not available from the Auth0 Management API. Contact Auth0 support to request a password hash export if you need to migrate passwords.
+
+Output: `exports/auth0-export.json` (default)
+
+### AuthJS Export
+
+Exports all users from an AuthJS (Next-Auth) database. Supports PostgreSQL, MySQL, and SQLite databases.
+
+```bash
+bun export:authjs
+bun export:authjs -- --db-url postgresql://user:password@host:5432/database
+bun export:authjs -- --db-url mysql://user:password@host:3306/database
+bun export:authjs -- --db-url /path/to/database.sqlite
+bun export:authjs -- --output my-users.json
+```
+
+You can set `AUTHJS_DB_URL` in your `.env` file to avoid being prompted for the connection string.
+
+The export reads from the standard AuthJS Prisma adapter tables (`User` and `Account`). If the PascalCase table names are not found, it retries with lowercase names automatically.
+
+Output: `exports/authjs-export.json` (default)
+
+### Better Auth Export
+
+Exports all users from a Better Auth database to a JSON file. Supports PostgreSQL, MySQL, and SQLite databases. The export dynamically detects installed Better Auth plugins (username, phone number, admin, two-factor) and includes those columns when present.
+
+```bash
+bun export:betterauth
+bun export:betterauth -- --db-url postgresql://user:password@host:5432/database
+bun export:betterauth -- --db-url mysql://user:password@host:3306/database
+bun export:betterauth -- --db-url /path/to/database.sqlite
+bun export:betterauth -- --output my-users.json
+```
+
+You can set `BETTER_AUTH_DB_URL` in your `.env` file to avoid being prompted for the connection string.
+
+The export joins the `"user"` table with the `"account"` table (filtered to `providerId = 'credential'`) to include password hashes. If you customized table names in your Better Auth config, you'll need to update the table references in the export module.
+
+Output: `exports/betterauth-export.json` (default)
+
+### Clerk Export
+
+Exports all users from your Clerk instance to a JSON file. Requires `CLERK_SECRET_KEY` in your `.env` file or environment.
+
+```bash
+bun export:clerk
+bun export:clerk -- --output my-users.json
+```
+
+The export includes all fields available from the Clerk API: emails, phones, usernames, names, metadata, and account settings. Note that passwords, TOTP secrets, and backup codes are **not** available from the API — only `passwordEnabled`, `totpEnabled`, and `backupCodeEnabled` booleans are included in the field coverage report.
+
+Output: `exports/clerk-export.json` (default)
+
+### Firebase Export
+
+Exports all users from your Firebase project via the Admin SDK. Requires a service account JSON key file.
+
+```bash
+bun export:firebase
+bun export:firebase -- --service-account /path/to/service-account.json
+bun export:firebase -- --output my-users.json
+```
+
+You can set `GOOGLE_APPLICATION_CREDENTIALS` in your `.env` file to avoid being prompted for the service account path.
+
+The export includes password hashes and salts when available. Ensure you're using a project-level service account for full access.
+
+Output: `exports/firebase-export.json` (default)
+
+### Supabase Export
+
+See the [Exporting Users](docs/exporting-users.md) guide for Supabase setup, CLI options, and troubleshooting.
 
 ```bash
 bun export:supabase
 ```
+
+Output: `exports/supabase-export.json` (default)
 
 ## Migrating OAuth Connections
 
