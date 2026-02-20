@@ -5,6 +5,7 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 logs
+exports
 test-convert-logs
 tmp/
 testing/

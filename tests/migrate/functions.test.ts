@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { existsSync, readdirSync, unlinkSync } from 'node:fs';
 import { loadUsersFromFile } from '../../src/migrate/functions';
-import { transformKeys } from '../../src/utils';
+import { transformKeys } from '../../src/lib';
 import { transformers } from '../../src/transformers';
 
 // Snapshot of files in logs/ before each test so we only clean up test-created files

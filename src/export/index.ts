@@ -17,7 +17,7 @@ import 'dotenv/config';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 import { displayExportSummary, exportSupabaseUsers } from './supabase';
-import { isValidConnectionString, resolveConnectionString } from '../utils';
+import { isValidConnectionString, resolveConnectionString } from '../lib';
 
 async function main() {
 	p.intro(color.bgCyan(color.black('Supabase User Export')));

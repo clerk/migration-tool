@@ -51,27 +51,32 @@ vi.mock('picocolors', () => ({
 }));
 
 // Mock utils for testing
-vi.mock('../../src/utils', () => ({
-	getDateTimeStamp: vi.fn(() => '2024-01-01T12:00:00'),
-	tryCatch: async (promise: Promise<any>) => {
-		try {
-			const data = await promise;
-			return [data, null];
-		} catch (throwable) {
-			if (throwable instanceof Error) return [null, throwable];
-			throw throwable;
-		}
-	},
-	getRetryDelay: (
-		retryAfterSeconds: number | undefined,
-		_defaultDelayMs: number
-	) => {
-		// Use a short delay for tests to avoid timeouts
-		const delayMs = retryAfterSeconds ? retryAfterSeconds * 1000 : 10; // 10ms instead of _defaultDelayMs
-		const delaySeconds = retryAfterSeconds || delayMs / 1000;
-		return { delayMs, delaySeconds };
-	},
-}));
+vi.mock('../../src/lib', async (importOriginal) => {
+	// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
+	const actual = (await importOriginal()) as Record<string, unknown>;
+	return {
+		...actual,
+		getDateTimeStamp: vi.fn(() => '2024-01-01T12:00:00'),
+		tryCatch: async (promise: Promise<any>) => {
+			try {
+				const data = await promise;
+				return [data, null];
+			} catch (throwable) {
+				if (throwable instanceof Error) return [null, throwable];
+				throw throwable;
+			}
+		},
+		getRetryDelay: (
+			retryAfterSeconds: number | undefined,
+			_defaultDelayMs: number
+		) => {
+			// Use a short delay for tests to avoid timeouts
+			const delayMs = retryAfterSeconds ? retryAfterSeconds * 1000 : 10; // 10ms instead of _defaultDelayMs
+			const delaySeconds = retryAfterSeconds || delayMs / 1000;
+			return { delayMs, delaySeconds };
+		},
+	};
+});
 
 // Mock logger module
 vi.mock('../../src/logger', () => ({
@@ -92,10 +97,8 @@ vi.mock('../../src/envs-constants', () => ({
 }));
 
 // Import after mocks are set up
-import {
-	importUsers,
-	normalizeErrorMessage,
-} from '../../src/migrate/import-users';
+import { importUsers } from '../../src/migrate/import-users';
+import { normalizeErrorMessage } from '../../src/lib';
 import * as logger from '../../src/logger';
 
 describe('importUsers', () => {

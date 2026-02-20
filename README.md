@@ -111,6 +111,7 @@ bun migrate [OPTIONS]
 | `-f, --file <path>`               | Path to the user data file (JSON or CSV)                                                 |
 | `-r, --resume-after <userId>`     | Resume migration after this user ID                                                      |
 | `--require-password`              | Only migrate users who have passwords (by default, users without passwords are migrated) |
+| `--skip-unsupported-providers`    | Skip users whose only providers are not enabled in Clerk (Supabase only, no prompt)      |
 | `-y, --yes`                       | Non-interactive mode (skip all confirmations)                                            |
 | `-h, --help`                      | Show help message                                                                        |
 
@@ -230,11 +231,14 @@ You could add a column in your user table inside of your database called `ClerkI
 
 The tool can be configured through the following environment variables:
 
-| Variable            | Description                                                               |
-| ------------------- | ------------------------------------------------------------------------- |
-| `CLERK_SECRET_KEY`  | Your Clerk secret key                                                     |
-| `RATE_LIMIT`        | Rate limit in requests/second (auto-configured: 100 for prod, 10 for dev) |
-| `CONCURRENCY_LIMIT` | Number of concurrent requests (auto-configured: ~9 for prod, ~1 for dev)  |
+| Variable                        | Description                                                               |
+| ------------------------------- | ------------------------------------------------------------------------- |
+| `CLERK_SECRET_KEY`              | Your Clerk secret key (required)                                          |
+| `CLERK_PUBLISHABLE_KEY`         | Clerk publishable key (enables automatic Dashboard config checking)       |
+| `RATE_LIMIT`                    | Rate limit in requests/second (auto-configured: 100 for prod, 10 for dev) |
+| `CONCURRENCY_LIMIT`             | Number of concurrent requests (auto-configured: ~9 for prod, ~1 for dev)  |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Supabase project URL (enables OAuth provider cross-referencing)           |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key (enables OAuth provider cross-referencing)              |
 
 The tool automatically detects production vs development instances from your `CLERK_SECRET_KEY` and sets appropriate rate limits and concurrency:
 

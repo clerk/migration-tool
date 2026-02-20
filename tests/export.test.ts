@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { isValidConnectionString, resolveConnectionString } from '../src/utils';
+import { isValidConnectionString, resolveConnectionString } from '../src/lib';
 
 // Mock pg Client
 const mockConnect = vi.fn();

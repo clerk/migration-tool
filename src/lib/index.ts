@@ -18,7 +18,7 @@ export const getDateTimeStamp = () => {
  * @returns The absolute file path
  */
 export const createImportFilePath = (file: string) => {
-	return path.join(__dirname, '..', file);
+	return path.join(__dirname, '..', '..', file);
 };
 
 /**
@@ -260,4 +260,33 @@ export function resolveConnectionString(
 	}
 
 	return { dbUrl, outputFile, warning };
+}
+
+/**
+ * Normalizes error messages by sorting field arrays to group similar errors
+ *
+ * Example: Converts both:
+ * - ["first_name" "last_name"] data doesn't match...
+ * - ["last_name" "first_name"] data doesn't match...
+ * into: ["first_name" "last_name"] data doesn't match...
+ *
+ * @param errorMessage - The original error message
+ * @returns The normalized error message with sorted field arrays
+ */
+export function normalizeErrorMessage(errorMessage: string): string {
+	// Match array-like patterns in error messages: ["field1" "field2"]
+	const arrayPattern = /\[([^\]]+)\]/g;
+
+	return errorMessage.replace(arrayPattern, (_match, fields: string) => {
+		// Split by spaces and quotes, filter out empty strings
+		const fieldNames = fields
+			.split(/["'\s]+/)
+			.filter((f: string) => f.trim().length > 0);
+
+		// Sort field names alphabetically
+		fieldNames.sort();
+
+		// Reconstruct the array notation
+		return `[${fieldNames.map((f: string) => `"${f}"`).join(' ')}]`;
+	});
 }
