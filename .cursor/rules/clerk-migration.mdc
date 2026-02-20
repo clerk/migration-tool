@@ -1,0 +1,13 @@
+---
+description: Migrate users between Clerk instances (development to production or instance to instance). Use when user wants to move users from one Clerk instance to another.
+globs:
+alwaysApply: false
+---
+
+Read and follow the instructions in `prompts/clerk-migration-prompt.md` for Clerk-to-Clerk migration.
+
+Typical flow:
+1. Verify environment and detect instance type
+2. Export from source instance (`bun export:clerk`)
+3. Switch `.env` to destination key
+4. Import into destination (`bun migrate -y --transformer clerk --file exports/clerk-export.json`)
