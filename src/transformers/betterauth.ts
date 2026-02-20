@@ -1,3 +1,5 @@
+import type { TransformerRegistryEntry } from '../types';
+
 /**
  * Transformer for migrating users from Better Auth
  *
@@ -99,6 +101,6 @@ const betterAuthTransformer = {
 	defaults: {
 		passwordHasher: 'bcrypt' as const,
 	},
-};
+} satisfies TransformerRegistryEntry;
 
 export default betterAuthTransformer;

@@ -37,13 +37,14 @@ src/
 │   ├── index.ts         # Entry point
 │   └── validator.ts     # Zod schema validation
 ├── transformers/        # Platform-specific transformers
+│   ├── index.ts         # Re-exports from registry
+│   ├── registry.ts      # Transformer registry (array-based, like exports)
 │   ├── auth0.ts
 │   ├── authjs.ts
 │   ├── betterauth.ts
 │   ├── clerk.ts
 │   ├── firebase.ts
-│   ├── supabase.ts
-│   └── index.ts
+│   └── supabase.ts
 ├── envs-constants.ts    # Environment configuration
 ├── logger.ts            # NDJSON logging
 └── types.ts             # TypeScript types
@@ -112,8 +113,8 @@ The migration tool uses a **transformer pattern** to support different source pl
 
 **Adding a new transformer**:
 
-1. Create a new file in `src/transformers/` with transformer config
-2. Export it in `src/transformers/index.ts`
+1. Create a new file in `src/transformers/` with a transformer config satisfying `TransformerRegistryEntry`
+2. Import and register it in `src/transformers/registry.ts`
 3. The CLI will automatically include it in the platform selection
 
 ### Export System

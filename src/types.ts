@@ -267,3 +267,24 @@ export type ExportRegistryEntry = {
 	description: string;
 	run: () => Promise<void>;
 };
+
+/**
+ * Registry entry for a platform transformer
+ *
+ * @property key - Unique key used for CLI --transformer flag
+ * @property label - Display name shown in the interactive picker
+ * @property description - Detailed description shown in CLI
+ * @property transformer - Field mapping from source platform to Clerk schema
+ * @property defaults - Default values applied to all users from this platform
+ * @property preTransform - Pre-processing before field transformation
+ * @property postTransform - Custom logic applied after field mapping
+ */
+export type TransformerRegistryEntry = {
+	key: string;
+	label: string;
+	description: string;
+	transformer: Record<string, string>;
+	defaults?: Record<string, unknown>;
+	preTransform?: (filePath: string, fileType: string) => PreTransformResult;
+	postTransform?: (user: Record<string, unknown>) => void;
+};

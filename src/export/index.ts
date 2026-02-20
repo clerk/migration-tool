@@ -7,9 +7,12 @@
  *
  * Usage:
  *   bun run export                             # Interactive platform picker
- *   bun run export -- --platform clerk         # Direct Clerk export
- *   bun run export -- --platform supabase      # Direct Supabase export
+ *   bun run export -- --platform auth0         # Direct Auth0 export
+ *   bun run export -- --platform authjs        # Direct AuthJS export
  *   bun run export -- --platform betterauth    # Direct Better Auth export
+ *   bun run export -- --platform clerk         # Direct Clerk export
+ *   bun run export -- --platform firebase      # Direct Firebase export
+ *   bun run export -- --platform supabase      # Direct Supabase export
  */
 import 'dotenv/config';
 import * as p from '@clack/prompts';

@@ -8,6 +8,15 @@
  * - encrypted_password (bcrypt hashes) — not available via Supabase Admin API
  * - first_name extracted from raw_user_meta_data.display_name
  * - All standard auth fields (email, phone, confirmation status, metadata)
+ *
+ * Usage:
+ *   bun run export:supabase
+ *   bun run export:supabase -- --db-url postgresql://... --output users.json
+ *
+ * Environment variables:
+ *   SUPABASE_DB_URL - Postgres connection string
+ *
+ * Priority: --db-url flag > SUPABASE_DB_URL env var > interactive prompt
  */
 import { Client } from 'pg';
 import * as p from '@clack/prompts';
