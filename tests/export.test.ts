@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
-import { isValidConnectionString, resolveConnectionString } from '../src/utils';
+import { isValidConnectionString, resolveConnectionString } from '../src/lib';
 
 // Mock pg Client
 const mockConnect = vi.fn();
@@ -16,7 +16,7 @@ vi.mock('pg', () => {
 	};
 });
 
-// Mock fs.writeFileSync to avoid writing files during tests
+// Mock fs to avoid writing files during tests
 vi.mock('fs', async () => {
 	const actual = await vi.importActual('fs');
 	return {
@@ -24,6 +24,7 @@ vi.mock('fs', async () => {
 		default: {
 			...(actual as Record<string, unknown>),
 			writeFileSync: vi.fn(),
+			mkdirSync: vi.fn(),
 		},
 	};
 });
@@ -49,8 +50,12 @@ describe('isValidConnectionString', () => {
 		).toBe(true);
 	});
 
-	test('rejects non-postgres URLs', () => {
-		expect(isValidConnectionString('mysql://host:3306/db')).toBe(false);
+	test('accepts mysql:// URLs', () => {
+		expect(isValidConnectionString('mysql://host:3306/db')).toBe(true);
+	});
+
+	test('rejects non-database URLs', () => {
+		expect(isValidConnectionString('ftp://host/file')).toBe(false);
 	});
 
 	test('rejects plain strings', () => {
@@ -114,13 +119,13 @@ describe('resolveConnectionString', () => {
 		expect(result.warning).toBeUndefined();
 	});
 
-	test('returns warning and undefined dbUrl when env var is not a valid Postgres URL', () => {
+	test('returns warning and undefined dbUrl when env var is not a valid connection string', () => {
 		const result = resolveConnectionString([], {
 			SUPABASE_DB_URL: 'not-a-valid-url',
 		});
 
 		expect(result.dbUrl).toBeUndefined();
-		expect(result.warning).toContain('not a valid Postgres URL');
+		expect(result.warning).toContain('not a valid database connection string');
 	});
 
 	test('returns warning for invalid SUPABASE_DB_URL with https scheme', () => {
@@ -129,7 +134,7 @@ describe('resolveConnectionString', () => {
 		});
 
 		expect(result.dbUrl).toBeUndefined();
-		expect(result.warning).toContain('not a valid Postgres URL');
+		expect(result.warning).toContain('not a valid database connection string');
 	});
 
 	test('returns undefined dbUrl and no warning when no env vars set', () => {

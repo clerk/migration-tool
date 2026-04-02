@@ -1,3 +1,5 @@
+import type { TransformerRegistryEntry } from '../types';
+
 /**
  * Transformer for migrating users from Supabase Auth
  *
@@ -114,6 +116,6 @@ const supabaseTransformer = {
 	defaults: {
 		passwordHasher: 'bcrypt' as const,
 	},
-};
+} satisfies TransformerRegistryEntry;
 
 export default supabaseTransformer;

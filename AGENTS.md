@@ -13,6 +13,23 @@ src/
 ├── clean-logs/          # Log cleanup utility
 ├── convert-logs/        # NDJSON to JSON converter
 ├── delete/              # User deletion functionality
+├── export/              # User export (Auth0, AuthJS, Better Auth, Clerk, Firebase, Supabase)
+│   ├── index.ts         # Entry point (platform dispatcher)
+│   ├── registry.ts      # Export registry (array-based, like transformers)
+│   ├── auth0.ts         # Auth0 export (Management API → JSON)
+│   ├── authjs.ts        # AuthJS export (DB query → JSON, supports PG/MySQL/SQLite)
+│   ├── betterauth.ts    # Better Auth export (DB query → JSON, supports PG/MySQL/SQLite)
+│   ├── clerk.ts         # Clerk export (API → JSON)
+│   ├── firebase.ts      # Firebase export (Admin SDK → JSON)
+│   └── supabase.ts      # Supabase export (Postgres → JSON)
+├── lib/                 # Shared utilities and helpers
+│   ├── index.ts         # General utils (file paths, tryCatch, transformKeys, etc.)
+│   ├── db.ts            # Database abstraction (PostgreSQL, MySQL, SQLite)
+│   ├── export.ts        # Shared export utils (coverage display, file writing, DB error hints)
+│   ├── settings.ts      # Settings persistence (loadSettings, saveSettings)
+│   ├── analysis.ts      # User data analysis (analyzeFields, validateUsers)
+│   ├── supabase.ts      # Supabase provider analysis (fetchSupabaseProviders, etc.)
+│   └── clerk.ts         # Clerk API helpers (detectInstanceType, fetchClerkConfig)
 ├── migrate/             # Main migration logic
 │   ├── cli.ts           # Interactive CLI
 │   ├── functions.ts     # Data loading and transformation
@@ -20,16 +37,17 @@ src/
 │   ├── index.ts         # Entry point
 │   └── validator.ts     # Zod schema validation
 ├── transformers/        # Platform-specific transformers
+│   ├── index.ts         # Re-exports from registry
+│   ├── registry.ts      # Transformer registry (array-based, like exports)
 │   ├── auth0.ts
 │   ├── authjs.ts
+│   ├── betterauth.ts
 │   ├── clerk.ts
 │   ├── firebase.ts
-│   ├── supabase.ts
-│   └── index.ts
+│   └── supabase.ts
 ├── envs-constants.ts    # Environment configuration
 ├── logger.ts            # NDJSON logging
-├── types.ts             # TypeScript types
-└── utils.ts             # Shared utilities
+└── types.ts             # TypeScript types
 ```
 
 ## Common Commands
@@ -37,6 +55,13 @@ src/
 ### Development Commands
 
 - `bun migrate` - Start the migration process (interactive CLI)
+- `bun export` - Export users (interactive platform picker)
+- `bun export:auth0` - Export users from Auth0 tenant
+- `bun export:authjs` - Export users from AuthJS database (PostgreSQL, MySQL, or SQLite)
+- `bun export:betterauth` - Export users from Better Auth database (PostgreSQL, MySQL, or SQLite)
+- `bun export:clerk` - Export users from Clerk instance
+- `bun export:firebase` - Export users from Firebase project
+- `bun export:supabase` - Export users from Supabase database
 - `bun delete` - Delete all migrated users (uses externalId to identify users)
 - `bun clean-logs` - Remove all log files from the `./logs` folder
 - `bun convert-logs` - Convert NDJSON log files to JSON array format for easier analysis
@@ -73,7 +98,7 @@ The migration tool uses a **transformer pattern** to support different source pl
 1. **Field Transformer**: Maps source platform fields to Clerk's schema
    - Example: Auth0's `_id.$oid` → Clerk's `userId`
    - Example: Supabase's `encrypted_password` → Clerk's `password`
-   - Handles nested field flattening (see `flattenObjectSelectively` in `src/migrate/functions.ts`)
+   - Handles nested field flattening (see `flattenObjectSelectively` in `src/lib/index.ts`)
 
 2. **Optional Default Fields**: Applied to all users from that platform
    - Example: Supabase defaults `passwordHasher` to `"bcrypt"`
@@ -88,9 +113,26 @@ The migration tool uses a **transformer pattern** to support different source pl
 
 **Adding a new transformer**:
 
-1. Create a new file in `src/transformers/` with transformer config
-2. Export it in `src/transformers/index.ts`
+1. Create a new file in `src/transformers/` with a transformer config satisfying `TransformerRegistryEntry`
+2. Import and register it in `src/transformers/registry.ts`
 3. The CLI will automatically include it in the platform selection
+
+### Export System
+
+The export tool (`src/export/`) exports users from various platforms to JSON files compatible with the migration tool.
+
+**Architecture**:
+
+- `registry.ts` — Registry of available exports (array-based, like transformers)
+- `index.ts` — CLI entry point / dispatcher (reads from registry)
+- `src/lib/export.ts` — Shared utilities (coverage display, file writing, DB error hints)
+- `[platform].ts` — Platform-specific export logic
+
+**Adding a new export**:
+
+1. Create `src/export/[platform].ts` with an export function, display summary, and CLI wrapper (`runXxxExport`)
+2. Register in `src/export/registry.ts`
+3. Add `"export:[platform]"` script to `package.json`
 
 ### Data Flow
 
@@ -148,7 +190,7 @@ The tool uses **p-limit for concurrency control** across all API calls.
 
 - If a 429 occurs, uses Retry-After value from API response
 - Falls back to 10 second default if Retry-After not available
-- Centralized in `getRetryDelay()` function in `src/utils.ts`
+- Centralized in `getRetryDelay()` function in `src/lib/index.ts`
 - Automatically retries up to 5 times (configurable via MAX_RETRIES)
 
 ### Logging System
@@ -157,11 +199,13 @@ All operations create timestamped logs in `./logs/` using NDJSON (Newline-Delimi
 
 - `{timestamp}-migration.log` - Combined log with all import entries
 - `{timestamp}-user-deletion.log` - Combined log with all deletion entries
+- `{timestamp}-export.log` - Combined log with all export entries
 
 **Log Entry Types** (defined in `src/types.ts`):
 
 - `ImportLogEntry` - Success/error for user imports
 - `DeleteLogEntry` - Success/error for user deletions
+- `ExportLogEntry` - Success/error for user exports
 - `ValidationErrorPayload` - Validation failures with path and row
 - `ErrorLog` - Additional identifier errors
 
@@ -169,7 +213,7 @@ All operations create timestamped logs in `./logs/` using NDJSON (Newline-Delimi
 
 The codebase uses a consistent error handling pattern:
 
-- `tryCatch()` utility (in `src/utils.ts`) - Returns `[result, error]` (error is null on success)
+- `tryCatch()` utility (in `src/lib/index.ts`) - Returns `[result, error]` (error is null on success)
 - Used extensively to make additional emails/phones non-fatal
 - Rate limit errors (429) trigger automatic retry with delay
 - Validation errors are logged but don't stop the migration
@@ -218,3 +262,4 @@ The tool auto-detects instance type from `CLERK_SECRET_KEY`:
 - [docs/creating-transformers.md](docs/creating-transformers.md) - Transformer development guide
 - [prompts/migration-prompt.md](prompts/migration-prompt.md) - AI prompt for running migrations
 - [prompts/transformer-prompt.md](prompts/transformer-prompt.md) - AI prompt for generating transformers
+- [prompts/export-prompt.md](prompts/export-prompt.md) - AI prompt for exporting users

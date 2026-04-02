@@ -4,7 +4,8 @@ import { env, MAX_RETRIES, RETRY_DELAY_MS } from '../envs-constants';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 import { closeAllStreams, errorLogger, importLogger } from '../logger';
-import { getDateTimeStamp, getRetryDelay, tryCatch } from '../utils';
+import { getDateTimeStamp, getRetryDelay, tryCatch } from '../lib';
+import { normalizeErrorMessage } from '../lib';
 import { userSchema } from './validator';
 import type { ImportSummary, User } from '../types';
 import pLimit from 'p-limit';
@@ -359,35 +360,6 @@ async function processUserToClerk(
 	s.message(
 		`Migrating users: [${processed}/${total}] (${successful} successful, ${failed} failed)`
 	);
-}
-
-/**
- * Normalizes error messages by sorting field arrays to group similar errors
- *
- * Example: Converts both:
- * - ["first_name" "last_name"] data doesn't match...
- * - ["last_name" "first_name"] data doesn't match...
- * into: ["first_name" "last_name"] data doesn't match...
- *
- * @param errorMessage - The original error message
- * @returns The normalized error message with sorted field arrays
- */
-export function normalizeErrorMessage(errorMessage: string): string {
-	// Match array-like patterns in error messages: ["field1" "field2"]
-	const arrayPattern = /\[([^\]]+)\]/g;
-
-	return errorMessage.replace(arrayPattern, (_match, fields: string) => {
-		// Split by spaces and quotes, filter out empty strings
-		const fieldNames = fields
-			.split(/["'\s]+/)
-			.filter((f: string) => f.trim().length > 0);
-
-		// Sort field names alphabetically
-		fieldNames.sort();
-
-		// Reconstruct the array notation
-		return `[${fieldNames.map((f: string) => `"${f}"`).join(' ')}]`;
-	});
 }
 
 /**

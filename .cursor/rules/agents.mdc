@@ -1,0 +1,7 @@
+---
+description: Project conventions and architecture for the Clerk user migration tool
+globs:
+alwaysApply: true
+---
+
+Read and follow the project instructions in `AGENTS.md` at the repository root. That file contains the project overview, structure, common commands, architecture, and implementation notes.

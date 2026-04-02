@@ -1,3 +1,5 @@
+import type { TransformerRegistryEntry } from '../types';
+
 /**
  * Transformer for migrating users from one Clerk instance to another
  *
@@ -35,6 +37,6 @@ const clerkTransformer = {
 		unsafe_metadata: 'unsafeMetadata',
 		private_metadata: 'privateMetadata',
 	},
-};
+} satisfies TransformerRegistryEntry;
 
 export default clerkTransformer;

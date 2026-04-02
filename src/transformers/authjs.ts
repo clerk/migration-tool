@@ -1,3 +1,5 @@
+import type { TransformerRegistryEntry } from '../types';
+
 /**
  * Transformer for migrating users from Auth.js (formerly Next-Auth)
  *
@@ -62,6 +64,6 @@ const authjsTransformer = {
 			delete user.name;
 		}
 	},
-};
+} satisfies TransformerRegistryEntry;
 
 export default authjsTransformer;

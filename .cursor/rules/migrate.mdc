@@ -1,0 +1,11 @@
+---
+description: Run user migration to Clerk from various authentication platforms (Auth0, Supabase, Firebase, AuthJS, Clerk). Use when user wants to import, migrate, or load users from a data file (JSON/CSV).
+globs:
+alwaysApply: false
+---
+
+Read and follow the instructions in `prompts/migration-prompt.md` for the complete migration workflow.
+
+Key commands:
+- `bun migrate` — Interactive migration
+- `bun migrate -y -t <transformer> -f <file>` — Non-interactive migration

@@ -17,7 +17,7 @@ Before proceeding, check if dependencies are installed. If not:
 1. Use `bun install` to install dependencies.
 
 Before generating the transformer, check if a `.env` file exists with `CLERK_SECRET_KEY`. If not:
-1. Ask the user to provide their CLERK_SECRET_KEY (found in Clerk Dashboard → API Keys → Secret keys)
+1. Ask the user to provide their CLERK_SECRET_KEY (found in Clerk Dashboard → API Keys → Secret keys, or https://dashboard.clerk.com/~/api-keys)
 1. Create the `.env` file with the provided key
 1. Continue with the transformer generation without stopping
 
