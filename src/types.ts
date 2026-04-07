@@ -23,6 +23,7 @@ export const PASSWORD_HASHERS = [
 	'pbkdf2_sha256',
 	'pbkdf2_sha256_django',
 	'pbkdf2_sha512',
+	'pbkdf2_sha512_hex',
 	'scrypt_firebase',
 	'scrypt_werkzeug',
 	'sha256',
