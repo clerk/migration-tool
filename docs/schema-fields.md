@@ -42,7 +42,7 @@ At least one identifier (email, phone, or username) is required.
 - `bcrypt`, `bcrypt_peppered`, `bcrypt_sha256_django`
 - `hmac_sha256_utf16_b64`
 - `md5`, `md5_salted`, `md5_phpass`
-- `pbkdf2_sha1`, `pbkdf2_sha256`, `pbkdf2_sha256_django`, `pbkdf2_sha512`, `pbkdf2_sha512_hex`,
+- `pbkdf2_sha1`, `pbkdf2_sha256`, `pbkdf2_sha256_django`, `pbkdf2_sha512`, `pbkdf2_sha512_hex`
 - `scrypt_firebase`, `scrypt_werkzeug`
 - `sha256`, `sha256_salted`, `sha512_symfony`
 - `ldap_ssha`
