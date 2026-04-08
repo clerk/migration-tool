@@ -1,3 +1,5 @@
+import type { TransformerRegistryEntry } from '../types';
+
 /**
  * Transformer for migrating users from Auth0
  *
@@ -80,6 +82,6 @@ const auth0Transformer = {
 		// Auth0 uses bcrypt with $2a$ or $2b$ prefix and 10 salt rounds
 		passwordHasher: 'bcrypt' as const,
 	},
-};
+} satisfies TransformerRegistryEntry;
 
 export default auth0Transformer;

@@ -10,21 +10,24 @@ import * as path from 'path';
  */
 
 const TRANSFORMERS_DIR = path.join(process.cwd(), 'src/transformers');
-const INDEX_FILE = path.join(TRANSFORMERS_DIR, 'index.ts');
+const REGISTRY_FILE = path.join(TRANSFORMERS_DIR, 'registry.ts');
 
 /**
- * Gets all transformer files (excluding index.ts)
+ * Gets all transformer files (excluding index.ts and registry.ts)
  */
 function getTransformerFiles(): string[] {
 	const files = fs.readdirSync(TRANSFORMERS_DIR);
 	return files
-		.filter((file) => file.endsWith('.ts') && file !== 'index.ts')
+		.filter(
+			(file) =>
+				file.endsWith('.ts') && file !== 'index.ts' && file !== 'registry.ts'
+		)
 		.map((file) => file.replace('.ts', ''));
 }
 
 describe('transformer registration', () => {
 	const transformerFiles = getTransformerFiles();
-	const indexContent = fs.readFileSync(INDEX_FILE, 'utf-8');
+	const registryContent = fs.readFileSync(REGISTRY_FILE, 'utf-8');
 
 	test('should have at least one transformer file', () => {
 		expect(transformerFiles.length).toBeGreaterThan(0);
@@ -57,8 +60,8 @@ describe('transformer registration', () => {
 			);
 
 			expect(
-				importPattern.test(indexContent),
-				`${fileName} must be imported in index.ts. Add: import ${fileName}Transformer from './${fileName}';`
+				importPattern.test(registryContent),
+				`${fileName} must be imported in registry.ts. Add: import ${fileName}Transformer from './${fileName}';`
 			).toBe(true);
 		});
 	});
@@ -97,16 +100,16 @@ describe('transformer registration', () => {
 				// Check the variable is in the transformers array in index.ts
 				const arrayPattern = new RegExp(`\\b${variableName}\\b`);
 				expect(
-					arrayPattern.test(indexContent),
-					`Transformer "${variableName}" with key "${transformerKey}" from ${fileName}.ts must be added to the transformers array in index.ts`
+					arrayPattern.test(registryContent),
+					`Transformer "${variableName}" with key "${transformerKey}" from ${fileName}.ts must be added to the transformers array in registry.ts`
 				).toBe(true);
 			}
 		);
 	});
 
 	test('transformers array has correct number of entries', () => {
-		// Count the number of imports in index.ts (excluding type imports)
-		const importMatches = indexContent.match(
+		// Count the number of imports in registry.ts (excluding type imports)
+		const importMatches = registryContent.match(
 			/import\s+\w+\s+from\s+['"]\.\/\w+['"]/g
 		);
 		const importCount = importMatches ? importMatches.length : 0;
@@ -114,7 +117,7 @@ describe('transformer registration', () => {
 		expect(
 			importCount,
 			`Expected ${transformerFiles.length} transformer imports but found ${importCount}. ` +
-				`Make sure all transformer files are imported in index.ts`
+				`Make sure all transformer files are imported in registry.ts`
 		).toBe(transformerFiles.length);
 	});
 

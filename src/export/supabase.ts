@@ -8,12 +8,27 @@
  * - encrypted_password (bcrypt hashes) — not available via Supabase Admin API
  * - first_name extracted from raw_user_meta_data.display_name
  * - All standard auth fields (email, phone, confirmation status, metadata)
+ *
+ * Usage:
+ *   bun run export:supabase
+ *   bun run export:supabase -- --db-url postgresql://... --output users.json
+ *
+ * Environment variables:
+ *   SUPABASE_DB_URL - Postgres connection string
+ *
+ * Priority: --db-url flag > SUPABASE_DB_URL env var > interactive prompt
  */
 import { Client } from 'pg';
-import fs from 'fs';
-import path from 'path';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
+import {
+	displayFieldCoverage,
+	getDbConnectionErrorHint,
+	isValidConnectionString,
+	resolveConnectionString,
+	writeExportOutput,
+} from '../lib';
+import type { BaseExportResult } from '../types';
 
 /**
  * SQL query that exports users in the format expected by the Supabase transformer.
@@ -42,9 +57,7 @@ const EXPORT_QUERY = `
   ORDER BY created_at
 `;
 
-interface ExportResult {
-	userCount: number;
-	outputPath: string;
+interface SupabaseExportResult extends BaseExportResult {
 	fieldCoverage: {
 		email: number;
 		emailConfirmed: number;
@@ -65,33 +78,14 @@ interface ExportResult {
 export async function exportSupabaseUsers(
 	dbUrl: string,
 	outputFile: string
-): Promise<ExportResult> {
+): Promise<SupabaseExportResult> {
 	const client = new Client({ connectionString: dbUrl });
 
 	try {
 		await client.connect();
 	} catch (err) {
 		const message = err instanceof Error ? err.message : String(err);
-		let hint: string;
-		if (message.includes('ENOTFOUND')) {
-			hint =
-				'The hostname could not be resolved. Check the project ref in your connection string.';
-		} else if (
-			message.includes('ETIMEDOUT') ||
-			message.includes('ENETUNREACH')
-		) {
-			hint =
-				'Direct connections require the IPv4 add-on. Use a pooler connection instead,\n' +
-				'or enable IPv4 in Supabase Dashboard → Settings → Add-Ons.';
-		} else if (
-			message.includes('authentication failed') ||
-			message.includes('password')
-		) {
-			hint = 'Check the password in your connection string.';
-		} else {
-			hint =
-				'Verify your connection string and ensure your Supabase project is accessible.';
-		}
+		const hint = getDbConnectionErrorHint(message, 'supabase');
 		throw new Error(
 			`Failed to connect to Supabase database: ${message}\n\n${hint}`
 		);
@@ -146,12 +140,7 @@ export async function exportSupabaseUsers(
 			if (row.last_name) coverage.lastName++;
 		}
 
-		// Write output
-		const outputPath = path.isAbsolute(outputFile)
-			? outputFile
-			: path.join(process.cwd(), outputFile);
-
-		fs.writeFileSync(outputPath, JSON.stringify(rows, null, 2));
+		const outputPath = writeExportOutput(rows, outputFile);
 
 		return {
 			userCount: rows.length,
@@ -166,33 +155,98 @@ export async function exportSupabaseUsers(
 /**
  * Displays the export results as a field coverage report and success message.
  *
- * Shows each field with an icon indicating coverage level:
- * - ● green — all users have this field
- * - ○ yellow — some users have this field
- * - ○ dim — no users have this field
- *
  * @param result - Export result containing user count, output path, and per-field coverage stats
  */
-export function displayExportSummary(result: ExportResult): void {
+export function displayExportSummary(result: SupabaseExportResult): void {
 	const { userCount, outputPath, fieldCoverage } = result;
 
-	/** Returns a colored icon based on how many users have a given field. */
-	const getCoverageIcon = (count: number, total: number): string => {
-		if (count === total) return color.green('●');
-		if (count > 0) return color.yellow('○');
-		return color.dim('○');
-	};
-
-	let summary = '';
-	summary += `${getCoverageIcon(fieldCoverage.email, userCount)} ${color.dim(`${fieldCoverage.email}/${userCount} have email`)}\n`;
-	summary += `${getCoverageIcon(fieldCoverage.emailConfirmed, userCount)} ${color.dim(`${fieldCoverage.emailConfirmed}/${userCount} email confirmed`)}\n`;
-	summary += `${getCoverageIcon(fieldCoverage.password, userCount)} ${color.dim(`${fieldCoverage.password}/${userCount} have password hash`)}\n`;
-	summary += `${getCoverageIcon(fieldCoverage.phone, userCount)} ${color.dim(`${fieldCoverage.phone}/${userCount} have phone`)}\n`;
-	summary += `${getCoverageIcon(fieldCoverage.firstName, userCount)} ${color.dim(`${fieldCoverage.firstName}/${userCount} have first name`)}\n`;
-	summary += `${getCoverageIcon(fieldCoverage.lastName, userCount)} ${color.dim(`${fieldCoverage.lastName}/${userCount} have last name`)}`;
-
-	p.note(summary, 'Field Coverage');
-	p.log.success(
-		`Exported ${color.bold(String(userCount))} users to ${color.dim(outputPath)}`
+	displayFieldCoverage(
+		[
+			{ label: 'have email', count: fieldCoverage.email },
+			{ label: 'email confirmed', count: fieldCoverage.emailConfirmed },
+			{ label: 'have password hash', count: fieldCoverage.password },
+			{ label: 'have phone', count: fieldCoverage.phone },
+			{ label: 'have first name', count: fieldCoverage.firstName },
+			{ label: 'have last name', count: fieldCoverage.lastName },
+		],
+		userCount,
+		outputPath
 	);
+}
+
+/**
+ * CLI wrapper for the Supabase export command
+ *
+ * Prompts for a connection string if not provided via --db-url flag or
+ * SUPABASE_DB_URL environment variable, then exports users to a JSON file.
+ */
+export async function runSupabaseExport(): Promise<void> {
+	p.intro(color.bgCyan(color.black('Supabase User Export')));
+
+	const {
+		dbUrl: resolvedUrl,
+		outputFile,
+		warning,
+	} = resolveConnectionString(
+		process.argv.slice(2),
+		process.env as Record<string, string | undefined>
+	);
+
+	let dbUrl = resolvedUrl;
+
+	if (warning) {
+		p.log.warn(color.yellow(warning));
+	}
+
+	// Prompt for connection string if not resolved from flag or env
+	if (!dbUrl) {
+		p.note(
+			`Find this in the Supabase Dashboard by clicking the ${color.bold('Connect')} button.\n\n${color.bold('Direct connection')} (requires IPv4 add-on):\n  ${color.dim('postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres')}\n\n${color.bold('Pooler connection')} (works without IPv4 add-on):\n  ${color.dim('postgres://postgres.[REF]:[PASSWORD]@aws-0-[REGION].pooler.supabase.com:6543/postgres')}`,
+			'Connection String'
+		);
+
+		const input = await p.text({
+			message: 'Enter your Supabase Postgres connection string',
+			placeholder:
+				'postgresql://postgres:[PASSWORD]@db.[REF].supabase.co:5432/postgres',
+			validate: (value) => {
+				if (!value || value.trim() === '') {
+					return 'Connection string is required';
+				}
+				if (!isValidConnectionString(value)) {
+					return 'Must be a valid Postgres connection string (postgresql://...)';
+				}
+			},
+		});
+
+		if (p.isCancel(input)) {
+			p.cancel('Export cancelled.');
+			process.exit(0);
+		}
+
+		dbUrl = input;
+	}
+
+	const spinner = p.spinner();
+	spinner.start('Connecting to Supabase database...');
+
+	try {
+		const result = await exportSupabaseUsers(dbUrl, outputFile);
+		spinner.stop(`Found ${result.userCount} users`);
+
+		displayExportSummary(result);
+
+		p.log.info(
+			color.dim(
+				`Next step: run ${color.bold('bun run migrate')} and select "Supabase" with file "exports/${outputFile}"`
+			)
+		);
+
+		p.outro(color.green('Export complete!'));
+	} catch (err) {
+		spinner.stop('Export failed');
+		const message = err instanceof Error ? err.message : String(err);
+		p.log.error(color.red(message));
+		process.exit(1);
+	}
 }

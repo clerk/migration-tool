@@ -11,7 +11,7 @@ import {
 	getDateTimeStamp,
 	getFileType,
 	transformKeys,
-} from '../utils';
+} from '../lib';
 
 // Re-export for backwards compatibility
 export type { PreTransformResult } from '../types';

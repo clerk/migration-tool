@@ -1,18 +1,14 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import { displayCrossReference, loadRawUsers } from '../../src/migrate/cli';
+import { loadSettings, saveSettings } from '../../src/lib/settings';
+import { analyzeFields, hasValue, validateUsers } from '../../src/lib/analysis';
 import {
-	analyzeFields,
 	analyzeUserProviders,
-	detectInstanceType,
-	displayCrossReference,
 	findUsersWithDisabledProviders,
-	hasValue,
-	loadRawUsers,
-	loadSettings,
-	saveSettings,
-	validateUsers,
-} from '../../src/migrate/cli';
+} from '../../src/lib/supabase';
+import { detectInstanceType } from '../../src/lib/clerk';
 
 // Mock modules
 vi.mock('fs', async () => {
@@ -75,7 +71,7 @@ vi.mock('../../src/envs-constants', () => ({
 }));
 
 // Mock the utils module
-vi.mock('../../src/utils', async (importOriginal) => {
+vi.mock('../../src/lib', async (importOriginal) => {
 	// eslint-disable-next-line @typescript-eslint/no-unnecessary-type-assertion
 	const actual = (await importOriginal()) as Record<string, unknown>;
 	return {

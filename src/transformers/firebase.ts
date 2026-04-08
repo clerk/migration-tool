@@ -1,6 +1,11 @@
 import fs from 'fs';
 import path from 'path';
-import type { FirebaseHashConfig, PreTransformResult, User } from '../types';
+import type {
+	FirebaseHashConfig,
+	PreTransformResult,
+	TransformerRegistryEntry,
+	User,
+} from '../types';
 
 // Re-export for backwards compatibility
 export type { FirebaseHashConfig } from '../types';
@@ -217,6 +222,6 @@ const firebaseTransformer = {
 	defaults: {
 		passwordHasher: 'scrypt_firebase' as const,
 	},
-};
+} satisfies TransformerRegistryEntry;
 
 export default firebaseTransformer;

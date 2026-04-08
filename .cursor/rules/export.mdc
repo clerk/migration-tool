@@ -1,0 +1,11 @@
+---
+description: Export users from authentication platforms (Auth0, AuthJS, Better Auth, Clerk, Firebase, Supabase) to JSON. Use when user wants to export users from their current auth provider.
+globs:
+alwaysApply: false
+---
+
+Read and follow the instructions in `prompts/export-prompt.md` for the complete export workflow.
+
+Key commands:
+- `bun export` — Interactive platform picker
+- `bun export:auth0` / `bun export:authjs` / `bun export:betterauth` / `bun export:clerk` / `bun export:firebase` / `bun export:supabase` — Direct export

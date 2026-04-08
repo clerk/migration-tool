@@ -1,0 +1,13 @@
+---
+description: Generate custom Clerk user transformers from sample data. Use when user needs to create a new transformer for an unsupported platform or custom data format.
+globs:
+alwaysApply: false
+---
+
+Read and follow the instructions in `prompts/transformer-prompt.md` for transformer generation.
+
+Key steps:
+1. Analyze sample user data to identify field mappings
+2. Create transformer file in `src/transformers/`
+3. Register in `src/transformers/registry.ts`
+4. Run `bun run test` to verify
