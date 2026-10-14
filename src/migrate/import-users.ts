@@ -1,5 +1,5 @@
 import { createClerkClient } from '@clerk/backend';
-import type { ClerkAPIError } from '@clerk/types';
+import type { ClerkAPIError } from '@clerk/shared/types';
 import { env, MAX_RETRIES, RETRY_DELAY_MS } from '../envs-constants';
 import * as p from '@clack/prompts';
 import color from 'picocolors';

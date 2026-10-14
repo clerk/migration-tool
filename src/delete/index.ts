@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { createClerkClient } from '@clerk/backend';
 import type { User } from '@clerk/backend';
-import type { ClerkAPIError } from '@clerk/types';
+import type { ClerkAPIError } from '@clerk/shared/types';
 import * as p from '@clack/prompts';
 import color from 'picocolors';
 import {
@@ -157,11 +157,10 @@ export const readMigrationFile = async (
 	if (type === 'text/csv') {
 		// Firebase CSV files don't have headers, so we need to provide them
 		const isFirebase = transformerKey === 'firebase';
-		const parserOptions: csvParser.Options = { skipComments: true };
-
-		if (isFirebase) {
-			parserOptions.headers = FIREBASE_CSV_HEADERS;
-		}
+		const parserOptions: csvParser.Options = {
+			skipComments: true,
+			...(isFirebase && { headers: FIREBASE_CSV_HEADERS }),
+		};
 
 		return new Promise((resolve, reject) => {
 			fs.createReadStream(fullPath)

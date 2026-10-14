@@ -1,4 +1,4 @@
-import type { ClerkAPIError } from '@clerk/types';
+import type { ClerkAPIError } from '@clerk/shared/types';
 import type { transformers } from './transformers';
 import type { userSchema } from './migrate/validator';
 import * as z from 'zod';

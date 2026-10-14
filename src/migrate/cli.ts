@@ -1176,8 +1176,8 @@ export function displayCrossReference(
 	// --- Field readiness sections ---
 	const sections: Partial<Record<string, ReadinessItem[]>> = {};
 	for (const item of items) {
-		if (!sections[item.section]) sections[item.section] = [];
-		sections[item.section].push(item);
+		const section = sections[item.section] ?? (sections[item.section] = []);
+		section.push(item);
 	}
 
 	const needsAttention: ReadinessItem[] = [];
